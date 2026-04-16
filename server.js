@@ -8,6 +8,7 @@ const { initDB } = require('./db');
 const authRouter = require('./routes/auth');
 const roomsRouter = require('./routes/rooms');
 const wsRouter = require('./routes/ws');
+const adminRouter = require('./routes/admin');
 
 const app = express();
 
@@ -27,16 +28,29 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Routes
 app.use('/api', authRouter);
 app.use('/api', roomsRouter);
+app.use('/api', adminRouter);
+
+// Page routes
+app.get('/room/:code/host', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'host.html'));
+});
+app.get('/room/:code', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'guest.html'));
+});
+app.get('/create', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'create.html'));
+});
 
 // Fallback: serve login.html for non-api routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-// HTTP server (export for WebSocket in part2)
+// HTTP server
 const server = http.createServer(app);
 
 wsRouter.init(server);
+adminRouter.init(require('./db').pool, wsRouter);
 
 const PORT = process.env.PORT || 3000;
 

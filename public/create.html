@@ -210,12 +210,18 @@
       }
       try {
         const res = await fetch(`/api/me?uuid=${uuid}`);
-        if (!res.ok) throw new Error('auth failed');
+        if (!res.ok) {
+          // uuid 무효 → localStorage 초기화 후 로그인으로
+          localStorage.removeItem('demo_uuid');
+          window.location.href = '/';
+          return;
+        }
         const data = await res.json();
         document.getElementById('welcomeMsg').innerHTML =
           `안녕하세요, <span>${data.nickname}</span>님! 지금 바로 모임을 열어보세요.`;
       } catch {
-        window.location.href = '/';
+        // 네트워크 오류 등 — 튕기지 않고 그냥 표시
+        document.getElementById('welcomeMsg').textContent = '모임을 열어보세요.';
       }
     }
 

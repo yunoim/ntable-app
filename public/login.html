@@ -298,15 +298,18 @@
           return;
         }
         try {
-          await fetch(`${API}/api/me?uuid=${storedUuid}`);
+          const meRes = await fetch(`${API}/api/me?uuid=${storedUuid}`);
+          if (!meRes.ok) {
+            localStorage.removeItem('demo_uuid');
+            showStep('step-login');
+            return;
+          }
           const roomRes = await fetch(`${API}/api/my-room?uuid=${storedUuid}`);
           const roomData = await roomRes.json();
           if (roomData.room_code) {
             window.location.href = `/room/${roomData.room_code}/host`;
           } else {
-            // create.html 미구현 시 로그인 화면 유지 (2번 개발자 구현 후 활성화)
-            // window.location.href = '/create';
-            showStep('step-login');
+            window.location.href = "/create";
           }
         } catch {
           localStorage.removeItem('demo_uuid');
@@ -395,10 +398,7 @@
             if (roomData.room_code) {
               window.location.href = `/room/${roomData.room_code}/host`;
             } else {
-              // create.html 미구현 시 로그인 화면 유지
-              // window.location.href = '/create';
-              alert('로그인 성공! (create.html 구현 전)');
-              showStep('step-login');
+            window.location.href = "/create";
             }
           }
         }
@@ -450,12 +450,16 @@
           body: JSON.stringify(payload),
         });
 
-        if (!res.ok) throw new Error('profile save failed');
+        if (!res.ok) {
+          const errData = await res.json().catch(()=>({}));
+          throw new Error(JSON.stringify(errData));
+        }
 
         const nextUrl = getNextUrl();
         window.location.href = nextUrl || '/create';
       } catch (err) {
-        alert('저장 중 오류가 발생했어요. 다시 시도해주세요.');
+        console.error('[profile error]', err.message);
+        alert('저장 오류: ' + err.message);
         profileBtn.disabled = false;
         profileBtn.textContent = '완료';
       }
