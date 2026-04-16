@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>ntable</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0c0c0e;
+      color: #f0ede8;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .logo-text {
+      font-size: 28px;
+      font-weight: 700;
+      color: #e8c97e;
+      letter-spacing: 2px;
+    }
+
+    .logo-sub {
+      font-size: 12px;
+      color: #6b6872;
+      margin-top: 4px;
+      letter-spacing: 1px;
+    }
+
+    .card {
+      background: #16161a;
+      border-radius: 16px;
+      padding: 32px 24px;
+      border: 1px solid #2a2a30;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #f0ede8;
+      margin-bottom: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      color: #9a9698;
+      margin-bottom: 8px;
+    }
+
+    input[type="text"],
+    select {
+      width: 100%;
+      background: #0c0c0e;
+      border: 1px solid #2a2a30;
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 15px;
+      color: #f0ede8;
+      outline: none;
+      transition: border-color 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="text"]:focus,
+    select:focus {
+      border-color: #e8c97e;
+    }
+
+    input[type="text"]::placeholder {
+      color: #4a4850;
+    }
+
+    .nickname-status {
+      font-size: 12px;
+      margin-top: 6px;
+      min-height: 16px;
+    }
+
+    .nickname-status.ok { color: #6bcb77; }
+    .nickname-status.err { color: #ff6b6b; }
+
+    .btn-primary {
+      width: 100%;
+      background: #e8c97e;
+      color: #0c0c0e;
+      border: none;
+      border-radius: 10px;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      margin-top: 8px;
+    }
+
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* 성별 버튼 */
+    .gender-group {
+      display: flex;
+      gap: 12px;
+    }
+
+    .gender-btn {
+      flex: 1;
+      padding: 14px;
+      background: #0c0c0e;
+      border: 1px solid #2a2a30;
+      border-radius: 10px;
+      color: #9a9698;
+      font-size: 15px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .gender-btn.selected {
+      border-color: #e8c97e;
+      color: #e8c97e;
+      background: rgba(232, 201, 126, 0.08);
+    }
+
+    /* 슬라이드 전환 */
+    .step {
+      display: none;
+    }
+    .step.active {
+      display: block;
+    }
+
+    .slide-wrapper {
+      overflow: hidden;
+    }
+
+    .required-mark {
+      color: #e8c97e;
+      margin-left: 2px;
+    }
+
+    .divider {
+      height: 1px;
+      background: #2a2a30;
+      margin: 24px 0;
+    }
+
+    select option {
+      background: #16161a;
+      color: #f0ede8;
+    }
+
+    .loading-text {
+      text-align: center;
+      color: #6b6872;
+      font-size: 14px;
+      padding: 40px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <div class="logo-text">ntable</div>
+      <div class="logo-sub">누가 열어도 재밌는 모임</div>
+    </div>
+
+    <div id="loading" class="loading-text">로딩 중...</div>
+
+    <!-- Step 1: 닉네임 로그인 -->
+    <div id="step-login" class="card step">
+      <div class="section-title">시작하기</div>
+      <div class="form-group">
+        <label>닉네임 <span class="required-mark">*</span></label>
+        <input type="text" id="nickname-input" placeholder="닉네임을 입력하세요" maxlength="20" autocomplete="off" />
+        <div class="nickname-status" id="nickname-status"></div>
+      </div>
+      <button class="btn-primary" id="login-btn" disabled>계속하기</button>
+    </div>
+
+    <!-- Step 2: 프로필 작성 -->
+    <div id="step-profile" class="card step">
+      <div class="section-title">프로필 설정</div>
+      <div class="form-group">
+        <label>성별 <span class="required-mark">*</span></label>
+        <div class="gender-group">
+          <button class="gender-btn" data-value="male" onclick="selectGender(this)">남성</button>
+          <button class="gender-btn" data-value="female" onclick="selectGender(this)">여성</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>출생연도 <span class="required-mark">*</span></label>
+        <select id="birth-year">
+          <option value="">선택하세요</option>
+        </select>
+      </div>
+      <div class="divider"></div>
+      <div class="form-group">
+        <label>지역</label>
+        <select id="region">
+          <option value="">선택하세요</option>
+          <option>서울</option><option>경기</option><option>인천</option>
+          <option>부산</option><option>대구</option><option>대전</option>
+          <option>광주</option><option>울산</option><option>세종</option>
+          <option>강원</option><option>충북</option><option>충남</option>
+          <option>전북</option><option>전남</option><option>경북</option>
+          <option>경남</option><option>제주</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>업종</label>
+        <select id="industry">
+          <option value="">선택하세요</option>
+          <option>IT/개발</option><option>디자인</option><option>마케팅/광고</option>
+          <option>금융/회계</option><option>교육</option><option>의료/보건</option>
+          <option>법률</option><option>공무원</option><option>서비스업</option>
+          <option>제조업</option><option>미디어/콘텐츠</option><option>스타트업</option>
+          <option>기타</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>MBTI</label>
+        <select id="mbti">
+          <option value="">선택하세요</option>
+          <option>INTJ</option><option>INTP</option><option>ENTJ</option><option>ENTP</option>
+          <option>INFJ</option><option>INFP</option><option>ENFJ</option><option>ENFP</option>
+          <option>ISTJ</option><option>ISFJ</option><option>ESTJ</option><option>ESFJ</option>
+          <option>ISTP</option><option>ISFP</option><option>ESTP</option><option>ESFP</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>관심사</label>
+        <input type="text" id="interest" placeholder="예: 등산, 독서, 요리" maxlength="30" />
+      </div>
+      <div class="form-group">
+        <label>인스타그램 아이디</label>
+        <input type="text" id="instagram" placeholder="@ 제외하고 입력" maxlength="50" />
+      </div>
+      <button class="btn-primary" id="profile-btn" disabled>완료</button>
+    </div>
+  </div>
+
+  <script>
+    const API = '';
+    let currentUuid = null;
+    let selectedGender = null;
+    let nicknameTimer = null;
+    let nicknameAvailable = false;
+
+    // 출생연도 옵션 생성
+    const birthSelect = document.getElementById('birth-year');
+    for (let y = 2007; y >= 1975; y--) {
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = y + '년';
+      birthSelect.appendChild(opt);
+    }
+
+    // next 파라미터 파싱
+    function getNextUrl() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('next') || null;
+    }
+
+    function showStep(id) {
+      document.getElementById('loading').style.display = 'none';
+      document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+      const el = document.getElementById(id);
+      if (el) el.classList.add('active');
+    }
+
+    async function init() {
+      const storedUuid = localStorage.getItem('demo_uuid');
+      const nextUrl = getNextUrl();
+
+      if (storedUuid) {
+        if (nextUrl) {
+          window.location.href = nextUrl;
+          return;
+        }
+        try {
+          await fetch(`${API}/api/me?uuid=${storedUuid}`);
+          const roomRes = await fetch(`${API}/api/my-room?uuid=${storedUuid}`);
+          const roomData = await roomRes.json();
+          if (roomData.room_code) {
+            window.location.href = `/room/${roomData.room_code}/host`;
+          } else {
+            // create.html 미구현 시 로그인 화면 유지 (2번 개발자 구현 후 활성화)
+            // window.location.href = '/create';
+            showStep('step-login');
+          }
+        } catch {
+          localStorage.removeItem('demo_uuid');
+          showStep('step-login');
+        }
+      } else {
+        showStep('step-login');
+      }
+    }
+
+    // 닉네임 debounce 체크
+    const nicknameInput = document.getElementById('nickname-input');
+    const nicknameStatus = document.getElementById('nickname-status');
+    const loginBtn = document.getElementById('login-btn');
+
+    nicknameInput.addEventListener('input', () => {
+      // 한글/영문/숫자 외 문자 즉시 제거
+      nicknameInput.value = nicknameInput.value.replace(/[^가-힣a-zA-Z0-9]/g, '');
+      clearTimeout(nicknameTimer);
+      const val = nicknameInput.value.trim();
+      nicknameStatus.textContent = '';
+      nicknameStatus.className = 'nickname-status';
+      loginBtn.disabled = true;
+      nicknameAvailable = false;
+
+      if (val.length < 1) return;
+
+      nicknameTimer = setTimeout(async () => {
+        try {
+          const res = await fetch(`${API}/api/check-nickname?nickname=${encodeURIComponent(val)}`);
+          const data = await res.json();
+          if (data.available) {
+            nicknameStatus.textContent = '✓ 사용 가능한 닉네임이에요';
+            nicknameStatus.className = 'nickname-status ok';
+            nicknameAvailable = true;
+            loginBtn.disabled = false;
+          } else {
+            nicknameStatus.textContent = '이미 사용 중인 닉네임이에요';
+            nicknameStatus.className = 'nickname-status err';
+            nicknameAvailable = false;
+          }
+        } catch {
+          nicknameStatus.textContent = '확인 중 오류가 발생했어요';
+          nicknameStatus.className = 'nickname-status err';
+        }
+      }, 300);
+    });
+
+    loginBtn.addEventListener('click', async () => {
+      const nickname = nicknameInput.value.trim();
+      if (!nickname || !nicknameAvailable) return;
+
+      loginBtn.disabled = true;
+      loginBtn.textContent = '처리 중...';
+
+      try {
+        const res = await fetch(`${API}/api/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nickname }),
+        });
+        const data = await res.json();
+
+        if (res.status === 409) {
+          nicknameStatus.textContent = '이미 사용 중인 닉네임이에요';
+          nicknameStatus.className = 'nickname-status err';
+          loginBtn.disabled = false;
+          loginBtn.textContent = '계속하기';
+          return;
+        }
+
+        if (!res.ok) throw new Error(data.error);
+
+        currentUuid = data.uuid;
+        localStorage.setItem('demo_uuid', currentUuid);
+
+        if (data.is_new) {
+          showStep('step-profile');
+        } else {
+          const nextUrl = getNextUrl();
+          if (nextUrl) {
+            window.location.href = nextUrl;
+          } else {
+            const roomRes = await fetch(`${API}/api/my-room?uuid=${currentUuid}`);
+            const roomData = await roomRes.json();
+            if (roomData.room_code) {
+              window.location.href = `/room/${roomData.room_code}/host`;
+            } else {
+              // create.html 미구현 시 로그인 화면 유지
+              // window.location.href = '/create';
+              alert('로그인 성공! (create.html 구현 전)');
+              showStep('step-login');
+            }
+          }
+        }
+      } catch (err) {
+        alert('로그인 중 오류가 발생했어요. 다시 시도해주세요.');
+        loginBtn.disabled = false;
+        loginBtn.textContent = '계속하기';
+      }
+    });
+
+    // 성별 선택
+    function selectGender(btn) {
+      document.querySelectorAll('.gender-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedGender = btn.dataset.value;
+      validateProfileForm();
+    }
+
+    function validateProfileForm() {
+      const birthYear = document.getElementById('birth-year').value;
+      const profileBtn = document.getElementById('profile-btn');
+      profileBtn.disabled = !(selectedGender && birthYear);
+    }
+
+    document.getElementById('birth-year').addEventListener('change', validateProfileForm);
+
+    document.getElementById('profile-btn').addEventListener('click', async () => {
+      if (!selectedGender || !document.getElementById('birth-year').value) return;
+
+      const profileBtn = document.getElementById('profile-btn');
+      profileBtn.disabled = true;
+      profileBtn.textContent = '저장 중...';
+
+      const payload = {
+        uuid: currentUuid,
+        gender: selectedGender,
+        birth_year: parseInt(document.getElementById('birth-year').value),
+        region: document.getElementById('region').value || null,
+        industry: document.getElementById('industry').value || null,
+        mbti: document.getElementById('mbti').value || null,
+        interest: document.getElementById('interest').value.trim() || null,
+        instagram: document.getElementById('instagram').value.trim() || null,
+      };
+
+      try {
+        const res = await fetch(`${API}/api/profile`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) throw new Error('profile save failed');
+
+        const nextUrl = getNextUrl();
+        window.location.href = nextUrl || '/create';
+      } catch (err) {
+        alert('저장 중 오류가 발생했어요. 다시 시도해주세요.');
+        profileBtn.disabled = false;
+        profileBtn.textContent = '완료';
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+const { Pool } = require('pg');
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('railway')
+    ? { rejectUnauthorized: false }
+    : false,
+});
+
+async function initDB() {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        uuid VARCHAR PRIMARY KEY,
+        nickname VARCHAR(20) UNIQUE NOT NULL,
+        gender VARCHAR(10),
+        birth_year INTEGER,
+        region VARCHAR(50),
+        industry VARCHAR(50),
+        mbti VARCHAR(10),
+        interest VARCHAR(30),
+        instagram VARCHAR(50),
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS rooms (
+        id SERIAL PRIMARY KEY,
+        room_code VARCHAR(10) UNIQUE NOT NULL,
+        title VARCHAR(100) NOT NULL,
+        host_uuid VARCHAR REFERENCES users(uuid),
+        host_role VARCHAR(20) DEFAULT 'host_only',
+        status VARCHAR(20) DEFAULT 'waiting',
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS room_state (
+        room_id INTEGER PRIMARY KEY REFERENCES rooms(id),
+        state_json JSONB,
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS survey_responses (
+        id SERIAL PRIMARY KEY,
+        uuid VARCHAR REFERENCES users(uuid),
+        room_id INTEGER REFERENCES rooms(id),
+        satisfaction INTEGER,
+        revisit BOOLEAN,
+        nps INTEGER,
+        best_moment TEXT,
+        regret TEXT,
+        review TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS member_results (
+        id SERIAL PRIMARY KEY,
+        uuid VARCHAR REFERENCES users(uuid),
+        room_id INTEGER REFERENCES rooms(id),
+        room_code VARCHAR(10),
+        votes_json JSONB,
+        match_json JSONB,
+        fi_count INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    console.log('[DB] All tables initialized');
+  } catch (err) {
+    console.error('[DB] initDB error:', err);
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { pool, initDB };
