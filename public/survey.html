@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>모임 후기 — ntable</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0c0c0e; color: #f0ede8; font-family: -apple-system, sans-serif; min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 40px 16px 60px; }
+  .container { width: 100%; max-width: 480px; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .sub { color: #888; font-size: 14px; margin-bottom: 32px; }
+  .section { background: #16161a; border-radius: 14px; padding: 20px; margin-bottom: 16px; }
+  .label { font-size: 14px; color: #aaa; margin-bottom: 10px; }
+  .stars { display: flex; gap: 8px; }
+  .star { font-size: 28px; cursor: pointer; color: #333; transition: color .15s; user-select: none; }
+  .star.active { color: #e8c97e; }
+  .yn-group { display: flex; gap: 10px; }
+  .yn-btn { flex: 1; padding: 12px; border: 1.5px solid #333; border-radius: 10px; background: transparent; color: #f0ede8; font-size: 15px; cursor: pointer; transition: all .15s; }
+  .yn-btn.active { border-color: #e8c97e; color: #e8c97e; background: rgba(232,201,126,.08); }
+  input[type=range] { width: 100%; accent-color: #e8c97e; margin-top: 4px; }
+  .nps-labels { display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-top: 4px; }
+  .nps-val { text-align: center; font-size: 22px; font-weight: 700; color: #e8c97e; margin-top: 8px; }
+  textarea, input[type=text] { width: 100%; background: #0c0c0e; border: 1.5px solid #2a2a2e; border-radius: 10px; color: #f0ede8; font-size: 14px; padding: 12px; resize: none; outline: none; font-family: inherit; }
+  textarea:focus, input[type=text]:focus { border-color: #e8c97e; }
+  textarea { height: 80px; }
+  .submit-btn { width: 100%; padding: 16px; background: #e8c97e; color: #0c0c0e; font-size: 16px; font-weight: 700; border: none; border-radius: 12px; cursor: pointer; margin-top: 8px; transition: opacity .15s; }
+  .submit-btn:disabled { opacity: .5; cursor: not-allowed; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>오늘 모임 어떠셨나요?</h1>
+  <p class="sub">솔직한 후기가 더 좋은 모임을 만들어요 🙏</p>
+
+  <div class="section">
+    <div class="label">만족도</div>
+    <div class="stars" id="stars">
+      <span class="star" data-v="1">★</span>
+      <span class="star" data-v="2">★</span>
+      <span class="star" data-v="3">★</span>
+      <span class="star" data-v="4">★</span>
+      <span class="star" data-v="5">★</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="label">다음 모임에도 참여하고 싶으신가요?</div>
+    <div class="yn-group">
+      <button class="yn-btn" id="yn-y" onclick="setYN(true)">✅ 네, 또 올게요!</button>
+      <button class="yn-btn" id="yn-n" onclick="setYN(false)">🤔 아직 모르겠어요</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="label">이 모임을 주변에 추천하시겠어요? (0~10)</div>
+    <input type="range" id="nps" min="0" max="10" value="7" oninput="document.getElementById('nps-val').textContent=this.value">
+    <div class="nps-labels"><span>전혀 아니오</span><span>매우 그렇다</span></div>
+    <div class="nps-val" id="nps-val">7</div>
+  </div>
+
+  <div class="section">
+    <div class="label">오늘 가장 기억에 남는 순간은?</div>
+    <textarea id="best" placeholder="예: 밸런스 게임 할 때 다들 웃었던 순간 😄"></textarea>
+  </div>
+
+  <div class="section">
+    <div class="label">아쉬웠던 점이 있다면?</div>
+    <textarea id="regret" placeholder="솔직하게 적어주세요. 더 나은 모임을 만드는 데 쓸게요."></textarea>
+  </div>
+
+  <div class="section">
+    <div class="label">한 줄 후기</div>
+    <input type="text" id="review" placeholder="한 문장으로 오늘을 표현한다면?">
+  </div>
+
+  <button class="submit-btn" id="submit-btn" onclick="submit()">후기 제출하기</button>
+</div>
+
+<script>
+  const params = new URLSearchParams(location.search);
+  const room_code = params.get('room');
+  const uuid = localStorage.getItem('demo_uuid');
+  if (!uuid || !room_code) location.href = '/';
+
+  let satisfaction = 0;
+  let revisit = null;
+
+  document.querySelectorAll('.star').forEach(s => {
+    s.addEventListener('click', () => {
+      satisfaction = parseInt(s.dataset.v);
+      document.querySelectorAll('.star').forEach(x => {
+        x.classList.toggle('active', parseInt(x.dataset.v) <= satisfaction);
+      });
+    });
+  });
+
+  function setYN(val) {
+    revisit = val;
+    document.getElementById('yn-y').classList.toggle('active', val === true);
+    document.getElementById('yn-n').classList.toggle('active', val === false);
+  }
+
+  async function submit() {
+    if (!satisfaction) return alert('만족도를 선택해주세요');
+    if (revisit === null) return alert('재방문 의향을 선택해주세요');
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.textContent = '제출 중...';
+
+    try {
+      const r = await fetch('/api/survey', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uuid, room_code,
+          satisfaction,
+          revisit,
+          nps: parseInt(document.getElementById('nps').value),
+          best_moment: document.getElementById('best').value,
+          regret: document.getElementById('regret').value,
+          review: document.getElementById('review').value
+        })
+      });
+      const data = await r.json();
+      if (data.success) {
+        location.href = `/result?room=${room_code}&uuid=${uuid}`;
+      } else {
+        alert('제출 중 오류가 발생했어요');
+        btn.disabled = false;
+        btn.textContent = '후기 제출하기';
+      }
+    } catch {
+      alert('네트워크 오류');
+      btn.disabled = false;
+      btn.textContent = '후기 제출하기';
+    }
+  }
+</script>
+</body>
+</html>

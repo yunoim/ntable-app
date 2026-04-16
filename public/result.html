@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>오늘의 결과 — ntable</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0c0c0e; color: #f0ede8; font-family: -apple-system, sans-serif; min-height: 100vh; display: flex; justify-content: center; padding: 40px 16px 60px; }
+  .container { width: 100%; max-width: 480px; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .sub { color: #888; font-size: 14px; margin-bottom: 28px; }
+  .card { background: #16161a; border-radius: 16px; padding: 22px; margin-bottom: 16px; }
+  .card-title { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #666; margin-bottom: 12px; }
+  .personality-text { font-size: 15px; line-height: 1.7; color: #f0ede8; }
+  .loading { color: #555; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+  .spinner { width: 16px; height: 16px; border: 2px solid #333; border-top-color: #e8c97e; border-radius: 50%; animation: spin .8s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .match-name { font-size: 26px; font-weight: 700; color: #e8c97e; margin: 6px 0 4px; }
+  .match-sub { font-size: 13px; color: #777; }
+  .fi-badge { display: inline-block; background: rgba(232,201,126,.12); color: #e8c97e; border-radius: 8px; padding: 4px 10px; font-size: 13px; font-weight: 600; margin-top: 10px; }
+  .stats-row { display: flex; gap: 12px; margin-bottom: 14px; }
+  .stat-box { flex: 1; background: #0c0c0e; border-radius: 10px; padding: 14px; text-align: center; }
+  .stat-num { font-size: 24px; font-weight: 700; color: #e8c97e; }
+  .stat-label { font-size: 11px; color: #666; margin-top: 2px; }
+  .highlight-item { padding: 10px 0; border-bottom: 1px solid #1e1e22; font-size: 13px; }
+  .highlight-item:last-child { border-bottom: none; }
+  .q-label { color: #666; font-size: 11px; margin-bottom: 3px; }
+  .q-bar { height: 6px; background: #1e1e22; border-radius: 3px; margin-top: 5px; }
+  .q-fill { height: 100%; background: #e8c97e; border-radius: 3px; transition: width .6s ease; }
+  .insta-btn { width: 100%; padding: 14px; background: transparent; border: 1.5px solid #e8c97e; color: #e8c97e; font-size: 15px; font-weight: 600; border-radius: 12px; cursor: pointer; transition: all .15s; }
+  .insta-btn:hover { background: rgba(232,201,126,.08); }
+  .insta-btn:disabled { opacity: .4; cursor: not-allowed; }
+  .insta-reveal { font-size: 20px; font-weight: 700; color: #e8c97e; text-align: center; margin-top: 12px; }
+  .insta-pending { font-size: 13px; color: #666; text-align: center; margin-top: 12px; line-height: 1.6; }
+  .no-match { color: #555; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>오늘의 결과 🎉</h1>
+  <p class="sub">수고하셨어요! 오늘 모임을 정리해드릴게요.</p>
+
+  <!-- AI 성향 분석 -->
+  <div class="card">
+    <div class="card-title">✨ AI 성향 분석</div>
+    <div class="loading" id="personality-loading">
+      <div class="spinner"></div>
+      <span>분석 중...</span>
+    </div>
+    <div class="personality-text" id="personality-text" style="display:none"></div>
+  </div>
+
+  <!-- 베스트 매칭 -->
+  <div class="card">
+    <div class="card-title">💘 베스트 매칭</div>
+    <div id="match-content">
+      <div class="loading"><div class="spinner"></div><span>불러오는 중...</span></div>
+    </div>
+  </div>
+
+  <!-- 오늘 모임 요약 -->
+  <div class="card">
+    <div class="card-title">📊 오늘 모임 요약</div>
+    <div id="summary-content">
+      <div class="loading"><div class="spinner"></div><span>불러오는 중...</span></div>
+    </div>
+  </div>
+
+  <!-- 인스타그램 공개 (매칭 있을 때만 표시) -->
+  <div class="card" id="insta-card" style="display:none">
+    <div class="card-title">📸 인스타그램 교환</div>
+    <p style="font-size:13px;color:#888;margin-bottom:14px">상호 동의 시에만 공개돼요. 먼저 공개 의사를 표시해보세요!</p>
+    <button class="insta-btn" id="insta-btn" onclick="requestInsta()">인스타 공개하기 📲</button>
+    <div id="insta-result"></div>
+  </div>
+</div>
+
+<script>
+  const params = new URLSearchParams(location.search);
+  const room_code = params.get('room');
+  const uuid = params.get('uuid') || localStorage.getItem('demo_uuid');
+  if (!uuid || !room_code) location.href = '/';
+
+  let matchedUuid = null;
+
+  async function loadPersonality() {
+    try {
+      const r = await fetch(`/api/personality?uuid=${uuid}&room_code=${room_code}`);
+      const data = await r.json();
+      document.getElementById('personality-loading').style.display = 'none';
+      const el = document.getElementById('personality-text');
+      el.textContent = data.personality || '분석 결과를 불러올 수 없어요.';
+      el.style.display = 'block';
+    } catch {
+      document.getElementById('personality-loading').innerHTML = '<span style="color:#555">분석 결과를 불러올 수 없어요.</span>';
+    }
+  }
+
+  async function loadResult() {
+    try {
+      const r = await fetch(`/api/result?uuid=${uuid}&room_code=${room_code}`);
+      const data = await r.json();
+
+      // 베스트 매칭
+      const matchEl = document.getElementById('match-content');
+      if (data.match_nickname) {
+        matchedUuid = data.match_uuid || null;
+        matchEl.innerHTML = `
+          <div class="match-name">💛 ${data.match_nickname}</div>
+          <div class="match-sub">오늘 모임에서 가장 잘 맞았던 분이에요</div>
+          ${data.fi_count ? `<div class="fi-badge">❤️ ${data.fi_count}명이 나에게 관심 표시</div>` : ''}
+        `;
+        document.getElementById('insta-card').style.display = 'block';
+      } else {
+        matchEl.innerHTML = '<div class="no-match">매칭 결과가 아직 없어요.</div>';
+      }
+
+      // 모임 요약
+      const summEl = document.getElementById('summary-content');
+      let hlHtml = '';
+      if (data.question_highlights?.length) {
+        const max = Math.max(...data.question_highlights.map(h => h.count));
+        hlHtml = `<div style="font-size:12px;color:#666;margin-bottom:8px">인기 선택지 TOP 5</div>` +
+          data.question_highlights.slice(0, 5).map(h => `
+            <div class="highlight-item">
+              <div class="q-label">Q${h.question_id}</div>
+              <div>${h.top_answer}</div>
+              <div class="q-bar"><div class="q-fill" style="width:${Math.round(h.count/max*100)}%"></div></div>
+            </div>
+          `).join('');
+      }
+      summEl.innerHTML = `
+        <div class="stats-row">
+          <div class="stat-box">
+            <div class="stat-num">${data.participants}</div>
+            <div class="stat-label">오늘 참가자</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num">${data.fi_count || 0}</div>
+            <div class="stat-label">나에게 관심 표시</div>
+          </div>
+        </div>
+        ${hlHtml}
+      `;
+    } catch {
+      document.getElementById('match-content').innerHTML = '<span style="color:#555">불러올 수 없어요.</span>';
+      document.getElementById('summary-content').innerHTML = '<span style="color:#555">불러올 수 없어요.</span>';
+    }
+  }
+
+  async function requestInsta() {
+    const btn = document.getElementById('insta-btn');
+    btn.disabled = true;
+    btn.textContent = '처리 중...';
+    try {
+      const r = await fetch(`/api/rooms/${room_code}/vote/match`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uuid, pick: matchedUuid })
+      });
+      const data = await r.json();
+      const resultEl = document.getElementById('insta-result');
+      if (data.match_json?.mutual && data.match_json?.instagram) {
+        resultEl.innerHTML = `<div class="insta-reveal">@${data.match_json.instagram} 🎉</div>`;
+      } else {
+        resultEl.innerHTML = `<div class="insta-pending">공개 의사를 전달했어요!<br>상대방이 공개하면 알려드릴게요 ⏳</div>`;
+      }
+    } catch {
+      btn.disabled = false;
+      btn.textContent = '인스타 공개하기 📲';
+    }
+  }
+
+  // 병렬 로드
+  loadPersonality();
+  loadResult();
+</script>
+</body>
+</html>

@@ -9,6 +9,8 @@ const authRouter = require('./routes/auth');
 const roomsRouter = require('./routes/rooms');
 const wsRouter = require('./routes/ws');
 const adminRouter = require('./routes/admin');
+const surveyRouter = require('./routes/survey');
+const aiRouter = require('./routes/ai');
 
 const app = express();
 
@@ -29,6 +31,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api', authRouter);
 app.use('/api', roomsRouter);
 app.use('/api', adminRouter);
+app.use('/api', surveyRouter);
+app.use('/api', aiRouter);
 
 // Page routes
 app.get('/room/:code/host', (req, res) => {
@@ -36,6 +40,12 @@ app.get('/room/:code/host', (req, res) => {
 });
 app.get('/room/:code', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'guest.html'));
+});
+app.get('/survey', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'survey.html'));
+});
+app.get('/result', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'result.html'));
 });
 app.get('/create', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'create.html'));
