@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ntable — 모임 참여</title>
+<style>
+  :root {
+    --bg: #0c0c0e;
+    --surface: #16161a;
+    --surface2: #1e1e24;
+    --surface3: #28282f;
+    --text: #f0ede8;
+    --subtext: #9090a0;
+    --gold: #e8c97e;
+    --gold-dim: rgba(232,201,126,0.15);
+    --gold-dim2: rgba(232,201,126,0.08);
+    --border: rgba(255,255,255,0.07);
+    --danger: #e87e7e;
+    --success: #7ee8a2;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ─── SCREENS ─── */
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+    overflow: hidden;
+  }
+  .screen.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  /* ─── HEADER ─── */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: var(--bg);
+    z-index: 10;
+  }
+  .logo {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--gold);
+  }
+  .room-tag {
+    font-size: 11px;
+    color: var(--subtext);
+    background: var(--surface2);
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+  .tab-indicator {
+    font-size: 12px;
+    color: var(--gold);
+    font-weight: 600;
+    background: var(--gold-dim);
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  /* ─── NUDGE BANNER ─── */
+  #nudgeBanner {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    background: var(--gold);
+    color: #0c0c0e;
+    text-align: center;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 700;
+    z-index: 9999;
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+  }
+  #nudgeBanner.show { transform: translateY(0); }
+
+  /* ─── QUESTION CARD POPUP ─── */
+  #questionCardOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    padding: 24px;
+  }
+  #questionCardOverlay.show {
+    opacity: 1;
+    pointer-events: all;
+  }
+  .question-card-popup {
+    background: var(--surface);
+    border: 1px solid var(--gold);
+    border-radius: 20px;
+    padding: 32px 24px;
+    max-width: 340px;
+    width: 100%;
+    text-align: center;
+    position: relative;
+  }
+  .question-card-popup .card-label {
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+  }
+  .question-card-popup .card-text {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  .card-close-hint {
+    margin-top: 20px;
+    font-size: 12px;
+    color: var(--subtext);
+  }
+  .card-timer-bar {
+    position: absolute;
+    bottom: 0; left: 0;
+    height: 3px;
+    background: var(--gold);
+    border-radius: 0 0 20px 20px;
+    width: 100%;
+    transform-origin: left;
+    transition: transform 5s linear;
+  }
+
+  /* ─── MATCHING RESULT OVERLAY ─── */
+  #matchingOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9500;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+    padding: 24px;
+  }
+  #matchingOverlay.show {
+    opacity: 1;
+    pointer-events: all;
+  }
+  .matching-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 40px 28px;
+    max-width: 340px;
+    width: 100%;
+    text-align: center;
+  }
+  .matching-emoji { font-size: 52px; margin-bottom: 16px; }
+  .matching-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+  .matching-sub {
+    font-size: 14px;
+    color: var(--subtext);
+    margin-bottom: 24px;
+  }
+  .insta-reveal-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--gold);
+    color: #0c0c0e;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 10px;
+  }
+  .insta-result-box {
+    background: var(--surface2);
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 14px;
+    color: var(--text);
+    margin-top: 10px;
+    display: none;
+  }
+
+  /* ─── SCROLL ─── */
+  .scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .scroll-area::-webkit-scrollbar { display: none; }
+
+  /* ─── CLOSED SCREEN ─── */
+  #screenClosed {
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    text-align: center;
+  }
+  .closed-icon { font-size: 48px; margin-bottom: 20px; }
+  .closed-title { font-size: 20px; font-weight: 700; margin-bottom: 10px; }
+  .closed-sub { font-size: 14px; color: var(--subtext); margin-bottom: 32px; line-height: 1.6; }
+  .btn-primary {
+    display: inline-block;
+    padding: 14px 28px;
+    background: var(--gold);
+    color: #0c0c0e;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  /* ─── WAITING SCREEN ─── */
+  #screenWaiting {
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    gap: 32px;
+  }
+  .waiting-msg { text-align: center; }
+  .waiting-msg h2 { font-size: 20px; font-weight: 700; margin-bottom: 10px; }
+  .waiting-msg p { font-size: 14px; color: var(--subtext); }
+  .dots-loader {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  .dots-loader span {
+    width: 10px; height: 10px;
+    background: var(--gold);
+    border-radius: 50%;
+    animation: dotPulse 1.2s infinite ease-in-out;
+  }
+  .dots-loader span:nth-child(2) { animation-delay: 0.2s; }
+  .dots-loader span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dotPulse {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+  .my-profile-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    width: 100%;
+    max-width: 320px;
+  }
+  .my-profile-card .card-title {
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+  }
+  .profile-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .profile-avatar {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: var(--gold-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .profile-name { font-size: 17px; font-weight: 700; }
+  .profile-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .tag {
+    background: var(--surface2);
+    border-radius: 20px;
+    padding: 5px 10px;
+    font-size: 12px;
+    color: var(--subtext);
+  }
+  .tag.gold { background: var(--gold-dim); color: var(--gold); }
+
+  /* ─── INTRO SCREEN ─── */
+  #screenIntro { display: flex; flex-direction: column; }
+  .carousel-wrapper {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    padding: 20px 0;
+  }
+  .carousel-track {
+    display: flex;
+    height: 100%;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+  }
+  .member-card {
+    flex-shrink: 0;
+    width: 100%;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .member-card-inner {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 32px 24px;
+    width: 100%;
+    max-width: 320px;
+    text-align: center;
+  }
+  .member-avatar {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: var(--gold-dim);
+    margin: 0 auto 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    border: 2px solid var(--gold-dim);
+  }
+  .member-name { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .member-meta { font-size: 13px; color: var(--subtext); margin-bottom: 16px; }
+  .member-tags { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+  .carousel-indicators {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 0 20px;
+    flex-shrink: 0;
+  }
+  .indicator {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--surface3);
+    transition: all 0.25s ease;
+  }
+  .indicator.active {
+    width: 18px;
+    border-radius: 3px;
+    background: var(--gold);
+  }
+
+  /* ─── EXPLORE SCREEN ─── */
+  #screenExplore {
+    display: flex;
+    flex-direction: column;
+  }
+  .question-area {
+    flex: 1;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+  }
+  .q-num {
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .q-text {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  .choices {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .choice-btn {
+    width: 100%;
+    padding: 18px 16px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--text);
+    font-size: 15px;
+    font-family: inherit;
+    position: relative;
+    overflow: hidden;
+  }
+  .choice-btn:active { transform: scale(0.98); }
+  .choice-btn.selected {
+    border-color: var(--gold);
+    background: var(--gold-dim);
+  }
+  .choice-btn.disabled { cursor: default; }
+  .choice-label {
+    display: inline-block;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--surface2);
+    text-align: center;
+    line-height: 24px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-right: 10px;
+    vertical-align: middle;
+    color: var(--gold);
+  }
+  .choice-btn.selected .choice-label {
+    background: var(--gold);
+    color: #0c0c0e;
+  }
+
+  /* vote result bars */
+  .vote-result-wrap {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .vote-result-wrap.show { display: flex; }
+  .vote-bar-row { display: flex; flex-direction: column; gap: 5px; }
+  .vote-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--subtext);
+  }
+  .vote-bar-track {
+    height: 8px;
+    background: var(--surface2);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .vote-bar-fill {
+    height: 100%;
+    background: var(--gold);
+    border-radius: 4px;
+    width: 0%;
+    transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .vote-bar-fill.b { background: var(--subtext); }
+
+  /* ─── FREE SCREEN ─── */
+  #screenFree { display: flex; flex-direction: column; }
+  .chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 16px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .chat-area::-webkit-scrollbar { display: none; }
+  .chat-bubble-wrap {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+  }
+  .chat-bubble-wrap.mine { flex-direction: row-reverse; }
+  .chat-bubble {
+    max-width: 70%;
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+  .chat-bubble.theirs {
+    background: var(--surface2);
+    color: var(--text);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-bubble.mine {
+    background: var(--gold);
+    color: #0c0c0e;
+    font-weight: 600;
+    border-bottom-right-radius: 4px;
+  }
+  .chat-time {
+    font-size: 10px;
+    color: var(--subtext);
+    margin-bottom: 2px;
+  }
+  .chat-input-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+    flex-shrink: 0;
+  }
+  .chat-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 22px;
+    padding: 10px 16px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input:focus { border-color: var(--gold); }
+  .chat-send-btn {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--gold);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 16px;
+    transition: opacity 0.2s;
+  }
+  .chat-send-btn:active { opacity: 0.7; }
+  .free-status-bar {
+    padding: 12px 16px;
+    background: var(--surface2);
+    font-size: 12px;
+    color: var(--subtext);
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  /* ─── CLOSING SCREEN ─── */
+  #screenClosing { display: flex; flex-direction: column; }
+  .closing-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 20px 24px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .closing-content::-webkit-scrollbar { display: none; }
+  .section-title {
+    font-size: 13px;
+    color: var(--gold);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .section-block { margin-bottom: 28px; }
+  .member-vote-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .member-vote-item:active { transform: scale(0.98); }
+  .member-vote-item.selected {
+    border-color: var(--gold);
+    background: var(--gold-dim);
+  }
+  .member-vote-item.done { cursor: default; }
+  .member-vote-name { font-size: 15px; font-weight: 600; }
+  .member-vote-meta { font-size: 12px; color: var(--subtext); margin-top: 2px; }
+  .vote-check {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .member-vote-item.selected .vote-check {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #0c0c0e;
+  }
+  .vote-done-msg {
+    text-align: center;
+    font-size: 13px;
+    color: var(--subtext);
+    padding: 8px;
+    display: none;
+  }
+  .vote-done-msg.show { display: block; }
+
+  /* ─── ERROR SCREEN ─── */
+  #screenError {
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    text-align: center;
+    gap: 16px;
+  }
+
+  /* ─── UTILS ─── */
+  .conn-status {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--subtext);
+    display: inline-block;
+    margin-left: 6px;
+    vertical-align: middle;
+    transition: background 0.3s;
+  }
+  .conn-status.connected { background: var(--success); }
+  .conn-status.reconnecting { background: #e8c97e; animation: blink 1s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  @media (min-width: 480px) {
+    body { display: flex; align-items: center; justify-content: center; }
+    body::before { content: ''; position: fixed; inset: 0; background: #080809; }
+    .screen, #nudgeBanner, #questionCardOverlay, #matchingOverlay {
+      max-width: 480px;
+      margin: auto;
+    }
+    #nudgeBanner { left: 50%; transform: translateX(-50%) translateY(-100%); right: auto; width: 100%; max-width: 480px; }
+    #nudgeBanner.show { transform: translateX(-50%) translateY(0); }
+    body > * { position: relative; z-index: 1; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Nudge Banner -->
+<div id="nudgeBanner">자리를 이동해볼까요 🔀</div>
+
+<!-- Question Card Overlay -->
+<div id="questionCardOverlay" onclick="closeQuestionCard()">
+  <div class="question-card-popup" onclick="event.stopPropagation()">
+    <div class="card-label">✨ 질문 카드</div>
+    <div class="card-text" id="questionCardText"></div>
+    <div class="card-close-hint">탭하면 닫힙니다</div>
+    <div class="card-timer-bar" id="cardTimerBar"></div>
+  </div>
+</div>
+
+<!-- Matching Result Overlay -->
+<div id="matchingOverlay">
+  <div class="matching-card">
+    <div class="matching-emoji" id="matchEmoji">🎉</div>
+    <div class="matching-title" id="matchTitle"></div>
+    <div class="matching-sub" id="matchSub"></div>
+    <button class="insta-reveal-btn" id="instaRevealBtn" onclick="revealInstagram()" style="display:none">
+      📸 인스타그램 공개하기
+    </button>
+    <div class="insta-result-box" id="instaResultBox"></div>
+  </div>
+</div>
+
+<!-- Error Screen -->
+<div class="screen active" id="screenError">
+  <div class="closed-icon">⚠️</div>
+  <div class="closed-title">로딩 중...</div>
+  <div class="closed-sub" id="errorMsg">잠시만 기다려주세요.</div>
+</div>
+
+<!-- Closed Screen -->
+<div class="screen" id="screenClosed">
+  <div class="closed-icon">🌙</div>
+  <div class="closed-title">이미 종료된 모임입니다</div>
+  <div class="closed-sub">모임이 종료되었어요.<br>새 모임을 만들어 보세요.</div>
+  <a href="/" class="btn-primary">새 모임 만들기</a>
+</div>
+
+<!-- Waiting Screen -->
+<div class="screen" id="screenWaiting">
+  <div class="waiting-msg">
+    <h2>호스트 승인을 기다리고 있어요 ☕</h2>
+    <p>잠시만 기다려주세요.<br>호스트가 확인 중이에요.</p>
+    <div class="dots-loader">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+  <div class="my-profile-card" id="myProfileCard">
+    <div class="card-title">내 프로필</div>
+    <div class="profile-row">
+      <div class="profile-avatar" id="myAvatar">👤</div>
+      <div>
+        <div class="profile-name" id="myName">—</div>
+        <div style="font-size:12px;color:var(--subtext)" id="myMeta">—</div>
+      </div>
+    </div>
+    <div class="profile-tags" id="myTags"></div>
+  </div>
+</div>
+
+<!-- Intro Screen -->
+<div class="screen" id="screenIntro">
+  <div class="top-bar">
+    <span class="logo">ntable</span>
+    <span class="tab-indicator">👋 소개</span>
+    <span class="room-tag" id="introRoomTag">—</span>
+  </div>
+  <div class="carousel-wrapper" id="carouselWrapper"
+       ontouchstart="touchStart(event)" ontouchend="touchEnd(event)"
+       onmousedown="mouseStart(event)" onmouseup="mouseEnd(event)">
+    <div class="carousel-track" id="carouselTrack"></div>
+  </div>
+  <div class="carousel-indicators" id="carouselIndicators"></div>
+</div>
+
+<!-- Explore Screen -->
+<div class="screen" id="screenExplore">
+  <div class="top-bar">
+    <span class="logo">ntable</span>
+    <span class="tab-indicator">🔍 탐구</span>
+    <span class="room-tag" id="exploreProgress">0 / 13</span>
+  </div>
+  <div class="question-area" id="questionArea">
+    <div class="q-num" id="qNum">Q1 / 13</div>
+    <div class="q-text" id="qText">질문 로딩 중...</div>
+    <div class="choices" id="choicesWrap"></div>
+    <div class="vote-result-wrap" id="voteResultWrap">
+      <div class="vote-bar-row">
+        <div class="vote-bar-label"><span id="vLabelA">A</span><span id="vPctA">0%</span></div>
+        <div class="vote-bar-track"><div class="vote-bar-fill" id="vBarA"></div></div>
+      </div>
+      <div class="vote-bar-row">
+        <div class="vote-bar-label"><span id="vLabelB">B</span><span id="vPctB">0%</span></div>
+        <div class="vote-bar-track"><div class="vote-bar-fill b" id="vBarB"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Free Screen -->
+<div class="screen" id="screenFree">
+  <div class="top-bar">
+    <span class="logo">ntable</span>
+    <span class="tab-indicator">💬 자유대화</span>
+    <span class="conn-status" id="connDot"></span>
+  </div>
+  <div class="free-status-bar">익명 채팅 — 상대방에게는 닉네임이 표시되지 않아요</div>
+  <div class="chat-area" id="chatArea"></div>
+  <div class="chat-input-bar">
+    <input class="chat-input" id="chatInput" type="text" placeholder="메시지 입력..." maxlength="200"
+           onkeydown="if(event.key==='Enter') sendChat()">
+    <button class="chat-send-btn" onclick="sendChat()">↑</button>
+  </div>
+</div>
+
+<!-- Closing Screen -->
+<div class="screen" id="screenClosing">
+  <div class="top-bar">
+    <span class="logo">ntable</span>
+    <span class="tab-indicator">🏆 마무리</span>
+    <span class="room-tag" id="closingRoomTag">—</span>
+  </div>
+  <div class="closing-content">
+    <!-- MVP -->
+    <div class="section-block">
+      <div class="section-title">🏆 오늘의 MVP</div>
+      <div id="mvpList"></div>
+      <div class="vote-done-msg" id="mvpDoneMsg">투표 완료 ✓</div>
+    </div>
+    <!-- Match -->
+    <div class="section-block">
+      <div class="section-title">💘 사랑의 작대기</div>
+      <div id="matchList"></div>
+      <div class="vote-done-msg" id="matchDoneMsg">선택 완료 ✓</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ──────────────────────────────────────────────────────────────────
+const STATE = {
+  uuid: null,
+  roomCode: null,
+  currentState: 'loading', // loading | closed | waiting | intro | explore | free | closing | result
+  ws: null,
+  wsRetries: 0,
+  MAX_RETRIES: 5,
+  pingInterval: null,
+  questions: [],
+  votedQuestions: new Set(),
+  currentQIndex: 0,
+  members: [],
+  myProfile: null,
+  carouselIndex: 0,
+  touchStartX: 0,
+  mouseStartX: 0,
+  mvpVoted: false,
+  matchVoted: false,
+  matchResult: null,
+  instaRevealed: false,
+};
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+(async function init() {
+  // Extract room code from URL: /room/:code
+  const pathMatch = location.pathname.match(/\/room\/([^/]+)/);
+  if (!pathMatch) {
+    showError('잘못된 접속 경로입니다.');
+    return;
+  }
+  STATE.roomCode = pathMatch[1];
+
+  // Check UUID
+  STATE.uuid = localStorage.getItem('demo_uuid');
+  if (!STATE.uuid) {
+    location.href = `/?next=/room/${STATE.roomCode}`;
+    return;
+  }
+
+  // Check room status
+  try {
+    const res = await fetch(`/api/rooms/${STATE.roomCode}`);
+    if (!res.ok) { showError('방 정보를 불러올 수 없어요.'); return; }
+    const room = await res.json();
+
+    if (room.status === 'closed') {
+      switchScreen('closed'); return;
+    }
+
+    // Load my profile
+    const meRes = await fetch(`/api/me?uuid=${STATE.uuid}`);
+    if (meRes.ok) {
+      STATE.myProfile = await meRes.json();
+      renderMyProfile();
+    }
+
+    // Update room tag
+    document.querySelectorAll('.room-tag').forEach(el => el.textContent = room.title || STATE.roomCode);
+
+    switchScreen('waiting');
+    connectWS();
+  } catch (e) {
+    showError('서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.');
+  }
+})();
+
+// ─── SCREEN MANAGEMENT ───────────────────────────────────────────────────────
+function switchScreen(state) {
+  STATE.currentState = state;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const map = {
+    loading: 'screenError',
+    closed: 'screenClosed',
+    waiting: 'screenWaiting',
+    intro: 'screenIntro',
+    explore: 'screenExplore',
+    free: 'screenFree',
+    closing: 'screenClosing',
+    error: 'screenError',
+  };
+  const id = map[state];
+  if (id) document.getElementById(id)?.classList.add('active');
+}
+
+function showError(msg) {
+  document.getElementById('errorMsg').textContent = msg;
+  switchScreen('error');
+}
+
+// ─── WEBSOCKET ───────────────────────────────────────────────────────────────
+function connectWS() {
+  const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  const proto = isLocal ? 'ws' : 'wss';
+  const host = location.host;
+  const url = `${proto}://${host}/ws/${STATE.roomCode}/${STATE.uuid}`;
+
+  STATE.ws = new WebSocket(url);
+
+  STATE.ws.onopen = () => {
+    STATE.wsRetries = 0;
+    updateConnDot('connected');
+    startPing();
+  };
+
+  STATE.ws.onclose = () => {
+    updateConnDot('reconnecting');
+    stopPing();
+    if (STATE.wsRetries < STATE.MAX_RETRIES) {
+      STATE.wsRetries++;
+      setTimeout(connectWS, 3000);
+    }
+  };
+
+  STATE.ws.onerror = () => { STATE.ws.close(); };
+
+  STATE.ws.onmessage = (e) => {
+    try { handleWSMessage(JSON.parse(e.data)); } catch(_) {}
+  };
+}
+
+function startPing() {
+  stopPing();
+  STATE.pingInterval = setInterval(() => {
+    if (STATE.ws?.readyState === WebSocket.OPEN) {
+      STATE.ws.send(JSON.stringify({ type: 'ping' }));
+    }
+  }, 30000);
+}
+
+function stopPing() {
+  if (STATE.pingInterval) { clearInterval(STATE.pingInterval); STATE.pingInterval = null; }
+}
+
+function updateConnDot(status) {
+  const dot = document.getElementById('connDot');
+  if (!dot) return;
+  dot.className = 'conn-status ' + (status === 'connected' ? 'connected' : 'reconnecting');
+}
+
+// ─── WS MESSAGE HANDLER ───────────────────────────────────────────────────────
+async function handleWSMessage(msg) {
+  switch (msg.type) {
+    case 'approved':
+      if (msg.uuid === STATE.uuid) {
+        await loadIntroData();
+        switchScreen('intro');
+      }
+      break;
+
+    case 'state_update': {
+      const { current_tab, question_index } = msg.state || {};
+      if (current_tab === 'intro') {
+        await loadIntroData();
+        switchScreen('intro');
+      } else if (current_tab === 'explore') {
+        if (question_index !== undefined) STATE.currentQIndex = question_index;
+        await loadExploreData();
+        switchScreen('explore');
+        renderQuestion();
+      } else if (current_tab === 'free') {
+        switchScreen('free');
+      } else if (current_tab === 'closing') {
+        await loadClosingData();
+        switchScreen('closing');
+      }
+      break;
+    }
+
+    case 'vote_result':
+      renderVoteResult(msg.question_id, msg.counts);
+      break;
+
+    case 'nudge':
+      showNudge(msg.message || '자리를 이동해볼까요 🔀');
+      break;
+
+    case 'question_card':
+      showQuestionCard(msg.text);
+      break;
+
+    case 'chat':
+      appendChat(msg.message, msg.uuid === STATE.uuid ? 'mine' : 'theirs');
+      break;
+
+    case 'matching_result':
+      STATE.matchResult = msg.match_json;
+      showMatchingResult(msg.match_json);
+      break;
+
+    case 'room_closed':
+      location.href = `/survey?room=${STATE.roomCode}`;
+      break;
+  }
+}
+
+// ─── MY PROFILE ──────────────────────────────────────────────────────────────
+function renderMyProfile() {
+  const p = STATE.myProfile;
+  if (!p) return;
+  const avatarEmoji = p.gender === 'M' ? '👨' : p.gender === 'F' ? '👩' : '👤';
+  document.getElementById('myAvatar').textContent = avatarEmoji;
+  document.getElementById('myName').textContent = p.nickname || '—';
+  const age = p.birth_year ? `${2025 - p.birth_year}세` : '';
+  document.getElementById('myMeta').textContent = [age, p.mbti].filter(Boolean).join(' · ');
+  const tagsEl = document.getElementById('myTags');
+  tagsEl.innerHTML = '';
+  if (p.interest) tagsEl.innerHTML += `<span class="tag gold">${p.interest}</span>`;
+  if (p.mbti) tagsEl.innerHTML += `<span class="tag">${p.mbti}</span>`;
+}
+
+// ─── INTRO ───────────────────────────────────────────────────────────────────
+async function loadIntroData() {
+  try {
+    const res = await fetch(`/api/rooms/${STATE.roomCode}/members`);
+    if (!res.ok) return;
+    STATE.members = await res.json();
+    renderCarousel();
+  } catch(_) {}
+}
+
+function renderCarousel() {
+  const track = document.getElementById('carouselTrack');
+  const indicators = document.getElementById('carouselIndicators');
+  track.innerHTML = '';
+  indicators.innerHTML = '';
+
+  STATE.members.forEach((m, i) => {
+    const age = m.birth_year ? `${2025 - m.birth_year}세` : '';
+    const genderText = m.gender === 'M' ? '남성' : m.gender === 'F' ? '여성' : '';
+    const avatarEmoji = m.gender === 'M' ? '👨' : m.gender === 'F' ? '👩' : '👤';
+    const isMe = m.uuid === STATE.uuid;
+
+    const card = document.createElement('div');
+    card.className = 'member-card';
+    card.innerHTML = `
+      <div class="member-card-inner">
+        <div class="member-avatar">${avatarEmoji}</div>
+        <div class="member-name">${m.nickname}${isMe ? ' <span style="font-size:12px;color:var(--gold)">나</span>' : ''}</div>
+        <div class="member-meta">${[genderText, age].filter(Boolean).join(' · ')}</div>
+        <div class="member-tags">
+          ${m.mbti ? `<span class="tag gold">${m.mbti}</span>` : ''}
+          ${m.interest ? `<span class="tag">${m.interest}</span>` : ''}
+        </div>
+      </div>`;
+    track.appendChild(card);
+
+    const dot = document.createElement('div');
+    dot.className = 'indicator' + (i === 0 ? ' active' : '');
+    indicators.appendChild(dot);
+  });
+
+  STATE.carouselIndex = 0;
+  updateCarousel();
+}
+
+function updateCarousel() {
+  const track = document.getElementById('carouselTrack');
+  track.style.transform = `translateX(${-STATE.carouselIndex * 100}%)`;
+  document.querySelectorAll('.indicator').forEach((d, i) => {
+    d.classList.toggle('active', i === STATE.carouselIndex);
+  });
+}
+
+// Touch / Mouse swipe
+let _tsX = 0, _teX = 0;
+function touchStart(e) { _tsX = e.touches[0].clientX; }
+function touchEnd(e) {
+  _teX = e.changedTouches[0].clientX;
+  const diff = _tsX - _teX;
+  if (Math.abs(diff) > 40) {
+    if (diff > 0 && STATE.carouselIndex < STATE.members.length - 1) STATE.carouselIndex++;
+    else if (diff < 0 && STATE.carouselIndex > 0) STATE.carouselIndex--;
+    updateCarousel();
+  }
+}
+function mouseStart(e) { _tsX = e.clientX; }
+function mouseEnd(e) {
+  _teX = e.clientX;
+  const diff = _tsX - _teX;
+  if (Math.abs(diff) > 40) {
+    if (diff > 0 && STATE.carouselIndex < STATE.members.length - 1) STATE.carouselIndex++;
+    else if (diff < 0 && STATE.carouselIndex > 0) STATE.carouselIndex--;
+    updateCarousel();
+  }
+}
+
+// ─── EXPLORE ─────────────────────────────────────────────────────────────────
+async function loadExploreData() {
+  if (STATE.questions.length > 0) return;
+  try {
+    const res = await fetch(`/api/rooms/${STATE.roomCode}/questions`);
+    if (!res.ok) return;
+    STATE.questions = await res.json();
+  } catch(_) {}
+}
+
+function renderQuestion() {
+  const q = STATE.questions[STATE.currentQIndex];
+  if (!q) return;
+
+  const total = STATE.questions.length;
+  document.getElementById('qNum').textContent = `Q${STATE.currentQIndex + 1} / ${total}`;
+  document.getElementById('exploreProgress').textContent = `${STATE.currentQIndex + 1} / ${total}`;
+  document.getElementById('qText').textContent = q.question;
+
+  const wrap = document.getElementById('choicesWrap');
+  wrap.innerHTML = '';
+  const voted = STATE.votedQuestions.has(q.id);
+
+  (q.options || []).forEach((opt, idx) => {
+    const label = idx === 0 ? 'A' : 'B';
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn' + (voted ? ' disabled' : '');
+    btn.innerHTML = `<span class="choice-label">${label}</span>${opt.replace(/^[AB]\.\s*/, '')}`;
+    if (!voted) {
+      btn.onclick = () => submitVote(q.id, label, q);
+    }
+    wrap.appendChild(btn);
+  });
+
+  // Reset result bars
+  document.getElementById('voteResultWrap').classList.remove('show');
+  document.getElementById('vBarA').style.width = '0%';
+  document.getElementById('vBarB').style.width = '0%';
+}
+
+async function submitVote(questionId, answer, q) {
+  if (STATE.votedQuestions.has(questionId)) return;
+  STATE.votedQuestions.add(questionId);
+
+  // Highlight selected
+  const btns = document.querySelectorAll('#choicesWrap .choice-btn');
+  const idx = answer === 'A' ? 0 : 1;
+  btns.forEach((b, i) => {
+    b.classList.add('disabled');
+    if (i === idx) b.classList.add('selected');
+  });
+
+  try {
+    await fetch(`/api/rooms/${STATE.roomCode}/vote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uuid: STATE.uuid, question_id: questionId, answer }),
+    });
+  } catch(_) {}
+}
+
+function renderVoteResult(questionId, counts) {
+  // Update to current question if matches
+  const currentQ = STATE.questions[STATE.currentQIndex];
+  if (currentQ && currentQ.id !== questionId) return;
+
+  const total = (counts.A || 0) + (counts.B || 0);
+  const pctA = total ? Math.round(counts.A * 100 / total) : 0;
+  const pctB = total ? Math.round(counts.B * 100 / total) : 0;
+
+  document.getElementById('vPctA').textContent = `${pctA}%`;
+  document.getElementById('vPctB').textContent = `${pctB}%`;
+  document.getElementById('vLabelA').textContent = `A (${counts.A || 0}명)`;
+  document.getElementById('vLabelB').textContent = `B (${counts.B || 0}명)`;
+
+  const wrap = document.getElementById('voteResultWrap');
+  wrap.classList.add('show');
+  setTimeout(() => {
+    document.getElementById('vBarA').style.width = pctA + '%';
+    document.getElementById('vBarB').style.width = pctB + '%';
+  }, 50);
+}
+
+// ─── FREE (CHAT) ──────────────────────────────────────────────────────────────
+function sendChat() {
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if (!msg || !STATE.ws || STATE.ws.readyState !== WebSocket.OPEN) return;
+  STATE.ws.send(JSON.stringify({ type: 'chat', message: msg }));
+  input.value = '';
+}
+
+function appendChat(message, side) {
+  const area = document.getElementById('chatArea');
+  const wrap = document.createElement('div');
+  wrap.className = `chat-bubble-wrap ${side}`;
+
+  const now = new Date();
+  const time = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+
+  wrap.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:${side==='mine'?'flex-end':'flex-start'};gap:3px">
+      <div class="chat-time">${time}</div>
+      <div class="chat-bubble ${side}">${escHtml(message)}</div>
+    </div>`;
+  area.appendChild(wrap);
+  area.scrollTop = area.scrollHeight;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── NUDGE ────────────────────────────────────────────────────────────────────
+let nudgeTimer = null;
+function showNudge(msg) {
+  const banner = document.getElementById('nudgeBanner');
+  banner.textContent = msg;
+  banner.classList.add('show');
+  if (nudgeTimer) clearTimeout(nudgeTimer);
+  nudgeTimer = setTimeout(() => banner.classList.remove('show'), 3000);
+}
+
+// ─── QUESTION CARD POPUP ──────────────────────────────────────────────────────
+let qCardTimer = null;
+function showQuestionCard(text) {
+  document.getElementById('questionCardText').textContent = text;
+  const overlay = document.getElementById('questionCardOverlay');
+  overlay.classList.add('show');
+
+  const bar = document.getElementById('cardTimerBar');
+  bar.style.transition = 'none';
+  bar.style.transform = 'scaleX(1)';
+  setTimeout(() => {
+    bar.style.transition = 'transform 5s linear';
+    bar.style.transform = 'scaleX(0)';
+  }, 50);
+
+  if (qCardTimer) clearTimeout(qCardTimer);
+  qCardTimer = setTimeout(closeQuestionCard, 5000);
+}
+
+function closeQuestionCard() {
+  document.getElementById('questionCardOverlay').classList.remove('show');
+  if (qCardTimer) { clearTimeout(qCardTimer); qCardTimer = null; }
+}
+
+// ─── CLOSING ─────────────────────────────────────────────────────────────────
+async function loadClosingData() {
+  if (STATE.members.length === 0) {
+    try {
+      const res = await fetch(`/api/rooms/${STATE.roomCode}/members`);
+      if (res.ok) STATE.members = await res.json();
+    } catch(_) {}
+  }
+
+  document.getElementById('closingRoomTag').textContent = STATE.roomCode;
+  renderVoteList('mvpList', 'mvp');
+  renderVoteList('matchList', 'match');
+}
+
+function renderVoteList(containerId, type) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+
+  STATE.members
+    .filter(m => m.uuid !== STATE.uuid)
+    .forEach(m => {
+      const age = m.birth_year ? `${2025 - m.birth_year}세` : '';
+      const item = document.createElement('div');
+      item.className = 'member-vote-item';
+      item.dataset.uuid = m.uuid;
+      item.innerHTML = `
+        <div>
+          <div class="member-vote-name">${m.nickname}</div>
+          <div class="member-vote-meta">${[age, m.mbti].filter(Boolean).join(' · ')}</div>
+        </div>
+        <div class="vote-check">○</div>`;
+      item.onclick = () => selectVote(item, type, m.uuid);
+      container.appendChild(item);
+    });
+}
+
+function selectVote(el, type, targetUuid) {
+  const isDone = type === 'mvp' ? STATE.mvpVoted : STATE.matchVoted;
+  if (isDone) return;
+
+  // Highlight
+  el.closest('div').querySelectorAll('.member-vote-item').forEach(i => {
+    i.classList.remove('selected');
+    i.querySelector('.vote-check').textContent = '○';
+  });
+  el.classList.add('selected');
+  el.querySelector('.vote-check').textContent = '✓';
+
+  // Submit
+  const endpoint = type === 'mvp' ? 'vote/mvp' : 'vote/match';
+  fetch(`/api/rooms/${STATE.roomCode}/${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uuid: STATE.uuid, target_uuid: targetUuid }),
+  }).catch(() => {});
+
+  // Disable
+  if (type === 'mvp') {
+    STATE.mvpVoted = true;
+    el.closest('div').querySelectorAll('.member-vote-item').forEach(i => i.classList.add('done'));
+    document.getElementById('mvpDoneMsg').classList.add('show');
+  } else {
+    STATE.matchVoted = true;
+    el.closest('div').querySelectorAll('.member-vote-item').forEach(i => i.classList.add('done'));
+    document.getElementById('matchDoneMsg').classList.add('show');
+  }
+}
+
+// ─── MATCHING RESULT ─────────────────────────────────────────────────────────
+function showMatchingResult(matchJson) {
+  let matched = null;
+  if (matchJson && matchJson[STATE.uuid]) {
+    matched = matchJson[STATE.uuid];
+  }
+
+  const overlay = document.getElementById('matchingOverlay');
+  const emoji = document.getElementById('matchEmoji');
+  const title = document.getElementById('matchTitle');
+  const sub = document.getElementById('matchSub');
+  const instaBtn = document.getElementById('instaRevealBtn');
+
+  if (matched) {
+    const matchedMember = STATE.members.find(m => m.uuid === matched.uuid);
+    const name = matchedMember ? matchedMember.nickname : '상대방';
+    emoji.textContent = '🎉';
+    title.textContent = `${name}님과 매칭됐어요!`;
+    sub.textContent = '서로 관심 있다는 신호를 보냈어요 ✨';
+    instaBtn.style.display = 'block';
+  } else {
+    emoji.textContent = '🌙';
+    title.textContent = '오늘은 인연이 없었어요';
+    sub.textContent = '다음 모임에서 다시 만나요 :)';
+    instaBtn.style.display = 'none';
+  }
+
+  overlay.classList.add('show');
+}
+
+async function revealInstagram() {
+  if (STATE.instaRevealed) return;
+  STATE.instaRevealed = true;
+
+  const btn = document.getElementById('instaRevealBtn');
+  btn.textContent = '⏳ 확인 중...';
+  btn.style.opacity = '0.7';
+
+  // Get match partner
+  const matched = STATE.matchResult?.[STATE.uuid];
+  if (!matched) return;
+  const matchedUuid = matched.uuid || matched;
+
+  // Check if partner revealed too
+  // The match_json structure should show mutual match info
+  const partnerInsta = STATE.members.find(m => m.uuid === matchedUuid)?.instagram;
+  const partnerRevealed = STATE.matchResult?.[matchedUuid]?.instagram_revealed;
+
+  const resultBox = document.getElementById('instaResultBox');
+  resultBox.style.display = 'block';
+
+  if (partnerRevealed && partnerInsta) {
+    resultBox.innerHTML = `📸 <strong>@${partnerInsta}</strong>`;
+    btn.style.display = 'none';
+  } else {
+    resultBox.textContent = '상대방이 아직 공개하지 않았어요';
+    btn.textContent = '📸 인스타그램 공개됨';
+    btn.style.opacity = '0.5';
+  }
+}
+</script>
+</body>
+</html>
