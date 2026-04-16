@@ -73,19 +73,16 @@ async function initDB() {
       )
     `);
 
-    await client.query(`
-      DO $
-      BEGIN
-        IF NOT EXISTS (
-          SELECT 1 FROM pg_constraint
-          WHERE conname = 'member_results_uuid_room_id_key'
-        ) THEN
-          ALTER TABLE member_results
-          ADD CONSTRAINT member_results_uuid_room_id_key
-          UNIQUE (uuid, room_id);
-        END IF;
-      END $;
-    `);
+    // UNIQUE 제약 추가 - 이미 존재하면 에러 무시
+    try {
+      await client.query(`
+        ALTER TABLE member_results
+        ADD CONSTRAINT member_results_uuid_room_id_key
+        UNIQUE (uuid, room_id)
+      `);
+    } catch (e) {
+      if (e.code !== '42P07') throw e; // 42P07 = duplicate_table (제약 이미 존재)
+    }
 
 
     console.log('[DB] All tables initialized');
