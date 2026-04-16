@@ -73,6 +73,12 @@ async function initDB() {
       )
     `);
 
+    await client.query(`
+      ALTER TABLE member_results
+      ADD CONSTRAINT IF NOT EXISTS member_results_uuid_room_id_key
+      UNIQUE (uuid, room_id)
+    `);
+
     console.log('[DB] All tables initialized');
   } catch (err) {
     console.error('[DB] initDB error:', err);

@@ -43,12 +43,43 @@ router.get('/result', async (req, res) => {
     const match_json = mr.match_json || {};
     const fi_count = mr.fi_count || 0;
 
-    // 베스트 매칭 상대 닉네임
+    // 베스트 매칭 상대 찾기 — match_json.pairs에서 내 uuid 기준 상대 탐색
+    // 구조: { pairs: [{ type, a: {uuid, nickname}, b: {uuid, nickname} }], mvp: {...} }
+    // mutual 우선, 없으면 recommended
     let match_nickname = null;
-    const match_uuid = match_json.matched_uuid || null;
-    if (match_uuid) {
-      const userRes = await pool.query('SELECT nickname FROM users WHERE uuid = $1', [match_uuid]);
-      match_nickname = userRes.rows[0]?.nickname || null;
+    let match_uuid = null;
+    const pairs = match_json.pairs || [];
+
+    // 1순위: mutual 매칭
+    for (const pair of pairs) {
+      if (pair.type === 'mutual') {
+        if (pair.a?.uuid === uuid) {
+          match_nickname = pair.b?.nickname || null;
+          match_uuid = pair.b?.uuid || null;
+          break;
+        } else if (pair.b?.uuid === uuid) {
+          match_nickname = pair.a?.nickname || null;
+          match_uuid = pair.a?.uuid || null;
+          break;
+        }
+      }
+    }
+
+    // 2순위: recommended (mutual 없을 때)
+    if (!match_uuid) {
+      for (const pair of pairs) {
+        if (pair.type === 'recommended') {
+          if (pair.a?.uuid === uuid) {
+            match_nickname = pair.b?.nickname || null;
+            match_uuid = pair.b?.uuid || null;
+            break;
+          } else if (pair.b?.uuid === uuid) {
+            match_nickname = pair.a?.nickname || null;
+            match_uuid = pair.a?.uuid || null;
+            break;
+          }
+        }
+      }
     }
 
     // 참가자 수
@@ -76,7 +107,7 @@ router.get('/result', async (req, res) => {
       return { question_id: qid, top_answer: top[0], count: top[1] };
     });
 
-    res.json({ match_nickname, fi_count, participants, question_highlights });
+    res.json({ match_nickname, match_uuid, fi_count, participants, question_highlights });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'db error' });
