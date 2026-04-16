@@ -74,10 +74,19 @@ async function initDB() {
     `);
 
     await client.query(`
-      ALTER TABLE member_results
-      ADD CONSTRAINT IF NOT EXISTS member_results_uuid_room_id_key
-      UNIQUE (uuid, room_id)
+      DO $
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint
+          WHERE conname = 'member_results_uuid_room_id_key'
+        ) THEN
+          ALTER TABLE member_results
+          ADD CONSTRAINT member_results_uuid_room_id_key
+          UNIQUE (uuid, room_id);
+        END IF;
+      END $;
     `);
+
 
     console.log('[DB] All tables initialized');
   } catch (err) {

@@ -62,7 +62,7 @@ const server = http.createServer(app);
 wsRouter.init(server);
 adminRouter.init(require('./db').pool, wsRouter);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 // Init DB then start server
 initDB()
