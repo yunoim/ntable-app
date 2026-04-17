@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../db');
+const { isUserActive } = require('./ws');
 
 // POST /api/login
 router.post('/login', async (req, res) => {
@@ -38,6 +39,10 @@ router.post('/login', async (req, res) => {
     );
     if (existing.rows.length > 0) {
       const profile = existing.rows[0];
+      // 기존 유저가 현재 어디서든 WS 접속 중이고, 요청한 uuid가 본인과 다르면 탈취 시도 차단
+      if (isUserActive(profile.uuid) && uuid !== profile.uuid) {
+        return res.status(409).json({ error: 'NICKNAME_IN_USE' });
+      }
       return res.json({ uuid: profile.uuid, is_new: false, profile });
     }
 
@@ -111,7 +116,9 @@ router.get('/check-nickname', async (req, res) => {
       [nickname.trim()]
     );
     const exists = result.rows.length > 0;
-    return res.json({ available: !exists, exists });
+    const existingUuid = exists ? result.rows[0].uuid : null;
+    const active = exists ? isUserActive(existingUuid) : false;
+    return res.json({ available: !exists, exists, active, uuid: existingUuid });
   } catch (err) {
     console.error('[auth] /check-nickname error:', err);
     return res.status(500).json({ error: 'INTERNAL_ERROR' });

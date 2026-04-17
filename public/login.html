@@ -454,13 +454,31 @@
     const nicknameInput = document.getElementById('nickname-input');
     const nicknameStatus = document.getElementById('nickname-status');
     const loginBtn = document.getElementById('login-btn');
+    let nicknameActive = false;
+    let isComposing = false;
 
     function updateLoginBtnLabel() {
-      loginBtn.textContent = nicknameExists ? '🎤 로그인 후 모임 열기' : '🎤 모임 열기 (호스트)';
+      if (nicknameActive) {
+        loginBtn.textContent = '⛔ 이미 접속 중인 닉네임';
+      } else {
+        loginBtn.textContent = nicknameExists ? '🎤 로그인 후 모임 열기' : '🎤 모임 열기 (호스트)';
+      }
       updateJoinBtn();
     }
 
-    nicknameInput.addEventListener('input', () => {
+    nicknameInput.addEventListener('compositionstart', () => { isComposing = true; });
+    nicknameInput.addEventListener('compositionend', () => {
+      isComposing = false;
+      handleNicknameChange();
+    });
+
+    nicknameInput.addEventListener('input', (e) => {
+      // IME 조합 중(한글 타이핑) 필터링하면 자모가 지워져 조합이 깨짐
+      if (isComposing || e.isComposing) return;
+      handleNicknameChange();
+    });
+
+    function handleNicknameChange() {
       nicknameInput.value = nicknameInput.value.replace(/[^가-힣a-zA-Z0-9]/g, '');
       clearTimeout(nicknameTimer);
       const val = nicknameInput.value.trim();
@@ -469,6 +487,7 @@
       loginBtn.disabled = true;
       nicknameAvailable = false;
       nicknameExists = false;
+      nicknameActive = false;
       updateLoginBtnLabel();
 
       if (val.length < 1) return;
@@ -482,20 +501,41 @@
             nicknameStatus.className = 'nickname-status ok';
             nicknameAvailable = true;
             nicknameExists = false;
+            nicknameActive = false;
+            loginBtn.disabled = false;
+          } else if (data.active) {
+            // 동일 닉네임이 이미 접속 중 — 본인 localStorage uuid가 일치하면 서버가 허용, 아니면 차단
+            const storedUuid = localStorage.getItem('demo_uuid');
+            if (storedUuid && storedUuid === data.uuid) {
+              nicknameStatus.textContent = 'ℹ️ 본인 계정으로 이어서 접속합니다.';
+              nicknameStatus.className = 'nickname-status info';
+              nicknameAvailable = true;
+              nicknameExists = true;
+              nicknameActive = false;
+              loginBtn.disabled = false;
+            } else {
+              nicknameStatus.textContent = '⛔ 같은 닉네임으로 이미 접속 중이에요. 다른 닉네임을 써주세요.';
+              nicknameStatus.className = 'nickname-status err';
+              nicknameAvailable = false;
+              nicknameExists = true;
+              nicknameActive = true;
+              loginBtn.disabled = true;
+            }
           } else {
             nicknameStatus.textContent = 'ℹ️ 기존 계정이 있어요. 본인이면 로그인합니다.';
             nicknameStatus.className = 'nickname-status info';
             nicknameAvailable = true;
             nicknameExists = true;
+            nicknameActive = false;
+            loginBtn.disabled = false;
           }
-          loginBtn.disabled = false;
           updateLoginBtnLabel();
         } catch {
           nicknameStatus.textContent = '확인 중 오류가 발생했어요';
           nicknameStatus.className = 'nickname-status err';
         }
       }, 300);
-    });
+    }
 
     // ─── 게스트: 방 코드 참여 ───
     const roomCodeInput = document.getElementById('room-code-input');
@@ -540,12 +580,22 @@
       loginBtn.disabled = true;
       loginBtn.textContent = '처리 중...';
       try {
+        const storedUuid = localStorage.getItem('demo_uuid');
         const res = await fetch(`${API}/api/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nickname }),
+          body: JSON.stringify({ nickname, uuid: storedUuid || undefined }),
         });
         const data = await res.json();
+        if (res.status === 409 && data.error === 'NICKNAME_IN_USE') {
+          nicknameStatus.textContent = '⛔ 같은 닉네임으로 이미 접속 중이에요.';
+          nicknameStatus.className = 'nickname-status err';
+          nicknameActive = true;
+          nicknameAvailable = false;
+          loginBtn.disabled = true;
+          updateLoginBtnLabel();
+          return;
+        }
         if (!res.ok) throw new Error(data.error || 'login failed');
 
         currentUuid = data.uuid;

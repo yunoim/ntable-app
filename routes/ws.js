@@ -32,6 +32,15 @@ function getRoomClients(room_code) {
   return [...room.clients.keys()];
 }
 
+// 지정 uuid가 현재 어떤 방에든 WS OPEN 상태로 접속 중인지
+function isUserActive(uuid) {
+  for (const code in rooms) {
+    const ws = rooms[code].clients.get(uuid);
+    if (ws && ws.readyState === ws.OPEN) return true;
+  }
+  return false;
+}
+
 function init(server) {
   const wss = new WebSocketServer({ server, path: undefined });
 
@@ -65,6 +74,12 @@ function init(server) {
       }
 
       const nickname = userResult.rows[0].nickname;
+
+      // 같은 uuid가 이미 어느 방에든 접속 중이면 신규 연결 거절 (기존 세션 보호)
+      if (isUserActive(uuid)) {
+        ws.close(4003, 'Already connected elsewhere');
+        return;
+      }
 
       // 방 초기화
       if (!rooms[room_code]) {
@@ -120,4 +135,4 @@ function init(server) {
   console.log('WebSocket server initialized');
 }
 
-module.exports = { init, broadcastToRoom, getRoomClients };
+module.exports = { init, broadcastToRoom, getRoomClients, isUserActive };
