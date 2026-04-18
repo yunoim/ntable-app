@@ -2501,9 +2501,13 @@ async function closeRoom() {
 }
 
 function logout() {
-  if (!confirm('로그아웃할까요? 진행 중인 모임은 그대로 유지돼요.')) return;
+  if (!confirm('로그아웃할까요? 진행 중인 모임은 유지되지만 저장된 닉네임/프로필은 모두 지워집니다.')) return;
   try { if (state.ws) state.ws.close(); } catch {}
-  localStorage.removeItem('demo_uuid');
+  try {
+    localStorage.removeItem('demo_uuid');
+    localStorage.removeItem('preferred_nickname');
+    localStorage.removeItem('profile_snapshot');
+  } catch (_) {}
   location.href = '/';
 }
 

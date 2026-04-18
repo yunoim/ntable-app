@@ -164,17 +164,28 @@ router.delete('/panel/rooms/:code', requireAdmin, async (req, res) => {
 });
 
 // GET /api/panel/users?limit=
+// 익명 구조 — 빈 users (방 한번도 안 만든·참여 안 한 uuid)는 자동 숨김
+// 닉네임은 room_members 의 가장 최근 닉을 사용 (방별 닉이라 없을 수 있음)
 router.get('/panel/users', requireAdmin, async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit || '200', 10) || 200, 1000);
   const search = (req.query.q || '').trim();
   try {
     let sql = `
-      SELECT u.*,
+      SELECT u.uuid, u.created_at,
+             COALESCE(u.nickname,
+                      (SELECT rm.nickname FROM room_members rm WHERE rm.uuid = u.uuid ORDER BY rm.joined_at DESC LIMIT 1)) AS nickname,
+             u.gender, u.birth_year, u.region, u.industry, u.mbti, u.interest, u.instagram,
              (SELECT COUNT(*)::int FROM rooms r WHERE r.host_uuid = u.uuid) AS hosted_rooms,
-             (SELECT COUNT(*)::int FROM member_results mr WHERE mr.uuid = u.uuid) AS participations
-        FROM users u`;
+             (SELECT COUNT(*)::int FROM room_members rm2 WHERE rm2.uuid = u.uuid) AS participations
+        FROM users u
+       WHERE EXISTS (SELECT 1 FROM rooms r WHERE r.host_uuid = u.uuid)
+          OR EXISTS (SELECT 1 FROM room_members rm3 WHERE rm3.uuid = u.uuid)
+    `;
     const args = [];
-    if (search) { sql += ` WHERE u.nickname ILIKE $1`; args.push(`%${search}%`); }
+    if (search) {
+      sql += ` AND (u.nickname ILIKE $1 OR EXISTS(SELECT 1 FROM room_members rm4 WHERE rm4.uuid = u.uuid AND rm4.nickname ILIKE $1))`;
+      args.push(`%${search}%`);
+    }
     sql += ` ORDER BY u.created_at DESC LIMIT ${limit}`;
     const { rows } = await pool.query(sql, args);
     res.json(rows);
@@ -193,8 +204,9 @@ router.delete('/panel/users/:uuid', requireAdmin, async (req, res) => {
     // 해당 유저의 흔적 정리
     await client.query('DELETE FROM member_results WHERE uuid = $1', [uuid]);
     await client.query('DELETE FROM survey_responses WHERE uuid = $1', [uuid]);
-    // 호스트로 등록된 방도 닫기 (삭제 대신 안전)
-    await client.query("UPDATE rooms SET status = 'closed' WHERE host_uuid = $1 AND status != 'closed'", [uuid]);
+    await client.query('DELETE FROM room_members WHERE uuid = $1', [uuid]);
+    // 호스트로 등록된 방은 NULL 처리 (FK 위반 방지) + 닫기
+    await client.query("UPDATE rooms SET host_uuid = NULL, status = 'closed' WHERE host_uuid = $1", [uuid]);
     await client.query('DELETE FROM users WHERE uuid = $1', [uuid]);
     await client.query('COMMIT');
     res.json({ deleted: true });

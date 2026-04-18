@@ -2413,9 +2413,13 @@ function escHtml(s) {
 }
 
 function guestLogout() {
-  if (!confirm('이 방에서 나가고 로그아웃할까요?')) return;
+  if (!confirm('이 방에서 나가고 로그아웃할까요? 저장된 닉네임/프로필도 모두 지워집니다.')) return;
   try { if (STATE.ws) STATE.ws.close(); } catch (_) {}
-  try { localStorage.removeItem('demo_uuid'); } catch (_) {}
+  try {
+    localStorage.removeItem('demo_uuid');
+    localStorage.removeItem('preferred_nickname');
+    localStorage.removeItem('profile_snapshot');
+  } catch (_) {}
   location.href = '/';
 }
 

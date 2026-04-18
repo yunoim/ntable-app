@@ -856,8 +856,12 @@
     }
 
     function logout() {
-      if (!confirm('로그아웃할까요?')) return;
-      localStorage.removeItem('demo_uuid');
+      if (!confirm('로그아웃할까요? 저장된 닉네임/프로필도 모두 지워집니다.')) return;
+      try {
+        localStorage.removeItem('demo_uuid');
+        localStorage.removeItem('preferred_nickname');
+        localStorage.removeItem('profile_snapshot');
+      } catch (_) {}
       window.location.href = '/';
     }
 
