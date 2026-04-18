@@ -130,9 +130,11 @@
       <button type="button" id="googleBtn" hidden style="flex:1;padding:13px;background:#fff;color:#3c4043;border:1px solid #dadce0;border-radius:10px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;">Google</button>
       <button type="button" id="kakaoBtn" hidden style="flex:1;padding:13px;background:#FEE500;color:#3a1d1d;border:none;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;">카카오</button>
     </div>
-    <div id="authedBadge" hidden style="margin-top:12px;padding:10px;background:rgba(126,232,162,0.08);border:1px dashed rgba(126,232,162,0.3);border-radius:8px;font-size:12px;color:#7ee8a2;">
-      ✓ <strong id="authedName">로그인됨</strong> — 다음 모임 입장 시 자동 채움
+    <div id="authedBadge" hidden style="margin-top:12px;padding:10px;background:rgba(126,232,162,0.08);border:1px dashed rgba(126,232,162,0.3);border-radius:8px;font-size:12px;color:#7ee8a2;display:flex;align-items:center;gap:10px;">
+      <span style="flex:1;">✓ <strong id="authedName">로그인됨</strong> — 다음 모임 입장 시 자동 채움</span>
+      <button type="button" id="logoutBtn" style="padding:6px 12px;background:transparent;border:1px solid rgba(126,232,162,0.4);border-radius:6px;color:#7ee8a2;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;">로그아웃</button>
     </div>
+    <div id="oauthLoginHint" style="font-size:11px;color:#c0c0c0;margin-top:8px;">또는 다른 계정으로 로그인</div>
   </div>
 
   <div class="anon-note">
@@ -211,7 +213,7 @@ ensureUuid();
       if (cfg.kakao) document.getElementById('kakaoBtn').hidden = false;
     }
   } catch (_) {}
-  // 현재 로그인 정보 표시
+  // 현재 로그인 정보 표시 — 로그인 시 OAuth 버튼·안내 숨김 + 로그아웃 버튼 노출
   try {
     const tok = localStorage.getItem('user_token');
     if (tok) {
@@ -222,6 +224,16 @@ ensureUuid();
         document.getElementById('authedBadge').hidden = false;
         const nameEl = document.getElementById('authedName');
         if (nameEl) nameEl.textContent = me.name || me.email || '로그인됨';
+        // 이미 로그인 — OAuth 버튼·안내 문구 모두 숨김
+        document.getElementById('googleBtn').hidden = true;
+        document.getElementById('kakaoBtn').hidden = true;
+        const hintTop = document.querySelector('#oauthArea > div:first-child');
+        if (hintTop) hintTop.style.display = 'none';
+        const hintBottom = document.getElementById('oauthLoginHint');
+        if (hintBottom) hintBottom.style.display = 'none';
+      } else {
+        // 토큰은 있지만 서버 세션 만료 — 정리
+        try { localStorage.removeItem('user_token'); } catch (_) {}
       }
     }
   } catch (_) {}
@@ -229,6 +241,15 @@ ensureUuid();
 
 document.getElementById('googleBtn').addEventListener('click', () => { location.href = '/api/auth/google'; });
 document.getElementById('kakaoBtn').addEventListener('click', () => { location.href = '/api/auth/kakao'; });
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  if (!confirm('Google/카카오 로그아웃 할까요?\n(닉네임·프로필 캐시는 유지됩니다)')) return;
+  const tok = localStorage.getItem('user_token');
+  if (tok) {
+    try { await fetch('/api/auth/logout', { method: 'POST', headers: { 'x-user-token': tok } }); } catch (_) {}
+  }
+  try { localStorage.removeItem('user_token'); } catch (_) {}
+  location.reload();
+});
 
 // 참여 코드 입장
 document.getElementById('joinCodeBtn').addEventListener('click', () => {
