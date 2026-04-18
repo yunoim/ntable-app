@@ -3044,7 +3044,7 @@ async function revealInstagram() {
       resultBox.innerHTML = `📸 <strong>@${escHtml(data.partner.instagram)}</strong>`;
       btn.style.display = 'none';
     } else if (data.pending) {
-      resultBox.textContent = '공개 의사를 전달했어요. 상대모임이 공개하면 자동으로 알려드릴게요 ⏳';
+      resultBox.textContent = '공개 의사를 전달했어요. 상대가 공개하면 자동으로 알려드릴게요 ⏳';
       btn.textContent = '✓ 공개 요청 완료';
       btn.style.opacity = '0.5';
       btn.disabled = true;
