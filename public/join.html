@@ -305,7 +305,7 @@ async function init() {
     if (df.includes('interest')) STEPS.push('interest');
     STEPS.push('confirm');
 
-    prefillFromCache();
+    await prefillFromCache();
     renderProgress();
     renderStep();
   } catch (e) {
@@ -313,15 +313,31 @@ async function init() {
   }
 }
 
-function prefillFromCache() {
+async function prefillFromCache() {
+  // 1) OAuth 로그인 상태이면 server profile 우선 (다른 디바이스 동기화)
+  try {
+    const tok = localStorage.getItem('user_token');
+    if (tok) {
+      const r = await fetch('/api/auth/me', { headers: { 'x-user-token': tok } });
+      if (r.ok) {
+        const me = await r.json();
+        if (me.authed) {
+          ['gender','birth_year','region','industry','mbti','interest'].forEach(k => {
+            if (me[k]) data[k] = me[k];
+          });
+        }
+      }
+    }
+  } catch (_) {}
+  // 2) localStorage fallback (익명 사용자)
   try {
     const pref = localStorage.getItem('preferred_nickname');
-    if (pref) data.nickname = pref;
+    if (pref && !data.nickname) data.nickname = pref;
     const profStr = localStorage.getItem('profile_snapshot');
     if (profStr) {
       const p = JSON.parse(profStr);
       ['gender','birth_year','region','industry','mbti','interest'].forEach(k => {
-        if (p[k]) data[k] = p[k];
+        if (p[k] && !data[k]) data[k] = p[k];
       });
     }
   } catch (_) {}
@@ -645,6 +661,20 @@ async function submitJoin() {
         gender: data.gender, birth_year: data.birth_year, region: data.region,
         industry: data.industry, mbti: data.mbti, interest: data.interest,
       }));
+    } catch (_) {}
+    // OAuth 로그인 상태이면 server users 테이블에도 profile 저장 (다음 모임 prefill)
+    try {
+      const tok = localStorage.getItem('user_token');
+      if (tok) {
+        await fetch('/api/auth/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'x-user-token': tok },
+          body: JSON.stringify({
+            gender: data.gender, birth_year: data.birth_year, region: data.region,
+            industry: data.industry, mbti: data.mbti, interest: data.interest,
+          }),
+        });
+      }
     } catch (_) {}
     location.replace(ROOM.isHost ? `/room/${ROOM_CODE}/host` : `/room/${ROOM_CODE}`);
   } catch (e) {

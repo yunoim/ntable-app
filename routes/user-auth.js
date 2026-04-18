@@ -217,4 +217,35 @@ router.post('/auth/logout', async (req, res) => {
   res.json({ ok: true });
 });
 
+// PUT /api/auth/profile — 방 입장 시 입력한 profile 을 user 에도 저장 (다음 모임 prefill 용)
+router.put('/auth/profile', async (req, res) => {
+  const token = req.headers['x-user-token'];
+  if (!token) return res.status(401).json({ error: 'no_token' });
+  const session = await pool.query(
+    'SELECT user_uuid FROM user_sessions WHERE token = $1 AND expires_at > NOW()',
+    [token]
+  );
+  if (session.rows.length === 0) return res.status(401).json({ error: 'invalid_session' });
+  const uuid = session.rows[0].user_uuid;
+  const { gender, birth_year, region, industry, mbti, interest, instagram } = req.body || {};
+  try {
+    await pool.query(
+      `UPDATE users SET
+         gender = COALESCE($1, gender),
+         birth_year = COALESCE($2, birth_year),
+         region = COALESCE($3, region),
+         industry = COALESCE($4, industry),
+         mbti = COALESCE($5, mbti),
+         interest = COALESCE($6, interest),
+         instagram = COALESCE($7, instagram)
+       WHERE uuid = $8`,
+      [gender || null, birth_year || null, region || null, industry || null, mbti || null, interest || null, instagram || null, uuid]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[user-auth profile]', err);
+    res.status(500).json({ error: 'db' });
+  }
+});
+
 module.exports = router;
