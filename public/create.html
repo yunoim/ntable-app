@@ -768,33 +768,56 @@
     async function init() {
       uuid = localStorage.getItem('demo_uuid');
       if (!uuid) {
-        // 첫 화면 안 거치고 직접 진입한 케이스 — 자동 uuid 생성
         uuid = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
           : ('u-' + Math.random().toString(36).slice(2) + '-' + Date.now().toString(36));
         try { localStorage.setItem('demo_uuid', uuid); } catch (_) {}
       }
-      // 닉네임은 방 만들 때 입력 — me 호출 안 함 (방별 익명 구조)
+      // OAuth 로그인 상태 우선
+      let authedName = '';
+      try {
+        const tok = localStorage.getItem('user_token');
+        if (tok) {
+          const r = await fetch('/api/auth/me', { headers: { 'x-user-token': tok } });
+          if (r.ok) {
+            const me = await r.json();
+            if (me.authed) authedName = me.name || me.email || '';
+          }
+        }
+      } catch (_) {}
       const pref = (() => { try { return localStorage.getItem('preferred_nickname') || ''; } catch (_) { return ''; } })();
-      document.getElementById('welcomeMsg').innerHTML = pref
-        ? `다시 만나요, <span>${pref}</span>님<br>지금 바로 모임을 열어보세요.`
+      const display = authedName || pref;
+      document.getElementById('welcomeMsg').innerHTML = display
+        ? `다시 만나요, <span>${display}</span>님<br>지금 바로 모임을 열어보세요.`
         : '지금 바로 모임을 열어보세요.';
       const navUser = document.getElementById('topNavUser');
-      if (navUser) navUser.textContent = pref ? `@${pref}` : '';
+      if (navUser) navUser.textContent = authedName ? `${authedName}` : (pref ? `@${pref}` : '');
+      // logout 버튼 라벨 동적 (OAuth 로그인 시 "로그아웃")
+      const logoutBtn = document.querySelector('.logout-btn');
+      if (logoutBtn) logoutBtn.textContent = authedName ? '로그아웃' : '정보 초기화';
       loadPacks();
     }
 
-    function logout() {
-      if (!confirm('이 기기에 저장된 닉네임·프로필 캐시를 모두 지울까요?\n다음 모임 입장 시 처음부터 입력하게 됩니다.')) return;
+    async function logout() {
+      const isOAuth = !!localStorage.getItem('user_token');
+      const msg = isOAuth
+        ? 'Google/카카오 로그아웃 + 이 기기에 저장된 닉네임·프로필 캐시를 모두 지울까요?'
+        : '이 기기에 저장된 닉네임·프로필 캐시를 모두 지울까요?\n다음 모임 입장 시 처음부터 입력합니다.';
+      if (!confirm(msg)) return;
+      // OAuth 세션 서버에서도 무효화
+      const tok = localStorage.getItem('user_token');
+      if (tok) {
+        try { await fetch('/api/auth/logout', { method: 'POST', headers: { 'x-user-token': tok } }); } catch (_) {}
+      }
       try {
+        localStorage.removeItem('user_token');
         localStorage.removeItem('preferred_nickname');
         localStorage.removeItem('profile_snapshot');
       } catch (_) {}
-      // create 페이지 그대로 두고 환영 문구/닉 표시만 갱신
       const welcome = document.getElementById('welcomeMsg');
       if (welcome) welcome.textContent = '지금 바로 모임을 열어보세요.';
       const navUser = document.getElementById('topNavUser');
       if (navUser) navUser.textContent = '';
-      alert('정보를 초기화했어요. 다음 모임 입장 시 처음부터 입력합니다.');
+      alert(isOAuth ? '로그아웃 완료. 캐시도 지워졌어요.' : '정보를 초기화했어요.');
     }
 
     const titleInput = document.getElementById('titleInput');
