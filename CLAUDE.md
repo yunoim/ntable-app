@@ -57,7 +57,7 @@
 | 로컬 경로 | `C:\Users\quite\Documents\ntable-demo\` |
 | GitHub | `yunoim/ntable-demo` |
 | 배포 | Railway (GitHub push → 자동 배포) |
-| 도메인 | https://demo.ntable.kr (Cloudflare DNS only + Railway SSL) |
+| 도메인 | https://app.ntable.kr (Cloudflare DNS only + Railway SSL) · demo.ntable.kr 는 전환기 301 redirect |
 | 스택 | Node.js / Express / PostgreSQL / WebSocket(ws) |
 | DB | Railway PostgreSQL 서비스 (DATABASE_URL 자동 주입) |
 | 로컬 포트 | 3000 |
@@ -66,9 +66,9 @@
 
 - **인증**: OAuth 없음. 닉네임 + 브라우저 UUID (localStorage)
   - 닉네임 재로그인 지원 (localStorage 유실 시 복구 가능)
-- **호스트 진입**: `demo.ntable.kr` 접속 = 무조건 호스트. 로비 없음.
+- **호스트 진입**: `app.ntable.kr` 접속 = 무조건 호스트. 로비 없음.
 - **게스트 진입**: 오프라인(QR 스캔) / 온라인(URL 공유) 동시 혼합 가능
-- **입장 URL**: 방 생성 시 `https://demo.ntable.kr/room/:code` 자동 생성 + QR + URL 복사 버튼
+- **입장 URL**: 방 생성 시 `https://app.ntable.kr/room/:code` 자동 생성 + QR + URL 복사 버튼
 - **승인**: 호스트 수동 승인 (개별/전체)
 - **호스트 역할**: 방 생성 시 선택 — 진행 전담 / 게스트 겸임
 - **결제/계좌/SMS/Discord 없음**

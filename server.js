@@ -15,11 +15,28 @@ const panelRouter = require('./routes/panel');
 
 const app = express();
 
-// CORS
+// CORS — app 우선, demo/ntable.kr 도 전환기 동안 유지
 app.use(cors({
-  origin: ['https://demo.ntable.kr', 'https://ntable.kr', 'https://www.ntable.kr', 'http://localhost:3000', 'http://localhost:3001'],
+  origin: [
+    'https://app.ntable.kr',
+    'https://demo.ntable.kr',
+    'https://ntable.kr',
+    'https://www.ntable.kr',
+    'http://localhost:3000',
+    'http://localhost:3001',
+  ],
   credentials: true,
 }));
+
+// demo.ntable.kr 로 들어온 요청 → app.ntable.kr 로 301 리다이렉트
+// (기존 QR·공유 링크 보호. Phase 4에서 제거 예정.)
+app.use((req, res, next) => {
+  const host = (req.headers['x-forwarded-host'] || req.headers.host || '').toLowerCase();
+  if (host === 'demo.ntable.kr') {
+    return res.redirect(301, `https://app.ntable.kr${req.originalUrl}`);
+  }
+  next();
+});
 
 // Body parser
 app.use(express.json());
