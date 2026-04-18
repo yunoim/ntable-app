@@ -1684,7 +1684,8 @@
     <img id="qr-modal-img" class="qr-modal-img" src="" alt="모임 입장 QR 코드 (확대)" />
     <div class="qr-modal-code" id="qr-modal-code">—</div>
     <div class="qr-modal-hint">📨 참가자 초대 — QR 또는 링크를 공유해 주세요.<br>들어온 참가자는 호스트 도구에서 확인 가능합니다.</div>
-    <button type="button" id="qr-modal-copy" class="qr-modal-copy-btn">입장 링크 복사</button>
+    <button type="button" id="qr-modal-kakao" class="qr-modal-copy-btn" onclick="kakaoShare()" hidden style="background:#FEE500;color:#3a1d1d;border:none;margin-bottom:8px;font-weight:700;">💛 카카오톡으로 초대</button>
+    <button type="button" id="qr-modal-copy" class="qr-modal-copy-btn">🔗 입장 링크 복사</button>
   </div>
 </div>
 
@@ -2402,6 +2403,8 @@ function bindEvents() {
         if (mb) mb.hidden = false;
         const sb = document.getElementById('sidebar-kakao-btn');
         if (sb) sb.hidden = false;
+        const qm = document.getElementById('qr-modal-kakao');
+        if (qm) qm.hidden = false;
         console.log('[host] kakao buttons revealed');
       } else {
         console.warn('[host] kakao not initialized — KAKAO_JS_KEY env or SDK load 확인');
