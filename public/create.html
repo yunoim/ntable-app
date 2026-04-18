@@ -875,9 +875,14 @@
     });
 
     function checkReady() {
-      const ready = titleInput.value.trim().length > 0 && selectedPack !== null;
+      const nick = (document.getElementById('hostNicknameInput')?.value || '').trim();
+      const ready = titleInput.value.trim().length > 0
+                  && selectedPack !== null
+                  && nick.length > 0;
       document.getElementById('createBtn').disabled = !ready;
     }
+    // 호스트 닉네임 입력도 활성화 조건에 포함
+    document.getElementById('hostNicknameInput')?.addEventListener('input', checkReady);
 
     // 호스트 셀프 프로필 chip 핸들러
     document.addEventListener('click', (e) => {
