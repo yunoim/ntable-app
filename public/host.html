@@ -2353,6 +2353,7 @@ function applyOneOnOneEnding() {
   if (total <= 2) {
     if (substeps) substeps.style.display = 'none';
     state.oneOnOne = true;
+    state.closingPhase = 'closing-explore-result';  // 즉시 set — switchTab 다음 분기 'closing-mvp' 덮어쓰기 방지
     mvpCard.innerHTML = `
       <div id="explore-result-card" style="background:transparent;">
         <div class="card-head">💑 1:1 모임 — 탐구 결과</div>
