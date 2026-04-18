@@ -52,11 +52,11 @@ router.post('/rooms', async (req, res) => {
     ? req.body.display_mode : 'mobile';
   const photo_enabled = req.body.photo_enabled === false ? false : true;
 
-  // uuid 검증
-  const userCheck = await pool.query('SELECT uuid FROM users WHERE uuid = $1', [uuid]);
-  if (userCheck.rows.length === 0) {
-    return res.status(404).json({ error: 'user not found' });
-  }
+  // uuid 보장 — 신규 익명 사용자는 자동 등록 (방별 익명 구조)
+  await pool.query(
+    `INSERT INTO users (uuid) VALUES ($1) ON CONFLICT (uuid) DO NOTHING`,
+    [uuid]
+  );
 
   // room_code 중복 없이 생성
   let room_code;
