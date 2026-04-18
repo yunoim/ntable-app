@@ -2592,18 +2592,7 @@ function showNudge(msg) {
 // ─── QUESTION CARD POPUP ──────────────────────────
 let qCardTimer = null;
 function showQuestionCard(text) {
-  // 자유대화(free) 화면에서는 상단 banner 로 고정 표시 (호스트 직접 닫기 전까지)
-  const isFree = STATE.currentState === 'free';
-  if (isFree) {
-    const banner = document.getElementById('qcBanner');
-    const txt = document.getElementById('qcBannerText');
-    if (banner && txt) {
-      txt.textContent = text;
-      banner.hidden = false;
-    }
-    return;
-  }
-  // 그 외 화면(탐구·소개 등)은 기존 큰 모달 5초 표시
+  // 1) 큰 모달 (모든 화면 공통) — 5초 자동 닫힘
   document.getElementById('questionCardText').textContent = text;
   const overlay = document.getElementById('questionCardOverlay');
   overlay.classList.add('show');
@@ -2618,6 +2607,14 @@ function showQuestionCard(text) {
 
   if (qCardTimer) clearTimeout(qCardTimer);
   qCardTimer = setTimeout(closeQuestionCard, 5000);
+
+  // 2) banner 에도 저장 — 자유대화 화면 진입 시 상단 압정으로 표시
+  const banner = document.getElementById('qcBanner');
+  const txt = document.getElementById('qcBannerText');
+  if (banner && txt) {
+    txt.textContent = text;
+    banner.hidden = false;
+  }
 }
 
 function closeQuestionCard() {
