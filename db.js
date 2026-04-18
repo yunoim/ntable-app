@@ -111,6 +111,26 @@ async function initDB() {
     try { await client.query(`ALTER TABLE users ALTER COLUMN nickname DROP NOT NULL`); } catch (_) {}
     try { await client.query(`ALTER TABLE users DROP CONSTRAINT users_nickname_key`); } catch (_) {}
 
+    // 일반 사용자 OAuth (Google / Kakao) — 익명 + 편의 hybrid
+    try { await client.query(`ALTER TABLE users ADD COLUMN google_sub VARCHAR UNIQUE`); } catch (e) { if (e.code !== '42701') throw e; }
+    try { await client.query(`ALTER TABLE users ADD COLUMN kakao_sub VARCHAR UNIQUE`); } catch (e) { if (e.code !== '42701') throw e; }
+    try { await client.query(`ALTER TABLE users ADD COLUMN email VARCHAR(200)`); } catch (e) { if (e.code !== '42701') throw e; }
+    try { await client.query(`ALTER TABLE users ADD COLUMN name VARCHAR(100)`); } catch (e) { if (e.code !== '42701') throw e; }
+    try { await client.query(`ALTER TABLE users ADD COLUMN picture VARCHAR(500)`); } catch (e) { if (e.code !== '42701') throw e; }
+    try { await client.query(`ALTER TABLE users ADD COLUMN last_login_at TIMESTAMP`); } catch (e) { if (e.code !== '42701') throw e; }
+
+    // user_sessions — OAuth 토큰 보관 (admin_sessions와 동일 패턴)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_sessions (
+        token VARCHAR PRIMARY KEY,
+        user_uuid VARCHAR NOT NULL REFERENCES users(uuid) ON DELETE CASCADE,
+        expires_at TIMESTAMP NOT NULL,
+        ip VARCHAR(50),
+        user_agent VARCHAR(500),
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
     // 일회성 리셋 — Railway env RESET_DB=1 설정 시 모든 사용자/방 데이터 비움.
     // 리셋 후 Railway env 에서 RESET_DB 제거 권장 (다음 재배포 시 또 비우지 않게).
     if (process.env.RESET_DB === '1') {

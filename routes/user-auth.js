@@ -1,0 +1,220 @@
+// 일반 사용자 OAuth — Google + Kakao (admin-auth.js 패턴)
+//
+// 엔드포인트:
+//   GET  /api/auth/google         — Google 인증 redirect
+//   GET  /api/auth/google/callback
+//   GET  /api/auth/kakao          — Kakao 인증 redirect
+//   GET  /api/auth/kakao/callback
+//   GET  /api/auth/me             — 현재 로그인 정보 (token header)
+//   POST /api/auth/logout
+//   GET  /api/auth/status         — 활성 provider 목록 (login.html 버튼 노출 결정용)
+//
+// 환경변수:
+//   GOOGLE_CLIENT_ID · GOOGLE_CLIENT_SECRET (admin과 공유)
+//   USER_OAUTH_GOOGLE_REDIRECT (기본: https://app.ntable.kr/api/auth/google/callback)
+//   KAKAO_REST_API_KEY
+//   USER_OAUTH_KAKAO_REDIRECT (기본: https://app.ntable.kr/api/auth/kakao/callback)
+
+const express = require('express');
+const crypto = require('crypto');
+const router = express.Router();
+
+let pool;
+router.init = (dbPool) => { pool = dbPool; };
+
+const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
+const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
+const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo';
+const KAKAO_AUTH_URL = 'https://kauth.kakao.com/oauth/authorize';
+const KAKAO_TOKEN_URL = 'https://kauth.kakao.com/oauth/token';
+const KAKAO_USERINFO_URL = 'https://kapi.kakao.com/v2/user/me';
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30일
+
+function googleConfigured() {
+  return !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+}
+function kakaoConfigured() {
+  return !!process.env.KAKAO_REST_API_KEY;
+}
+function googleRedirect() {
+  return process.env.USER_OAUTH_GOOGLE_REDIRECT || 'https://app.ntable.kr/api/auth/google/callback';
+}
+function kakaoRedirect() {
+  return process.env.USER_OAUTH_KAKAO_REDIRECT || 'https://app.ntable.kr/api/auth/kakao/callback';
+}
+
+router.get('/auth/status', (req, res) => {
+  res.json({ google: googleConfigured(), kakao: kakaoConfigured() });
+});
+
+// ─── Google ──────────────────────────────────────────────────────────────────
+router.get('/auth/google', (req, res) => {
+  if (!googleConfigured()) return res.status(503).send('Google OAuth 미설정');
+  const state = crypto.randomBytes(16).toString('hex');
+  res.cookie('user_oauth_state', state, { httpOnly: true, secure: true, sameSite: 'lax', maxAge: 10 * 60 * 1000 });
+  const params = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID,
+    redirect_uri: googleRedirect(),
+    response_type: 'code',
+    scope: 'openid email profile',
+    state,
+    prompt: 'select_account',
+    access_type: 'online',
+  });
+  res.redirect(`${GOOGLE_AUTH_URL}?${params.toString()}`);
+});
+
+router.get('/auth/google/callback', async (req, res) => {
+  if (!googleConfigured()) return res.status(503).send('Google OAuth 미설정');
+  const { code, state, error: gError } = req.query;
+  const cookieState = (req.headers.cookie || '').split(';').map(s => s.trim())
+    .find(c => c.startsWith('user_oauth_state='))?.split('=')[1];
+  res.clearCookie('user_oauth_state');
+  if (gError) return res.redirect('/?auth_error=' + encodeURIComponent(gError));
+  if (!code || !state || !cookieState || state !== cookieState) {
+    return res.redirect('/?auth_error=state');
+  }
+  try {
+    const tokenRes = await fetch(GOOGLE_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code, client_id: process.env.GOOGLE_CLIENT_ID, client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: googleRedirect(), grant_type: 'authorization_code',
+      }),
+    });
+    if (!tokenRes.ok) throw new Error('token_exchange_failed');
+    const tok = await tokenRes.json();
+    const uiRes = await fetch(GOOGLE_USERINFO_URL, { headers: { Authorization: `Bearer ${tok.access_token}` } });
+    if (!uiRes.ok) throw new Error('userinfo_failed');
+    const ui = await uiRes.json();
+    if (!ui.email || !ui.email_verified) return res.redirect('/?auth_error=email_unverified');
+    const token = await upsertUserAndIssueSession({
+      provider: 'google', sub: ui.sub, email: ui.email, name: ui.name, picture: ui.picture,
+      ip: (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim(),
+      user_agent: (req.headers['user-agent'] || '').slice(0, 500),
+    });
+    res.redirect(`/?auth_token=${token}`);
+  } catch (err) {
+    console.error('[user-auth google]', err);
+    res.redirect('/?auth_error=server');
+  }
+});
+
+// ─── Kakao ───────────────────────────────────────────────────────────────────
+router.get('/auth/kakao', (req, res) => {
+  if (!kakaoConfigured()) return res.status(503).send('Kakao OAuth 미설정');
+  const state = crypto.randomBytes(16).toString('hex');
+  res.cookie('user_oauth_state', state, { httpOnly: true, secure: true, sameSite: 'lax', maxAge: 10 * 60 * 1000 });
+  const params = new URLSearchParams({
+    client_id: process.env.KAKAO_REST_API_KEY,
+    redirect_uri: kakaoRedirect(),
+    response_type: 'code',
+    state,
+  });
+  res.redirect(`${KAKAO_AUTH_URL}?${params.toString()}`);
+});
+
+router.get('/auth/kakao/callback', async (req, res) => {
+  if (!kakaoConfigured()) return res.status(503).send('Kakao OAuth 미설정');
+  const { code, state, error: kError } = req.query;
+  const cookieState = (req.headers.cookie || '').split(';').map(s => s.trim())
+    .find(c => c.startsWith('user_oauth_state='))?.split('=')[1];
+  res.clearCookie('user_oauth_state');
+  if (kError) return res.redirect('/?auth_error=' + encodeURIComponent(kError));
+  if (!code || !state || !cookieState || state !== cookieState) {
+    return res.redirect('/?auth_error=state');
+  }
+  try {
+    const tokenRes = await fetch(KAKAO_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: process.env.KAKAO_REST_API_KEY,
+        redirect_uri: kakaoRedirect(),
+        code,
+      }),
+    });
+    if (!tokenRes.ok) throw new Error('token_exchange_failed');
+    const tok = await tokenRes.json();
+    const uiRes = await fetch(KAKAO_USERINFO_URL, { headers: { Authorization: `Bearer ${tok.access_token}` } });
+    if (!uiRes.ok) throw new Error('userinfo_failed');
+    const ui = await uiRes.json();
+    const sub = String(ui.id || '');
+    if (!sub) throw new Error('no_kakao_id');
+    const account = ui.kakao_account || {};
+    const profile = account.profile || {};
+    const token = await upsertUserAndIssueSession({
+      provider: 'kakao', sub,
+      email: account.email || null,
+      name: profile.nickname || null,
+      picture: profile.profile_image_url || null,
+      ip: (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim(),
+      user_agent: (req.headers['user-agent'] || '').slice(0, 500),
+    });
+    res.redirect(`/?auth_token=${token}`);
+  } catch (err) {
+    console.error('[user-auth kakao]', err);
+    res.redirect('/?auth_error=server');
+  }
+});
+
+// ─── 공용 — user upsert + session 발급 ────────────────────────────────────────
+async function upsertUserAndIssueSession({ provider, sub, email, name, picture, ip, user_agent }) {
+  const subCol = provider === 'google' ? 'google_sub' : 'kakao_sub';
+  // 기존 user 찾기
+  const existing = await pool.query(`SELECT uuid FROM users WHERE ${subCol} = $1`, [sub]);
+  let uuid;
+  if (existing.rows.length) {
+    uuid = existing.rows[0].uuid;
+    await pool.query(
+      `UPDATE users SET email = COALESCE($1, email), name = COALESCE($2, name), picture = COALESCE($3, picture), last_login_at = NOW() WHERE uuid = $4`,
+      [email, name, picture, uuid]
+    );
+  } else {
+    uuid = (crypto.randomUUID && crypto.randomUUID()) || ('u-' + crypto.randomBytes(8).toString('hex'));
+    await pool.query(
+      `INSERT INTO users (uuid, ${subCol}, email, name, picture, last_login_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       ON CONFLICT (uuid) DO UPDATE SET ${subCol} = EXCLUDED.${subCol}, email = EXCLUDED.email, name = EXCLUDED.name, picture = EXCLUDED.picture, last_login_at = NOW()`,
+      [uuid, sub, email, name, picture]
+    );
+  }
+  const token = crypto.randomBytes(48).toString('hex');
+  await pool.query(
+    `INSERT INTO user_sessions (token, user_uuid, expires_at, ip, user_agent) VALUES ($1, $2, $3, $4, $5)`,
+    [token, uuid, new Date(Date.now() + SESSION_TTL_MS), ip || null, user_agent || null]
+  );
+  return token;
+}
+
+// ─── /api/auth/me ────────────────────────────────────────────────────────────
+router.get('/auth/me', async (req, res) => {
+  const token = req.headers['x-user-token'] || req.query.token;
+  if (!token) return res.json({ authed: false });
+  try {
+    const r = await pool.query(
+      `SELECT u.uuid, u.email, u.name, u.picture,
+              u.google_sub IS NOT NULL AS google,
+              u.kakao_sub IS NOT NULL AS kakao,
+              u.gender, u.birth_year, u.region, u.industry, u.mbti, u.interest, u.instagram
+         FROM user_sessions s JOIN users u ON u.uuid = s.user_uuid
+        WHERE s.token = $1 AND s.expires_at > NOW()`,
+      [token]
+    );
+    if (r.rows.length === 0) return res.json({ authed: false });
+    res.json({ authed: true, ...r.rows[0] });
+  } catch (err) {
+    console.error('[user-auth me]', err);
+    res.status(500).json({ error: 'db' });
+  }
+});
+
+router.post('/auth/logout', async (req, res) => {
+  const token = req.headers['x-user-token'];
+  if (token) { try { await pool.query('DELETE FROM user_sessions WHERE token = $1', [token]); } catch (_) {} }
+  res.json({ ok: true });
+});
+
+module.exports = router;

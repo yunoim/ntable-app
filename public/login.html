@@ -124,6 +124,17 @@
 
   <button type="button" class="cta-primary" id="openRoomBtn">모임 열기 →</button>
 
+  <div id="oauthArea" style="margin-top:14px;display:none;">
+    <div style="font-size:11px;color:#c0c0c0;letter-spacing:0.16em;margin:14px 0;text-transform:uppercase;">또는 로그인하면 다음에도 정보 자동 채움</div>
+    <div style="display:flex;gap:10px;">
+      <button type="button" id="googleBtn" hidden style="flex:1;padding:13px;background:#fff;color:#3c4043;border:1px solid #dadce0;border-radius:10px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;">Google</button>
+      <button type="button" id="kakaoBtn" hidden style="flex:1;padding:13px;background:#FEE500;color:#3a1d1d;border:none;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;">카카오</button>
+    </div>
+    <div id="authedBadge" hidden style="margin-top:12px;padding:10px;background:rgba(126,232,162,0.08);border:1px dashed rgba(126,232,162,0.3);border-radius:8px;font-size:12px;color:#7ee8a2;">
+      ✓ <strong id="authedName">로그인됨</strong> — 다음 모임 입장 시 자동 채움
+    </div>
+  </div>
+
   <div class="anon-note">
     🔒 <strong>완전 익명</strong> — 닉네임은 방 안에서만 존재하고<br>모임이 끝나면 자동으로 사라져요
   </div>
@@ -172,6 +183,52 @@ document.getElementById('openRoomBtn').addEventListener('click', () => {
 
 // 페이지 로드 시 uuid 자동 보장 (백그라운드)
 ensureUuid();
+
+// OAuth 콜백 토큰 처리
+(() => {
+  const url = new URL(location.href);
+  const tok = url.searchParams.get('auth_token');
+  if (tok) {
+    try { localStorage.setItem('user_token', tok); } catch (_) {}
+    history.replaceState(null, '', '/');
+  }
+  const err = url.searchParams.get('auth_error');
+  if (err) {
+    alert('로그인 실패: ' + err);
+    history.replaceState(null, '', '/');
+  }
+})();
+
+// OAuth 활성 provider 조회 + 로그인 상태 표시
+(async () => {
+  try {
+    const r = await fetch('/api/auth/status');
+    const cfg = r.ok ? await r.json() : {};
+    const area = document.getElementById('oauthArea');
+    if (cfg.google || cfg.kakao) {
+      area.style.display = 'block';
+      if (cfg.google) document.getElementById('googleBtn').hidden = false;
+      if (cfg.kakao) document.getElementById('kakaoBtn').hidden = false;
+    }
+  } catch (_) {}
+  // 현재 로그인 정보 표시
+  try {
+    const tok = localStorage.getItem('user_token');
+    if (tok) {
+      const r = await fetch('/api/auth/me', { headers: { 'x-user-token': tok } });
+      const me = r.ok ? await r.json() : {};
+      if (me.authed) {
+        document.getElementById('oauthArea').style.display = 'block';
+        document.getElementById('authedBadge').hidden = false;
+        const nameEl = document.getElementById('authedName');
+        if (nameEl) nameEl.textContent = me.name || me.email || '로그인됨';
+      }
+    }
+  } catch (_) {}
+})();
+
+document.getElementById('googleBtn').addEventListener('click', () => { location.href = '/api/auth/google'; });
+document.getElementById('kakaoBtn').addEventListener('click', () => { location.href = '/api/auth/kakao'; });
 
 // 참여 코드 입장
 document.getElementById('joinCodeBtn').addEventListener('click', () => {
