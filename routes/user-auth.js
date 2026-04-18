@@ -127,15 +127,19 @@ router.get('/auth/kakao/callback', async (req, res) => {
   }
   try {
     console.log('[user-auth kakao] callback start, redirect_uri=', kakaoRedirect());
+    const tokenParams = new URLSearchParams({
+      grant_type: 'authorization_code',
+      client_id: process.env.KAKAO_REST_API_KEY,
+      redirect_uri: kakaoRedirect(),
+      code,
+    });
+    if (process.env.KAKAO_CLIENT_SECRET) {
+      tokenParams.set('client_secret', process.env.KAKAO_CLIENT_SECRET);
+    }
     const tokenRes = await fetch(KAKAO_TOKEN_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        client_id: process.env.KAKAO_REST_API_KEY,
-        redirect_uri: kakaoRedirect(),
-        code,
-      }),
+      body: tokenParams,
     });
     if (!tokenRes.ok) {
       const errBody = await tokenRes.text().catch(() => '');
