@@ -1095,8 +1095,38 @@
     .btn { flex: 1; padding: 12px 16px; font-size: 14px; min-width: 0; }
     .btn-gold { min-width: 0; }
   }
+
+  /* mobile share row — sidebar-head 안에서만 모바일 노출 */
+  .mobile-share-row { display: none; }
+  @media (max-width: 768px) {
+    .sidebar-head { flex-wrap: wrap; }
+    .mobile-share-row {
+      display: flex;
+      width: 100%;
+      gap: 8px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(212,168,67,0.22);
+    }
+    .mobile-share-row button {
+      flex: 1;
+      padding: 9px 6px;
+      background: rgba(212,168,67,0.12);
+      border: 1px solid rgba(212,168,67,0.4);
+      color: #e8b84b;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .mobile-share-row button:hover { background: rgba(212,168,67,0.2); }
+    .mobile-share-row button:active { transform: scale(0.97); }
+  }
 </style>
 <script src="/sentry-init.js" data-page="host" defer></script>
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js" defer></script>
 </head>
 <body>
 
@@ -1111,6 +1141,11 @@
       <span>호스트 도구</span>
       <span class="toggle-arrow">⌄</span>
     </button>
+    <div class="mobile-share-row">
+      <button type="button" id="mobile-share-copy" aria-label="입장 링크 복사">📋 링크</button>
+      <button type="button" id="mobile-share-qr" aria-label="QR 크게 보기">🔍 QR</button>
+      <button type="button" id="mobile-share-kakao" aria-label="카카오로 초대" hidden>💛 카카오</button>
+    </div>
   </div>
   <div id="qr-wrap">
     <img id="qr-img" src="" alt="방 입장 QR 코드 — 탭하면 크게 보기" onclick="openQRModal()" />
@@ -1755,6 +1790,27 @@ function bindEvents() {
     });
   });
 
+  // 모바일 share row — sidebar-head 안 항상 노출
+  document.getElementById('mobile-share-copy')?.addEventListener('click', () => {
+    document.getElementById('copy-url-btn')?.click();
+  });
+  document.getElementById('mobile-share-qr')?.addEventListener('click', openQRModal);
+  document.getElementById('mobile-share-kakao')?.addEventListener('click', kakaoShare);
+
+  // 카카오 SDK 초기화 (키 없으면 카카오 버튼 hidden 유지)
+  (async () => {
+    try {
+      const r = await fetch('/api/share-config');
+      if (!r.ok) return;
+      const cfg = await r.json();
+      if (cfg.kakaoJsKey && window.Kakao && !Kakao.isInitialized()) {
+        Kakao.init(cfg.kakaoJsKey);
+        const btn = document.getElementById('mobile-share-kakao');
+        if (btn) btn.hidden = false;
+      }
+    } catch (e) { /* graceful fallback */ }
+  })();
+
   document.getElementById('approve-all-btn').addEventListener('click', approveAll);
 
   document.getElementById('primary-btn').addEventListener('click', onPrimary);
@@ -1971,6 +2027,30 @@ function logout() {
   try { if (state.ws) state.ws.close(); } catch {}
   localStorage.removeItem('demo_uuid');
   location.href = '/';
+}
+
+function kakaoShare() {
+  if (!window.Kakao || !window.Kakao.isInitialized || !Kakao.isInitialized()) {
+    if (typeof toast === 'function') toast('카카오 공유 준비 중…');
+    return;
+  }
+  if (!state.roomCode) { if (typeof toast === 'function') toast('방 코드 로딩 중…'); return; }
+  const url = `${location.origin}/room/${state.roomCode}`;
+  try {
+    Kakao.Share.sendDefault({
+      objectType: 'feed',
+      content: {
+        title: 'ntable 모임 초대',
+        description: '함께할 모임에 초대받았어요. 링크를 눌러 입장하세요.',
+        imageUrl: `${location.origin}/og-image.png`,
+        link: { mobileWebUrl: url, webUrl: url },
+      },
+      buttons: [{ title: '입장하기', link: { mobileWebUrl: url, webUrl: url } }],
+    });
+  } catch (e) {
+    console.error('kakao share failed', e);
+    if (typeof toast === 'function') toast('카카오 공유 실패');
+  }
 }
 
 function toggleSidebar() {

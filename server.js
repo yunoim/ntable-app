@@ -71,6 +71,14 @@ app.get('/api/sentry-config', (req, res) => {
   });
 });
 
+// 외부 공유 SDK 키 (없으면 빈 값 → 클라이언트가 graceful fallback)
+app.get('/api/share-config', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=300');
+  res.json({
+    kakaoJsKey: process.env.KAKAO_JS_KEY || '',
+  });
+});
+
 // Routes
 app.use('/api', authRouter);
 app.use('/api', roomsRouter);

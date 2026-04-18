@@ -168,6 +168,34 @@ function init(server) {
             } catch (e) {
               console.error('waiting_too_long handler error:', e.message);
             }
+          } else if (msg.type === 'photo_update') {
+            // 클라이언트 base64 사진 broadcast (서버 메모리·DB 저장 X — relay only)
+            const photo = String(msg.photo || '');
+            if (photo.length > 250000) return; // ~180KB 안전 한계
+            if (photo && !photo.startsWith('data:image/')) return;
+            broadcastToRoom(room_code, {
+              type: 'photo_update',
+              uuid,
+              photo,
+            }, uuid);
+          } else if (msg.type === 'request_photos') {
+            // 새 입장자가 기존 참가자에게 사진 재공유 요청
+            broadcastToRoom(room_code, {
+              type: 'photo_request',
+              requester_uuid: uuid,
+            }, uuid);
+          } else if (msg.type === 'photo_kick') {
+            // 호스트만 가능 — 부적절 사진 강제 제거
+            const room = rooms[room_code];
+            if (!room || uuid !== room.hostUuid) return;
+            const target = String(msg.target_uuid || '');
+            if (!target) return;
+            broadcastToRoom(room_code, {
+              type: 'photo_update',
+              uuid: target,
+              photo: '',
+              kicked: true,
+            });
           }
         } catch (e) {
           // ignore malformed messages
