@@ -334,6 +334,41 @@
 
     select option { background: var(--surface); color: var(--white); }
 
+    /* Chip 선택 */
+    .chip-grid {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      margin-top: 4px;
+    }
+    .chip-grid.mbti-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+    .chip-item {
+      padding: 9px 14px;
+      background: var(--surface-2, rgba(212,168,67,0.06));
+      border: 1px solid var(--gold-border, rgba(212,168,67,0.35));
+      color: var(--white-dim, #e8e8e8);
+      border-radius: 18px;
+      font-size: 13.5px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .chip-grid.mbti-grid .chip-item {
+      padding: 11px 6px;
+      text-align: center;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    .chip-item:hover { background: rgba(212,168,67,0.15); border-color: var(--gold, #d4a843); }
+    .chip-item.selected {
+      background: var(--gold, #d4a843);
+      color: var(--navy, #0e1628);
+      border-color: var(--gold, #d4a843);
+      font-weight: 700;
+    }
+
     .loading-text {
       text-align: center;
       color: var(--subtext);
@@ -507,47 +542,92 @@
 
       <div class="form-group optional">
         <label>지역 <span class="optional-tag">선택</span></label>
-        <select id="region" aria-label="지역">
-          <option value="">선택하세요</option>
-          <option>서울</option><option>경기</option><option>인천</option>
-          <option>부산</option><option>대구</option><option>대전</option>
-          <option>광주</option><option>울산</option><option>세종</option>
-          <option>강원</option><option>충북</option><option>충남</option>
-          <option>전북</option><option>전남</option><option>경북</option>
-          <option>경남</option><option>제주</option>
-        </select>
+        <input type="hidden" id="region">
+        <div class="chip-grid" data-chip-group="region">
+          <button type="button" class="chip-item" data-value="서울">서울</button>
+          <button type="button" class="chip-item" data-value="경기">경기</button>
+          <button type="button" class="chip-item" data-value="인천">인천</button>
+          <button type="button" class="chip-item" data-value="부산">부산</button>
+          <button type="button" class="chip-item" data-value="대구">대구</button>
+          <button type="button" class="chip-item" data-value="대전">대전</button>
+          <button type="button" class="chip-item" data-value="광주">광주</button>
+          <button type="button" class="chip-item" data-value="울산">울산</button>
+          <button type="button" class="chip-item" data-value="세종">세종</button>
+          <button type="button" class="chip-item" data-value="강원">강원</button>
+          <button type="button" class="chip-item" data-value="충북">충북</button>
+          <button type="button" class="chip-item" data-value="충남">충남</button>
+          <button type="button" class="chip-item" data-value="전북">전북</button>
+          <button type="button" class="chip-item" data-value="전남">전남</button>
+          <button type="button" class="chip-item" data-value="경북">경북</button>
+          <button type="button" class="chip-item" data-value="경남">경남</button>
+          <button type="button" class="chip-item" data-value="제주">제주</button>
+        </div>
         <div class="field-hint">같은 지역 참가자와 오프라인 만남 기회</div>
       </div>
 
       <div class="form-group optional">
         <label>업종 <span class="optional-tag">선택</span></label>
-        <select id="industry" aria-label="업종">
-          <option value="">선택하세요</option>
-          <option>IT/개발</option><option>디자인</option><option>마케팅/광고</option>
-          <option>금융/회계</option><option>교육</option><option>의료/보건</option>
-          <option>법률</option><option>공무원</option><option>서비스업</option>
-          <option>제조업</option><option>미디어/콘텐츠</option><option>스타트업</option>
-          <option>기타</option>
-        </select>
+        <input type="hidden" id="industry">
+        <div class="chip-grid" data-chip-group="industry">
+          <button type="button" class="chip-item" data-value="IT/개발">IT/개발</button>
+          <button type="button" class="chip-item" data-value="디자인">디자인</button>
+          <button type="button" class="chip-item" data-value="마케팅/광고">마케팅/광고</button>
+          <button type="button" class="chip-item" data-value="금융/회계">금융/회계</button>
+          <button type="button" class="chip-item" data-value="교육">교육</button>
+          <button type="button" class="chip-item" data-value="의료/보건">의료/보건</button>
+          <button type="button" class="chip-item" data-value="법률">법률</button>
+          <button type="button" class="chip-item" data-value="공무원">공무원</button>
+          <button type="button" class="chip-item" data-value="서비스업">서비스업</button>
+          <button type="button" class="chip-item" data-value="제조업">제조업</button>
+          <button type="button" class="chip-item" data-value="미디어/콘텐츠">미디어/콘텐츠</button>
+          <button type="button" class="chip-item" data-value="스타트업">스타트업</button>
+          <button type="button" class="chip-item" data-value="기타">기타</button>
+        </div>
         <div class="field-hint">비슷한 업계끼리 자연스럽게 대화가 이어져요</div>
       </div>
 
       <div class="form-group optional">
         <label>MBTI <span class="optional-tag">선택</span></label>
-        <select id="mbti" aria-label="MBTI">
-          <option value="">선택하세요</option>
-          <option>INTJ</option><option>INTP</option><option>ENTJ</option><option>ENTP</option>
-          <option>INFJ</option><option>INFP</option><option>ENFJ</option><option>ENFP</option>
-          <option>ISTJ</option><option>ISFJ</option><option>ESTJ</option><option>ESFJ</option>
-          <option>ISTP</option><option>ISFP</option><option>ESTP</option><option>ESFP</option>
-        </select>
+        <input type="hidden" id="mbti">
+        <div class="chip-grid mbti-grid" data-chip-group="mbti">
+          <button type="button" class="chip-item" data-value="INTJ">INTJ</button>
+          <button type="button" class="chip-item" data-value="INTP">INTP</button>
+          <button type="button" class="chip-item" data-value="ENTJ">ENTJ</button>
+          <button type="button" class="chip-item" data-value="ENTP">ENTP</button>
+          <button type="button" class="chip-item" data-value="INFJ">INFJ</button>
+          <button type="button" class="chip-item" data-value="INFP">INFP</button>
+          <button type="button" class="chip-item" data-value="ENFJ">ENFJ</button>
+          <button type="button" class="chip-item" data-value="ENFP">ENFP</button>
+          <button type="button" class="chip-item" data-value="ISTJ">ISTJ</button>
+          <button type="button" class="chip-item" data-value="ISFJ">ISFJ</button>
+          <button type="button" class="chip-item" data-value="ESTJ">ESTJ</button>
+          <button type="button" class="chip-item" data-value="ESFJ">ESFJ</button>
+          <button type="button" class="chip-item" data-value="ISTP">ISTP</button>
+          <button type="button" class="chip-item" data-value="ISFP">ISFP</button>
+          <button type="button" class="chip-item" data-value="ESTP">ESTP</button>
+          <button type="button" class="chip-item" data-value="ESFP">ESFP</button>
+        </div>
         <div class="field-hint">성향 매칭 정확도가 올라갑니다</div>
       </div>
 
       <div class="form-group optional">
         <label>관심사 <span class="optional-tag">선택</span></label>
-        <input type="text" id="interest" placeholder="예: 등산, 독서, 요리" maxlength="30" aria-label="관심사" />
-        <div class="field-hint">대화 시작할 거리가 생겨요. 쉼표로 여러 개 OK</div>
+        <div class="chip-grid" data-chip-group="interest-suggest">
+          <button type="button" class="chip-item" data-value="운동">운동</button>
+          <button type="button" class="chip-item" data-value="독서">독서</button>
+          <button type="button" class="chip-item" data-value="음식">음식</button>
+          <button type="button" class="chip-item" data-value="영화">영화</button>
+          <button type="button" class="chip-item" data-value="여행">여행</button>
+          <button type="button" class="chip-item" data-value="음악">음악</button>
+          <button type="button" class="chip-item" data-value="게임">게임</button>
+          <button type="button" class="chip-item" data-value="술">술</button>
+          <button type="button" class="chip-item" data-value="카페">카페</button>
+          <button type="button" class="chip-item" data-value="등산">등산</button>
+          <button type="button" class="chip-item" data-value="사진">사진</button>
+          <button type="button" class="chip-item" data-value="공연">공연</button>
+        </div>
+        <input type="text" id="interest" placeholder="또는 직접 입력 (예: 와인 클래스)" maxlength="30" aria-label="관심사" style="margin-top:10px;" />
+        <div class="field-hint">대화 시작할 거리가 생겨요</div>
       </div>
 
       <div class="form-group optional">
@@ -861,6 +941,42 @@
     }
 
     document.getElementById('birth-year').addEventListener('change', validateRequiredProfile);
+
+    // Chip 선택 핸들러 — single select, 같은 값 다시 누르면 취소
+    document.addEventListener('click', (e) => {
+      const chip = e.target.closest('.chip-item');
+      if (!chip) return;
+      const grid = chip.closest('.chip-grid');
+      if (!grid) return;
+      const group = grid.dataset.chipGroup;
+      if (!group) return;
+      const wasSelected = chip.classList.contains('selected');
+      grid.querySelectorAll('.chip-item').forEach(c => c.classList.remove('selected'));
+      let value = '';
+      if (!wasSelected) {
+        chip.classList.add('selected');
+        value = chip.dataset.value || '';
+      }
+      // interest는 추천 chip → input value 채움 (하지만 input 직접 입력도 가능)
+      if (group === 'interest-suggest') {
+        const inp = document.getElementById('interest');
+        if (inp) inp.value = value;
+      } else {
+        const hidden = document.getElementById(group);
+        if (hidden) hidden.value = value;
+      }
+      if (typeof updateOptionalProgress === 'function') updateOptionalProgress();
+    });
+
+    // interest 직접 입력 시 chip 선택 해제
+    document.getElementById('interest')?.addEventListener('input', (e) => {
+      const v = e.target.value.trim();
+      const grid = document.querySelector('[data-chip-group="interest-suggest"]');
+      if (!grid) return;
+      grid.querySelectorAll('.chip-item').forEach(c => {
+        c.classList.toggle('selected', c.dataset.value === v);
+      });
+    });
 
     // 공통 — 전체 프로필 저장
     async function saveProfile(includeOptional) {
