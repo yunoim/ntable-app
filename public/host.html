@@ -1689,6 +1689,19 @@ async function loadRoomInfo() {
     state.birthYearFormat = room.birth_year_format || 'exact';
     state.hostRole = room.host_role || 'host_only';
     state.questionCount = Number.isFinite(room.question_count) ? room.question_count : 10;
+
+    // 호스트가 participant 면 본인 카드도 approvedUsers 에 포함
+    if (state.hostRole === 'participant') {
+      try {
+        const myRes = await fetch(`/api/rooms/${state.roomCode}/members/${encodeURIComponent(state.uuid)}`);
+        if (myRes.ok) {
+          const me = await myRes.json();
+          if (me.uuid && !state.approvedUsers.find(u => u.uuid === me.uuid)) {
+            state.approvedUsers.push(me);
+          }
+        }
+      } catch (_) {}
+    }
     settingsState.roomStatus = room.status || 'waiting';
     updateSettingsBtnVisibility();
     if (state.hostRole === 'participant') {
