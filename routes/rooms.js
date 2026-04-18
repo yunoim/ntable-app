@@ -461,9 +461,10 @@ router.get('/stats', async (req, res) => {
     for (const code of activeRooms) {
       participants += wsModule.getRoomClients(code).length;
     }
-    // 최소 1명 이상 참여한 방만 누적 카운트 (호스트 단독 테스트 방 제외 → "모임 수 > 참여자 수" 역전 방지)
+    // 누적 통계: 의미 있는 모임만 카운트 — 최소 2명 이상 참여한 방 (호스트 단독 테스트 제외)
+    // unique_people: 실제 사람 수 (DISTINCT uuid)
     const [totalRoomsRow, totalAttendRow, uniquePeopleRow] = await Promise.all([
-      pool.query('SELECT COUNT(*)::int AS cnt FROM rooms r WHERE EXISTS (SELECT 1 FROM room_members rm WHERE rm.room_id = r.id)'),
+      pool.query('SELECT COUNT(*)::int AS cnt FROM rooms r WHERE (SELECT COUNT(*) FROM room_members rm WHERE rm.room_id = r.id) >= 2'),
       pool.query('SELECT COUNT(*)::int AS cnt FROM room_members'),
       pool.query('SELECT COUNT(DISTINCT uuid)::int AS cnt FROM room_members'),
     ]);
