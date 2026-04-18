@@ -504,6 +504,33 @@
     transition: background 0.15s;
   }
   .approved-kick:hover { background: rgba(220,53,69,0.28); }
+  .approved-banned-dot {
+    font-size: 13px;
+    width: 26px; height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+  .approved-unban {
+    margin-left: auto;
+    background: rgba(126,232,162,0.12);
+    border: 1px solid rgba(126,232,162,0.4);
+    color: #7ee8a2;
+    font-size: 13px;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .approved-unban:hover { background: rgba(126,232,162,0.28); }
   .empty-msg { color: var(--text-muted); font-size: 13px; padding: 6px 2px; }
 
   /* ── MAIN STAGE ────────────────────────────────── */
@@ -681,6 +708,18 @@
   }
   .profile-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .profile-avatar.has-photo { font-size: 0; padding: 0; background: transparent; }
+  .profile-intro {
+    margin-top: 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text);
+    font-style: italic;
+    padding: 8px 12px;
+    background: rgba(212,168,67,0.06);
+    border-left: 2px solid var(--gold);
+    border-radius: 4px;
+    text-align: left;
+  }
   .profile-card .name {
     font-family: 'Cormorant Garamond', serif;
     font-size: 24px;
@@ -1384,6 +1423,8 @@ const state = {
   waitingUsers: [],
   approvedUsers: [],
   photos: {}, // uuid → dataURL (서버 미저장, WS broadcast 휘발성)
+  intros: {}, // uuid → 한줄 자기소개 (서버 미저장)
+  bannedPhotos: new Set(), // photo_kick 한 uuid (서버에서도 추적, host UI 반영용)
   mvpList: [],
   timerMinutes: 20,
   timerSeconds: 0,
@@ -1489,8 +1530,9 @@ function connectWS() {
     state.pongInterval = setInterval(() => {
       if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
     }, 30000);
-    // 호스트 입장 시 기존 참가자에게 사진 다시 broadcast 요청
+    // 호스트 입장 시 기존 참가자에게 사진 다시 broadcast 요청 + 차단 목록 동기화
     try { ws.send(JSON.stringify({ type: 'request_photos' })); } catch (_) {}
+    try { ws.send(JSON.stringify({ type: 'request_banlist' })); } catch (_) {}
   };
   ws.onmessage = (e) => { try { handleWSMessage(JSON.parse(e.data)); } catch {} };
   ws.onclose = () => {
@@ -1561,21 +1603,46 @@ function handleWSMessage(msg) {
       renderApprovedList();
       renderProfiles();
       break;
+    case 'photo_banlist':
+      // 호스트 전용 — 차단 목록 sync
+      state.bannedPhotos = new Set(msg.banned || []);
+      renderApprovedList();
+      renderProfiles();
+      break;
+    case 'intro_update':
+      if (msg.intro) state.intros[msg.uuid] = msg.intro;
+      else delete state.intros[msg.uuid];
+      renderProfiles();
+      break;
   }
 }
 
-// 호스트 — 부적절 사진 강제 차단
+// 호스트 — 부적절 사진 강제 차단 (모임 동안 재업로드 불가)
 function photoKick(targetUuid, nickname) {
   if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
     toast('연결이 끊겼어요');
     return;
   }
-  if (!confirm(`${nickname || '이 참가자'}의 사진을 강제로 제거하시겠어요?\n(즉시 모든 화면에서 사라집니다)`)) return;
+  if (!confirm(`${nickname || '이 참가자'}의 사진을 강제로 제거하시겠어요?\n(모임 동안 사진 재업로드도 차단됩니다)`)) return;
   state.ws.send(JSON.stringify({ type: 'photo_kick', target_uuid: targetUuid }));
   delete state.photos[targetUuid];
+  state.bannedPhotos.add(targetUuid);
   renderApprovedList();
   renderProfiles();
-  toast('사진을 제거했어요');
+  toast('사진 제거 + 재업로드 차단');
+}
+
+// 호스트 — 사진 차단 해제
+function photoUnban(targetUuid, nickname) {
+  if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+    toast('연결이 끊겼어요');
+    return;
+  }
+  state.ws.send(JSON.stringify({ type: 'photo_unban', target_uuid: targetUuid }));
+  state.bannedPhotos.delete(targetUuid);
+  renderApprovedList();
+  renderProfiles();
+  toast(`${nickname || '참가자'} 사진 차단 해제`);
 }
 
 async function fetchUserProfile(uuid) {
@@ -1621,13 +1688,17 @@ function renderApprovedList() {
     const el = document.createElement('div');
     el.className = 'approved-item';
     const photo = state.photos[u.uuid];
+    const isBanned = state.bannedPhotos && state.bannedPhotos.has(u.uuid);
     const photoHtml = photo
       ? `<img class="approved-photo" src="${escHtml(photo)}" alt="">`
-      : `<span class="approved-dot"></span>`;
-    const kickBtn = photo
-      ? `<button type="button" class="approved-kick" title="사진 강제 제거" onclick="photoKick('${escHtml(u.uuid)}','${escHtml(u.nickname)}')">✕</button>`
-      : '';
-    el.innerHTML = `${photoHtml}<span class="approved-name">${escHtml(u.nickname)}</span>${kickBtn}`;
+      : (isBanned ? `<span class="approved-banned-dot" title="사진 차단됨">🚫</span>` : `<span class="approved-dot"></span>`);
+    let actionBtn = '';
+    if (photo) {
+      actionBtn = `<button type="button" class="approved-kick" title="사진 강제 제거" onclick="photoKick('${escHtml(u.uuid)}','${escHtml(u.nickname)}')">✕</button>`;
+    } else if (isBanned) {
+      actionBtn = `<button type="button" class="approved-unban" title="사진 차단 해제" onclick="photoUnban('${escHtml(u.uuid)}','${escHtml(u.nickname)}')">↺</button>`;
+    }
+    el.innerHTML = `${photoHtml}<span class="approved-name">${escHtml(u.nickname)}</span>${actionBtn}`;
     list.appendChild(el);
   }
 }
@@ -1652,6 +1723,8 @@ function renderProfiles() {
     const avatarHtml = photo
       ? `<div class="profile-avatar has-photo"><img src="${escHtml(photo)}" alt=""></div>`
       : `<div class="profile-avatar">${emoji}</div>`;
+    const intro = state.intros[u.uuid];
+    const introHtml = intro ? `<div class="profile-intro">"${escHtml(intro)}"</div>` : '';
     const card = document.createElement('div');
     card.className = 'profile-card';
     card.innerHTML = `
@@ -1662,7 +1735,8 @@ function renderProfiles() {
         ${u.mbti ? `<span class="tag-chip gold">${escHtml(u.mbti)}</span>` : ''}
         ${u.interest ? `<span class="tag-chip">${escHtml(u.interest)}</span>` : ''}
         ${u.industry ? `<span class="tag-chip">${escHtml(u.industry)}</span>` : ''}
-      </div>`;
+      </div>
+      ${introHtml}`;
     carousel.appendChild(card);
   }
 }

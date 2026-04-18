@@ -117,9 +117,11 @@ function init(server) {
           hostUuid,
           hostGraceTimer: null,
           hostDisconnectedAt: null,
+          photoBanned: new Set(), // 호스트가 photo_kick 한 uuid — 모임 동안 사진 재업로드 무시
         };
       } else {
         rooms[room_code].hostUuid = hostUuid;
+        if (!rooms[room_code].photoBanned) rooms[room_code].photoBanned = new Set();
       }
       rooms[room_code].clients.set(uuid, ws);
 
@@ -173,6 +175,16 @@ function init(server) {
             const photo = String(msg.photo || '');
             if (photo.length > 250000) return; // ~180KB 안전 한계
             if (photo && !photo.startsWith('data:image/')) return;
+            // 호스트가 차단한 uuid는 빈값(removal) 외엔 무시
+            const room = rooms[room_code];
+            if (photo && room && room.photoBanned && room.photoBanned.has(uuid)) {
+              // 차단된 사용자는 본인에게만 차단 알림
+              broadcastToRoom(room_code, {
+                type: 'photo_blocked',
+                reason: 'host_banned',
+              }, null, uuid);
+              return;
+            }
             broadcastToRoom(room_code, {
               type: 'photo_update',
               uuid,
@@ -185,17 +197,54 @@ function init(server) {
               requester_uuid: uuid,
             }, uuid);
           } else if (msg.type === 'photo_kick') {
-            // 호스트만 가능 — 부적절 사진 강제 제거
+            // 호스트만 가능 — 부적절 사진 강제 제거 + 모임 동안 재업로드 차단
             const room = rooms[room_code];
             if (!room || uuid !== room.hostUuid) return;
             const target = String(msg.target_uuid || '');
             if (!target) return;
+            room.photoBanned.add(target);
             broadcastToRoom(room_code, {
               type: 'photo_update',
               uuid: target,
               photo: '',
               kicked: true,
             });
+            // 호스트에게만 banlist 갱신
+            broadcastToRoom(room_code, {
+              type: 'photo_banlist',
+              banned: [...room.photoBanned],
+            }, null, room.hostUuid);
+          } else if (msg.type === 'photo_unban') {
+            // 호스트만 가능 — 차단 해제
+            const room = rooms[room_code];
+            if (!room || uuid !== room.hostUuid) return;
+            const target = String(msg.target_uuid || '');
+            if (!target) return;
+            room.photoBanned.delete(target);
+            broadcastToRoom(room_code, {
+              type: 'photo_banlist',
+              banned: [...room.photoBanned],
+            }, null, room.hostUuid);
+            // 차단 해제된 사용자에게 알림 (재업로드 가능 안내)
+            broadcastToRoom(room_code, {
+              type: 'photo_unblocked',
+            }, null, target);
+          } else if (msg.type === 'request_banlist') {
+            // 호스트가 reconnect 시 현재 차단 상태 요청
+            const room = rooms[room_code];
+            if (!room || uuid !== room.hostUuid) return;
+            broadcastToRoom(room_code, {
+              type: 'photo_banlist',
+              banned: [...(room.photoBanned || [])],
+            }, null, room.hostUuid);
+          } else if (msg.type === 'intro_update') {
+            // 한줄 자기소개 broadcast (서버 미저장 — relay only)
+            const intro = String(msg.intro || '').slice(0, 80).trim();
+            broadcastToRoom(room_code, {
+              type: 'intro_update',
+              uuid,
+              intro,
+            }, uuid);
           }
         } catch (e) {
           // ignore malformed messages

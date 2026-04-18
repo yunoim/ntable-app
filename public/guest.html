@@ -464,6 +464,43 @@
     border-radius: inherit;
   }
   .member-avatar.has-photo { font-size: 0; background: transparent; padding: 0; overflow: hidden; }
+  .intro-input-wrap {
+    margin-top: 12px;
+    position: relative;
+  }
+  .intro-input {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--gold-border);
+    border-radius: 10px;
+    padding: 10px 60px 10px 12px;
+    color: var(--white);
+    font-size: 13px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  .intro-input:focus { outline: none; border-color: var(--gold); }
+  .intro-input::placeholder { color: var(--text-muted); font-size: 11.5px; }
+  .intro-char-count {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+  .member-intro {
+    margin-top: 10px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--white-dim, #e8e8e8);
+    font-style: italic;
+    padding: 0 12px;
+    max-width: 280px;
+    margin-left: auto;
+    margin-right: auto;
+  }
   .profile-name {
     font-family: 'Cormorant Garamond', serif;
     font-size: 22px;
@@ -1220,6 +1257,10 @@
       </div>
     </div>
     <div class="profile-tags" id="myTags"></div>
+    <div class="intro-input-wrap">
+      <input type="text" id="introInput" maxlength="60" placeholder="한줄 자기소개 (60자) — 다른 참가자 카드에도 표시돼요" class="intro-input" oninput="onIntroInput(event)">
+      <span class="intro-char-count" id="introCharCount">0/60</span>
+    </div>
     <div class="photo-help">
       💡 아바타를 탭해 사진을 올리면 다른 참가자가 더 잘 알아봐요. <strong>서버에 저장되지 않아요</strong> — 모임 동안만 다른 참가자에게 보입니다.
       <button type="button" class="photo-clear-link" id="photoClearBtn" onclick="clearMyPhoto()" hidden>사진 지우기</button>
@@ -1373,6 +1414,8 @@ const STATE = {
   members: [],
   myProfile: null,
   photos: {}, // uuid → dataURL (서버에 저장되지 않음, WS broadcast 휘발성)
+  intros: {}, // uuid → 한줄 자기소개 (서버 미저장, 휘발성)
+  photoBanned: false, // 호스트가 본인 사진 차단했는지
   carouselIndex: 0,
   touchStartX: 0,
   mouseStartX: 0,
@@ -1455,13 +1498,22 @@ function connectWS() {
     STATE.wsRetries = 0;
     updateConnDot('connected');
     startPing();
-    // 본인 사진 복원 (localStorage) → 즉시 broadcast + 다른 참가자 사진 요청
+    // 본인 사진·자기소개 복원 (localStorage) → 즉시 broadcast + 다른 참가자 사진/소개 요청
     try {
-      const saved = localStorage.getItem(`ntable_photo_${STATE.roomCode}`);
-      if (saved) {
-        STATE.photos[STATE.uuid] = saved;
-        setMyAvatarPhoto(saved);
-        STATE.ws.send(JSON.stringify({ type: 'photo_update', photo: saved }));
+      const savedPhoto = localStorage.getItem(`ntable_photo_${STATE.roomCode}`);
+      if (savedPhoto) {
+        STATE.photos[STATE.uuid] = savedPhoto;
+        setMyAvatarPhoto(savedPhoto);
+        STATE.ws.send(JSON.stringify({ type: 'photo_update', photo: savedPhoto }));
+      }
+      const savedIntro = localStorage.getItem(`ntable_intro_${STATE.roomCode}`);
+      if (savedIntro) {
+        STATE.intros[STATE.uuid] = savedIntro;
+        const inp = document.getElementById('introInput');
+        if (inp) inp.value = savedIntro;
+        const cnt = document.getElementById('introCharCount');
+        if (cnt) cnt.textContent = `${savedIntro.length}/60`;
+        STATE.ws.send(JSON.stringify({ type: 'intro_update', intro: savedIntro }));
       }
     } catch (_) {}
     try { STATE.ws.send(JSON.stringify({ type: 'request_photos' })); } catch (_) {}
@@ -1579,13 +1631,44 @@ async function handleWSMessage(msg) {
       break;
 
     case 'photo_request':
-      // 새 입장자 요청 → 본인 사진 다시 broadcast (가지고 있을 때만)
+      // 새 입장자 요청 → 본인 사진 + 자기소개 다시 broadcast (가지고 있을 때만)
       if (msg.requester_uuid !== STATE.uuid) {
         const myPhoto = STATE.photos[STATE.uuid];
         if (myPhoto && STATE.ws && STATE.ws.readyState === WebSocket.OPEN) {
           STATE.ws.send(JSON.stringify({ type: 'photo_update', photo: myPhoto }));
         }
+        const myIntro = STATE.intros[STATE.uuid];
+        if (myIntro && STATE.ws && STATE.ws.readyState === WebSocket.OPEN) {
+          STATE.ws.send(JSON.stringify({ type: 'intro_update', intro: myIntro }));
+        }
       }
+      break;
+
+    case 'intro_update':
+      if (msg.uuid === STATE.uuid) break;
+      if (msg.intro) STATE.intros[msg.uuid] = msg.intro;
+      else delete STATE.intros[msg.uuid];
+      if (STATE.members && STATE.members.length) renderCarousel();
+      break;
+
+    case 'photo_blocked':
+      // 호스트가 본인 사진을 차단 (재업로드도 차단됨)
+      STATE.photoBanned = true;
+      delete STATE.photos[STATE.uuid];
+      setMyAvatarPhoto('');
+      try { localStorage.removeItem(`ntable_photo_${STATE.roomCode}`); } catch (_) {}
+      if (typeof toast === 'function') toast('호스트가 사진 업로드를 제한했어요');
+      const myAv = document.getElementById('myAvatar');
+      if (myAv) { myAv.disabled = true; myAv.title = '호스트가 사진 업로드를 제한했어요'; }
+      if (STATE.members && STATE.members.length) renderCarousel();
+      break;
+
+    case 'photo_unblocked':
+      // 호스트가 차단 해제
+      STATE.photoBanned = false;
+      if (typeof toast === 'function') toast('사진 업로드 제한이 해제됐어요');
+      const myAv2 = document.getElementById('myAvatar');
+      if (myAv2) { myAv2.disabled = false; myAv2.title = '사진 업로드'; }
       break;
   }
 }
@@ -1753,6 +1836,8 @@ function renderCarousel() {
       ? `<div class="member-avatar has-photo"><img src="${escHtml(photo)}" alt=""></div>`
       : `<div class="member-avatar">${avatarEmoji}</div>`;
 
+    const intro = STATE.intros[m.uuid];
+    const introHtml = intro ? `<div class="member-intro">"${escHtml(intro)}"</div>` : '';
     const card = document.createElement('div');
     card.className = 'member-card';
     card.innerHTML = `
@@ -1765,6 +1850,7 @@ function renderCarousel() {
           ${m.interest ? `<span class="tag">${escHtml(m.interest)}</span>` : ''}
           ${m.region ? `<span class="tag">${escHtml(m.region)}</span>` : ''}
         </div>
+        ${introHtml}
       </div>`;
     track.appendChild(card);
 
@@ -1927,6 +2013,10 @@ function escHtml(s) {
 const PHOTO_MAX_BYTES = 250000; // ~180KB raw base64
 
 function openPhotoUpload() {
+  if (STATE.photoBanned) {
+    if (typeof toast === 'function') toast('호스트가 사진 업로드를 제한했어요');
+    return;
+  }
   document.getElementById('photoFileInput')?.click();
 }
 
@@ -1991,6 +2081,23 @@ function resizePhotoToDataUrl(file, maxDim, quality) {
     reader.onerror = () => resolve('');
     reader.readAsDataURL(file);
   });
+}
+
+// 한줄 자기소개 — debounce 500ms broadcast
+let _introDebounce = null;
+function onIntroInput(e) {
+  const txt = String(e.target.value || '').slice(0, 60);
+  STATE.intros[STATE.uuid] = txt;
+  const cnt = document.getElementById('introCharCount');
+  if (cnt) cnt.textContent = `${txt.length}/60`;
+  if (_introDebounce) clearTimeout(_introDebounce);
+  _introDebounce = setTimeout(() => {
+    try { localStorage.setItem(`ntable_intro_${STATE.roomCode}`, txt); } catch (_) {}
+    if (STATE.ws && STATE.ws.readyState === WebSocket.OPEN) {
+      STATE.ws.send(JSON.stringify({ type: 'intro_update', intro: txt }));
+    }
+    if (STATE.members && STATE.members.length) renderCarousel();
+  }, 500);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

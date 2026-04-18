@@ -175,6 +175,31 @@
     position: relative;
     filter: drop-shadow(0 4px 14px rgba(212,168,67,0.45));
   }
+  .share-card-photo {
+    width: 110px; height: 110px;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid var(--gold);
+    box-shadow: 0 0 24px rgba(212,168,67,0.4);
+    position: relative;
+  }
+  .share-card-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .photo-include-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: rgba(212,168,67,0.06);
+    border: 1px dashed rgba(212,168,67,0.3);
+    border-radius: 10px;
+    margin: 14px 0;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--white-dim);
+  }
+  .photo-include-toggle input { width: 16px; height: 16px; accent-color: var(--gold); cursor: pointer; }
+  .photo-include-toggle small { font-size: 11px; color: var(--text-muted); display: block; margin-top: 2px; }
   .share-card-type {
     font-family: 'Cormorant Garamond', serif;
     font-size: 34px; font-weight: 600;
@@ -381,11 +406,16 @@
       <!-- html2canvas 캡처 타깃: 이 박스만 이미지로 저장됨 -->
       <div id="share-card" class="share-card">
         <div class="share-card-brand">ntable</div>
+        <div class="share-card-photo" id="share-photo" style="display:none"></div>
         <div class="share-card-emoji" id="share-emoji">✨</div>
         <div class="share-card-type" id="share-type">탐구형</div>
         <div class="share-card-text" id="personality-text"></div>
         <div class="share-card-footer">오늘의 모임 유형 · ntable.kr</div>
       </div>
+      <label class="photo-include-toggle" id="photoToggleWrap" hidden>
+        <input type="checkbox" id="includePhotoToggle">
+        <span>내 사진 포함하기 <small>(이 기기에 저장된 사진만 사용)</small></span>
+      </label>
       <div class="share-actions">
         <button type="button" id="save-image-btn" class="share-btn" aria-label="이미지 저장">📷 이미지 저장</button>
         <button type="button" id="insta-share-btn" class="share-btn outline" aria-label="인스타 스토리로 공유">📸 인스타 스토리 공유</button>
@@ -432,9 +462,34 @@
       document.getElementById('share-type').textContent = data.personality || '탐구형';
       document.getElementById('personality-text').textContent = data.text || '분석 결과를 불러올 수 없어요.';
       document.getElementById('personality-body').style.display = 'block';
+      setupPhotoToggle();
     } catch {
       document.getElementById('personality-loading').innerHTML = '<span style="color:var(--subtext)">분석 결과를 불러올 수 없어요.</span>';
     }
+  }
+
+  // 본인 사진 (모임 중 업로드한 것이 localStorage에 남아 있을 때만) 인스타 카드 포함 옵션
+  function setupPhotoToggle() {
+    let savedPhoto = null;
+    try { savedPhoto = localStorage.getItem(`ntable_photo_${room_code}`); } catch (_) {}
+    if (!savedPhoto) return;
+    const wrap = document.getElementById('photoToggleWrap');
+    const toggle = document.getElementById('includePhotoToggle');
+    const photoSlot = document.getElementById('share-photo');
+    const emojiSlot = document.getElementById('share-emoji');
+    if (!wrap || !toggle || !photoSlot || !emojiSlot) return;
+    wrap.hidden = false;
+    toggle.addEventListener('change', () => {
+      if (toggle.checked) {
+        photoSlot.innerHTML = `<img src="${savedPhoto}" alt="">`;
+        photoSlot.style.display = 'block';
+        emojiSlot.style.display = 'none';
+      } else {
+        photoSlot.innerHTML = '';
+        photoSlot.style.display = 'none';
+        emojiSlot.style.display = '';
+      }
+    });
   }
 
   // ── 이미지 저장 / 링크 복사 ──
