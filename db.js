@@ -123,6 +123,7 @@ async function initDB() {
     try { await client.query(`ALTER TABLE room_members ADD COLUMN hide_region BOOLEAN DEFAULT FALSE`); } catch (e) { if (e.code !== '42701') throw e; }
     try { await client.query(`ALTER TABLE room_members ADD COLUMN hide_industry BOOLEAN DEFAULT FALSE`); } catch (e) { if (e.code !== '42701') throw e; }
     try { await client.query(`ALTER TABLE room_members ADD COLUMN hide_interest BOOLEAN DEFAULT FALSE`); } catch (e) { if (e.code !== '42701') throw e; }
+    try { await client.query(`ALTER TABLE room_members ADD COLUMN hide_instagram BOOLEAN DEFAULT FALSE`); } catch (e) { if (e.code !== '42701') throw e; }
 
     // users.nickname — 방별 익명 구조로 전환되며 더 이상 unique·required 아님
     // (호환성 위해 컬럼 자체는 유지)

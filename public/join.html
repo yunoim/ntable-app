@@ -255,9 +255,9 @@ let CURRENT = 0;
 let STEPS = [];           // step keys: 'nick','basic','region','industry','mbti','interest','confirm'
 const data = {
   nickname: '', gender: null, birth_year: null, region: null,
-  industry: null, mbti: null, interest: null,
+  industry: null, mbti: null, interest: null, instagram: null,
   // 카드 비공개 (매칭에만 사용, 다른 게스트 카드에서 마스킹)
-  hide_birth_year: false, hide_region: false, hide_industry: false, hide_interest: false,
+  hide_birth_year: false, hide_region: false, hide_industry: false, hide_interest: false, hide_instagram: false,
 };
 
 function ensureUuid() {
@@ -333,7 +333,7 @@ async function prefillFromCache() {
       if (r.ok) {
         const me = await r.json();
         if (me.authed) {
-          ['gender','birth_year','region','industry','mbti','interest'].forEach(k => {
+          ['gender','birth_year','region','industry','mbti','interest','instagram'].forEach(k => {
             if (me[k]) data[k] = me[k];
           });
         }
@@ -347,7 +347,7 @@ async function prefillFromCache() {
     const profStr = localStorage.getItem('profile_snapshot');
     if (profStr) {
       const p = JSON.parse(profStr);
-      ['gender','birth_year','region','industry','mbti','interest'].forEach(k => {
+      ['gender','birth_year','region','industry','mbti','interest','instagram'].forEach(k => {
         if (p[k] && !data[k]) data[k] = p[k];
       });
     }
@@ -543,8 +543,17 @@ function renderStep() {
           <input type="text" id="interestInput" maxlength="60" placeholder="또는 직접 입력 (콤마로 여러 개)" value="${escHtml(data.interest || '')}" style="margin-top:14px;">
         </div>
         <div class="field">
-          <label class="chip df-check${data.hide_interest?' selected':''}" style="cursor:pointer;"><input type="checkbox" id="hide_interest"${data.hide_interest?' checked':''} style="display:none;"> 🔒 카드에 표시 안 함 (매칭에만 사용)</label>
+          <label class="chip df-check${data.hide_interest?' selected':''}" style="cursor:pointer;"><input type="checkbox" id="hide_interest"${data.hide_interest?' checked':''} style="display:none;"> 🔒 관심사 카드에 표시 안 함 (매칭에만 사용)</label>
         </div>
+
+        <div class="field" style="margin-top:24px;padding-top:18px;border-top:1px dashed rgba(212,168,67,0.2);">
+          <div class="field-label">인스타그램 <span style="opacity:0.5;font-size:11px;">(선택)</span></div>
+          <input type="text" id="instaInput" maxlength="50" placeholder="@your_id (영문·숫자·점·언더바)" value="${escHtml(data.instagram || '')}" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email">
+        </div>
+        <div class="field">
+          <label class="chip df-check${data.hide_instagram?' selected':''}" style="cursor:pointer;"><input type="checkbox" id="hide_instagram"${data.hide_instagram?' checked':''} style="display:none;"> 🔒 인스타그램 카드에 표시 안 함</label>
+        </div>
+
         <div class="actions">
           ${prevBtn}
           <button type="button" class="btn btn-next" onclick="nextStep()">다음</button>
@@ -589,6 +598,7 @@ function renderStep() {
           ${rowH('업종', data.industry, data.hide_industry)}
           ${rowH('MBTI', data.mbti, false)}
           ${rowH('관심사', data.interest, data.hide_interest)}
+          ${rowH('인스타그램', data.instagram ? '@' + data.instagram : '', data.hide_instagram)}
         </div>
         <div class="actions">
           ${prevBtn}
@@ -644,6 +654,7 @@ document.addEventListener('click', (e) => {
         dfChip.classList.toggle('selected', cb.checked);
         if (cb.id === 'hide_industry') data.hide_industry = cb.checked;
         if (cb.id === 'hide_interest') data.hide_interest = cb.checked;
+        if (cb.id === 'hide_instagram') data.hide_instagram = cb.checked;
       }, 0);
     }
     return;
@@ -770,10 +781,15 @@ function ensureBirthDefault() {
 
 document.addEventListener('input', (e) => {
   if (e.target.id === 'interestInput') {
-    // 직접 입력 — 콤마로 구분된 문자열 그대로 저장. chip 자동선택은 끔(자유 텍스트)
     const v = e.target.value.trim();
     data.interest = v || null;
     document.querySelectorAll('.chip[data-group="interest"]').forEach(c => c.classList.remove('selected'));
+  }
+  if (e.target.id === 'instaInput') {
+    // 인스타그램 — 영문/숫자/점/언더바만 허용, 소문자 변환, @ 자동 제거
+    const cleaned = e.target.value.toLowerCase().replace(/^@/, '').replace(/[^a-z0-9._]/g, '');
+    if (cleaned !== e.target.value) e.target.value = cleaned;
+    data.instagram = cleaned || null;
   }
 });
 
@@ -843,10 +859,12 @@ async function submitJoin() {
           gender: data.gender, birth_year: data.birth_year,
           region: data.region, industry: data.industry,
           mbti: data.mbti, interest: data.interest,
+          instagram: data.instagram,
           hide_birth_year: data.hide_birth_year,
           hide_region: data.hide_region,
           hide_industry: data.hide_industry,
           hide_interest: data.hide_interest,
+          hide_instagram: data.hide_instagram,
         },
       }),
     });

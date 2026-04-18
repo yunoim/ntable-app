@@ -199,8 +199,8 @@ router.get('/rooms/:code/members', async (req, res) => {
   // room_members 우선 (방별 익명 + hide 정보), 없으면 users fallback
   const placeholders = clients.map((_, i) => `$${i + 2}`).join(',');
   const members = await pool.query(
-    `SELECT uuid, nickname, gender, birth_year, region, industry, mbti, interest,
-            hide_birth_year, hide_region, hide_industry, hide_interest
+    `SELECT uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram,
+            hide_birth_year, hide_region, hide_industry, hide_interest, hide_instagram
        FROM room_members
       WHERE room_id = $1 AND uuid IN (${placeholders})`,
     [room.rows[0].id, ...clients]
@@ -227,12 +227,13 @@ router.get('/rooms/:code/members', async (req, res) => {
       if (row.hide_region) row.region = null;
       if (row.hide_industry) row.industry = null;
       if (row.hide_interest) row.interest = null;
+      if (row.hide_instagram) row.instagram = null;
     }
-    // 클라이언트로는 hide 플래그 노출 안 함 (정보 누출 방지)
     delete row.hide_birth_year;
     delete row.hide_region;
     delete row.hide_industry;
     delete row.hide_interest;
+    delete row.hide_instagram;
     return row;
   }).filter(Boolean);
   res.json(out);
@@ -278,7 +279,7 @@ router.get('/rooms/:code/members/:uuid', async (req, res) => {
   const isHostViewer = viewer && room.rows[0].host_uuid && viewer === room.rows[0].host_uuid;
   const m = await pool.query(
     `SELECT uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram,
-            hide_birth_year, hide_region, hide_industry, hide_interest
+            hide_birth_year, hide_region, hide_industry, hide_interest, hide_instagram
        FROM room_members WHERE room_id = $1 AND uuid = $2`,
     [room.rows[0].id, uuid]
   );
@@ -298,6 +299,7 @@ router.get('/rooms/:code/members/:uuid', async (req, res) => {
     if (row.hide_region) row.region = null;
     if (row.hide_industry) row.industry = null;
     if (row.hide_interest) row.interest = null;
+    if (row.hide_instagram) row.instagram = null;
   }
   // hide 플래그는 본인 응답일 때만 클라이언트로 노출 (확인 화면 🔒 마크용)
   if (viewer !== uuid) {
@@ -305,6 +307,7 @@ router.get('/rooms/:code/members/:uuid', async (req, res) => {
     delete row.hide_region;
     delete row.hide_industry;
     delete row.hide_interest;
+    delete row.hide_instagram;
   }
   res.json(row);
 });
@@ -385,8 +388,8 @@ router.post('/rooms/:code/join', async (req, res) => {
 
   try {
     await pool.query(
-      `INSERT INTO room_members (room_id, uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram, hide_birth_year, hide_region, hide_industry, hide_interest)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+      `INSERT INTO room_members (room_id, uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram, hide_birth_year, hide_region, hide_industry, hide_interest, hide_instagram)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
        ON CONFLICT (room_id, uuid)
        DO UPDATE SET nickname = EXCLUDED.nickname,
                      gender = EXCLUDED.gender,
@@ -399,7 +402,8 @@ router.post('/rooms/:code/join', async (req, res) => {
                      hide_birth_year = EXCLUDED.hide_birth_year,
                      hide_region = EXCLUDED.hide_region,
                      hide_industry = EXCLUDED.hide_industry,
-                     hide_interest = EXCLUDED.hide_interest`,
+                     hide_interest = EXCLUDED.hide_interest,
+                     hide_instagram = EXCLUDED.hide_instagram`,
       [
         room_id, uuid, nick,
         profile.gender || null,
@@ -413,6 +417,7 @@ router.post('/rooms/:code/join', async (req, res) => {
         profile.hide_region === true,
         profile.hide_industry === true,
         profile.hide_interest === true,
+        profile.hide_instagram === true,
       ]
     );
     // users 테이블에 uuid 만 보장 (FK 제약 호환). nickname 은 room_members 에서 관리.
