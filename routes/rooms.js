@@ -562,17 +562,23 @@ router.patch('/rooms/:code/settings', async (req, res) => {
   const updates = [];
   const params = [];
   let i = 1;
+  const changed = {};
   const qc = parseInt(req.body.question_count, 10);
-  if (Number.isFinite(qc) && qc >= 1 && qc <= 15) { updates.push(`question_count = $${i++}`); params.push(qc); }
+  if (Number.isFinite(qc) && qc >= 1 && qc <= 15) { updates.push(`question_count = $${i++}`); params.push(qc); changed.question_count = qc; }
   const fcTimer = parseInt(req.body.free_chat_timer_minutes, 10);
-  if (Number.isFinite(fcTimer) && fcTimer >= 0 && fcTimer <= 60) { updates.push(`free_chat_timer_minutes = $${i++}`); params.push(fcTimer); }
-  if (typeof req.body.free_chat_chat_enabled === 'boolean') { updates.push(`free_chat_chat_enabled = $${i++}`); params.push(req.body.free_chat_chat_enabled); }
-  if (typeof req.body.free_chat_topic_card_enabled === 'boolean') { updates.push(`free_chat_topic_card_enabled = $${i++}`); params.push(req.body.free_chat_topic_card_enabled); }
-  if (['host_only', 'participant'].includes(req.body.host_role)) { updates.push(`host_role = $${i++}`); params.push(req.body.host_role); }
-  if (['mobile', 'presenter'].includes(req.body.display_mode)) { updates.push(`display_mode = $${i++}`); params.push(req.body.display_mode); }
+  if (Number.isFinite(fcTimer) && fcTimer >= 0 && fcTimer <= 60) { updates.push(`free_chat_timer_minutes = $${i++}`); params.push(fcTimer); changed.free_chat_timer_minutes = fcTimer; }
+  if (typeof req.body.free_chat_chat_enabled === 'boolean') { updates.push(`free_chat_chat_enabled = $${i++}`); params.push(req.body.free_chat_chat_enabled); changed.free_chat_chat_enabled = req.body.free_chat_chat_enabled; }
+  if (typeof req.body.free_chat_topic_card_enabled === 'boolean') { updates.push(`free_chat_topic_card_enabled = $${i++}`); params.push(req.body.free_chat_topic_card_enabled); changed.free_chat_topic_card_enabled = req.body.free_chat_topic_card_enabled; }
+  if (['host_only', 'participant'].includes(req.body.host_role)) { updates.push(`host_role = $${i++}`); params.push(req.body.host_role); changed.host_role = req.body.host_role; }
+  if (['mobile', 'presenter'].includes(req.body.display_mode)) { updates.push(`display_mode = $${i++}`); params.push(req.body.display_mode); changed.display_mode = req.body.display_mode; }
   if (updates.length === 0) return res.status(400).json({ error: 'nothing to update' });
   params.push(code);
   await pool.query(`UPDATE rooms SET ${updates.join(', ')} WHERE room_code = $${i}`, params);
+  // 게스트들에게 변경 broadcast — 영향받는 화면(carousel·자유대화 옵션)이 즉시 반영되도록
+  try {
+    const wsModule = require('./ws');
+    wsModule.broadcastToRoom(code, { type: 'room_updated', changes: changed });
+  } catch (_) {}
   res.json({ ok: true });
 });
 

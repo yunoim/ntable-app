@@ -2034,6 +2034,25 @@ async function handleWSMessage(msg) {
       if (STATE.members && STATE.members.length) renderCarousel();
       break;
 
+    case 'room_updated':
+      // 호스트가 운영 옵션 변경 — 영향받는 화면 즉시 갱신
+      if (msg.changes) {
+        Object.assign(STATE.room, msg.changes);
+        // host_role 변경 시 멤버 목록 다시 fetch (host_only면 호스트가 carousel에서 빠짐)
+        if ('host_role' in msg.changes) {
+          loadIntroData();
+        }
+        // 자유대화 진입 중이면 옵션 즉시 반영
+        if (STATE.currentState === 'free' && (
+          'free_chat_timer_minutes' in msg.changes ||
+          'free_chat_chat_enabled' in msg.changes ||
+          'free_chat_topic_card_enabled' in msg.changes
+        )) {
+          applyGuestFreeChatOptions();
+        }
+      }
+      break;
+
     case 'photo_request':
       // 새 입장자 요청 → 본인 사진 + 자기소개 다시 broadcast (가지고 있을 때만)
       if (msg.requester_uuid !== STATE.uuid) {

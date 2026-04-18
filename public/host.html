@@ -1737,6 +1737,11 @@ async function loadRoomInfo() {
     const room = await res.json();
     if (room.host_uuid && room.host_uuid !== state.uuid) { location.href = '/'; return; }
     if (room.status === 'closed') { location.href = '/create'; return; }
+    // display_mode === 'presenter' 면 presenter 화면으로 자동 이동 (호스트가 큰 화면 선택)
+    if (room.display_mode === 'presenter' && !location.pathname.includes('/presenter/')) {
+      location.replace(`/presenter/${state.roomCode}`);
+      return;
+    }
     state.room = room;
     state.displayFields = Array.isArray(room.display_fields) ? room.display_fields : ['birth_year','region','industry','interest'];
     state.birthYearFormat = room.birth_year_format || 'exact';
