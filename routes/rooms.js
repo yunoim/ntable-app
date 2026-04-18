@@ -235,17 +235,19 @@ router.post('/rooms/:code/approve', async (req, res) => {
 });
 
 // GET /api/rooms/:code/members/:uuid — 특정 멤버 프로필 조회 (방별 익명 — room_members 우선)
+// ?viewer=<uuid> 로 viewer가 다른 사람이면 hide_* 필드 마스킹 (카드 비공개)
 router.get('/rooms/:code/members/:uuid', async (req, res) => {
   const { code, uuid } = req.params;
+  const viewer = req.query.viewer;
   const room = await pool.query('SELECT id FROM rooms WHERE room_code = $1', [code]);
   if (room.rows.length === 0) return res.status(404).json({ error: 'room not found' });
   const m = await pool.query(
-    `SELECT uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram
+    `SELECT uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram,
+            hide_birth_year, hide_region, hide_industry, hide_interest
        FROM room_members WHERE room_id = $1 AND uuid = $2`,
     [room.rows[0].id, uuid]
   );
   if (m.rows.length === 0) {
-    // legacy fallback
     const u = await pool.query(
       `SELECT uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram
          FROM users WHERE uuid = $1`,
@@ -254,7 +256,15 @@ router.get('/rooms/:code/members/:uuid', async (req, res) => {
     if (u.rows.length === 0) return res.status(404).json({ error: 'not found' });
     return res.json(u.rows[0]);
   }
-  res.json(m.rows[0]);
+  const row = m.rows[0];
+  // viewer가 본인이 아니면 hide 적용 (본인 보기는 본인 정보 그대로 + hide flag 같이)
+  if (viewer && viewer !== uuid) {
+    if (row.hide_birth_year) row.birth_year = null;
+    if (row.hide_region) row.region = null;
+    if (row.hide_industry) row.industry = null;
+    if (row.hide_interest) row.interest = null;
+  }
+  res.json(row);
 });
 
 // GET /api/rooms/:code/explore-result — 탐구 단계 결과 (각 질문별 멤버들의 답변)
@@ -333,8 +343,8 @@ router.post('/rooms/:code/join', async (req, res) => {
 
   try {
     await pool.query(
-      `INSERT INTO room_members (room_id, uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      `INSERT INTO room_members (room_id, uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram, hide_birth_year, hide_region, hide_industry, hide_interest)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
        ON CONFLICT (room_id, uuid)
        DO UPDATE SET nickname = EXCLUDED.nickname,
                      gender = EXCLUDED.gender,
@@ -343,7 +353,11 @@ router.post('/rooms/:code/join', async (req, res) => {
                      industry = EXCLUDED.industry,
                      mbti = EXCLUDED.mbti,
                      interest = EXCLUDED.interest,
-                     instagram = EXCLUDED.instagram`,
+                     instagram = EXCLUDED.instagram,
+                     hide_birth_year = EXCLUDED.hide_birth_year,
+                     hide_region = EXCLUDED.hide_region,
+                     hide_industry = EXCLUDED.hide_industry,
+                     hide_interest = EXCLUDED.hide_interest`,
       [
         room_id, uuid, nick,
         profile.gender || null,
@@ -353,6 +367,10 @@ router.post('/rooms/:code/join', async (req, res) => {
         profile.mbti || null,
         profile.interest || null,
         profile.instagram || null,
+        profile.hide_birth_year === true,
+        profile.hide_region === true,
+        profile.hide_industry === true,
+        profile.hide_interest === true,
       ]
     );
     // users 테이블에 uuid 만 보장 (FK 제약 호환). nickname 은 room_members 에서 관리.

@@ -253,7 +253,12 @@ let UUID = '';
 let ROOM = null;
 let CURRENT = 0;
 let STEPS = [];           // step keys: 'nick','basic','region','industry','mbti','interest','confirm'
-const data = { nickname: '', gender: null, birth_year: null, region: null, industry: null, mbti: null, interest: null };
+const data = {
+  nickname: '', gender: null, birth_year: null, region: null,
+  industry: null, mbti: null, interest: null,
+  // 카드 비공개 (매칭에만 사용, 다른 게스트 카드에서 마스킹)
+  hide_birth_year: false, hide_region: false, hide_industry: false, hide_interest: false,
+};
 
 function ensureUuid() {
   try { UUID = localStorage.getItem('demo_uuid') || ''; } catch (_) {}
@@ -307,21 +312,15 @@ async function init() {
 }
 
 function rebuildSteps() {
-  const isHost = !!ROOM.isHost;
+  // 인라인 hide 모델 — 별도 'display' step 폐기 / 사진 step 추가
+  // couples: 닉 → 기본 → 사진 → 확인 (4단계)
+  // 일반:    닉 → 기본 → 지역 → 업종 → MBTI → 관심사 → 사진 → 확인 (8단계)
   const isCouples = ROOM.pack_id === 'couples';
-  const df = Array.isArray(ROOM.display_fields)
-    ? ROOM.display_fields
-    : ['birth_year','region','industry','interest'];
-  const steps = ['nick'];
-  if (isHost) steps.push('display');
-  steps.push('basic');
+  const steps = ['nick', 'basic'];
   if (!isCouples) {
-    if (df.includes('region')) steps.push('region');
-    if (df.includes('industry')) steps.push('industry');
-    steps.push('mbti');
-    if (df.includes('interest')) steps.push('interest');
+    steps.push('region', 'industry', 'mbti', 'interest');
   }
-  steps.push('confirm');
+  steps.push('photo', 'confirm');
   STEPS = steps;
 }
 
@@ -392,66 +391,9 @@ function renderStep() {
         </div>
       `;
       break;
-    case 'display': {
-      // 호스트 전용 — display_fields + birth_year_format + region_detail + photo_enabled
-      const isCouples = ROOM.pack_id === 'couples';
-      const df = Array.isArray(ROOM.display_fields)
-        ? ROOM.display_fields
-        : ['birth_year','region','industry','interest'];
-      const fmt = ROOM.birth_year_format || (isCouples ? 'exact' : 'decade_half');
-      const rd = ROOM.region_detail === true;
-      const pe = ROOM.photo_enabled !== false;
-      body = `
-        <div class="step-num">${stepNum} · 표시 설정 <span style="opacity:0.6;font-weight:400;">(호스트)</span></div>
-        <h2 class="step-title">카드에 어떤 정보를 보일지 정하세요</h2>
-        <p class="step-sub">게스트들에게도 같은 방식으로 적용됩니다.</p>
-
-        <div class="field">
-          <div class="field-label">참가자 카드에 표시할 정보</div>
-          <div class="chip-row">
-            <label class="chip df-check${df.includes('birth_year')?' selected':''}"><input type="checkbox" id="df_birth_year" data-df="birth_year"${df.includes('birth_year')?' checked':''} style="display:none;"> 출생연도</label>
-            <label class="chip df-check${df.includes('region')?' selected':''}"><input type="checkbox" id="df_region" data-df="region"${df.includes('region')?' checked':''} style="display:none;"> 지역</label>
-            <label class="chip df-check${df.includes('industry')?' selected':''}"><input type="checkbox" id="df_industry" data-df="industry"${df.includes('industry')?' checked':''} style="display:none;"> 업종</label>
-            <label class="chip df-check${df.includes('interest')?' selected':''}"><input type="checkbox" id="df_interest" data-df="interest"${df.includes('interest')?' checked':''} style="display:none;"> 관심사</label>
-          </div>
-          <div class="hint">체크한 항목만 다른 참가자 카드에 노출됩니다.</div>
-        </div>
-
-        <div class="field">
-          <div class="field-label">출생연도 표시 방식</div>
-          <div class="chip-row">
-            <button type="button" class="chip${fmt==='decade'?' selected':''}" data-group="bfmt" data-value="decade">30대 (가장 익명)</button>
-            <button type="button" class="chip${fmt==='decade_half'?' selected':''}" data-group="bfmt" data-value="decade_half">30초·중·후 (권장)</button>
-            <button type="button" class="chip${fmt==='exact'?' selected':''}" data-group="bfmt" data-value="exact">정확한 연도 (1990)</button>
-          </div>
-          ${isCouples ? '<div class="hint">둘이서는 권장값이 "정확한 연도"입니다.</div>' : ''}
-        </div>
-
-        <div class="field">
-          <div class="field-label">지역 세부 표시</div>
-          <div class="chip-row">
-            <button type="button" class="chip${!rd?' selected':''}" data-group="rd" data-value="false">시·도만 (예: 서울)</button>
-            <button type="button" class="chip${rd?' selected':''}" data-group="rd" data-value="true">서울은 구까지 (예: 서울 강남)</button>
-          </div>
-        </div>
-
-        <div class="field">
-          <div class="field-label">참가자 사진 업로드</div>
-          <div class="chip-row">
-            <button type="button" class="chip${pe?' selected':''}" data-group="pe" data-value="true">📷 허용</button>
-            <button type="button" class="chip${!pe?' selected':''}" data-group="pe" data-value="false">🚫 비허용</button>
-          </div>
-          <div class="hint">허용 시 참가자가 본인 사진을 카드에 올릴 수 있어요. (브라우저에만 저장 · 새로고침 시 사라짐)</div>
-        </div>
-
-        <div class="actions">
-          ${prevBtn}
-          <button type="button" class="btn btn-next" onclick="saveDisplayAndNext()">다음</button>
-        </div>
-      `;
-      break;
-    }
     case 'basic': {
+      const isHost = !!ROOM.isHost;
+      const isCouples = ROOM.pack_id === 'couples';
       const defaultYear = data.birth_year || 1990;
       const yearOpts = (() => {
         const cur = new Date().getFullYear();
@@ -461,11 +403,27 @@ function renderStep() {
         }
         return html;
       })();
-      const fmtHint = ROOM.birth_year_format === 'decade_half'
-        ? '카드에 "30초/30중/30후" 형태로 표시'
-        : ROOM.birth_year_format === 'decade'
-          ? '카드에 "30대" 형태로 표시'
-          : '카드에 정확한 연도가 표시됩니다';
+      const fmt = ROOM.birth_year_format || (isCouples ? 'exact' : 'decade_half');
+      // 호스트는 표시 방식 4옵션(decade/decade_half/exact/hide), 게스트는 hide 토글만
+      const fmtSection = isHost
+        ? `
+        <div class="field">
+          <div class="field-label">출생연도 표시 방식 <span style="opacity:0.5;font-size:11px;">호스트가 모두에게 적용</span></div>
+          <div class="chip-row">
+            <button type="button" class="chip${fmt==='decade'&&!data.hide_birth_year?' selected':''}" data-group="bfmt" data-value="decade">30대 (10대 단위)</button>
+            <button type="button" class="chip${fmt==='decade_half'&&!data.hide_birth_year?' selected':''}" data-group="bfmt" data-value="decade_half">30초·중·후 (기본·권장)</button>
+            <button type="button" class="chip${fmt==='exact'&&!data.hide_birth_year?' selected':''}" data-group="bfmt" data-value="exact">정확한 연도 (1990)</button>
+            <button type="button" class="chip${data.hide_birth_year?' selected':''}" data-group="bfmt" data-value="hide">🔒 카드에 표시 안 함 (매칭에만 사용)</button>
+          </div>
+        </div>`
+        : `
+        <div class="field">
+          <div class="field-label">내 출생연도 공개</div>
+          <div class="chip-row">
+            <button type="button" class="chip${!data.hide_birth_year?' selected':''}" data-group="hide_birth_year" data-value="false">호스트 설정대로 표시 (${fmt==='decade'?'30대':fmt==='decade_half'?'30초·중·후':'정확한 연도'})</button>
+            <button type="button" class="chip${data.hide_birth_year?' selected':''}" data-group="hide_birth_year" data-value="true">🔒 카드에 표시 안 함</button>
+          </div>
+        </div>`;
       body = `
         <div class="step-num">${stepNum} · 기본 정보 <span style="opacity:0.6;font-weight:400;">(선택)</span></div>
         <h2 class="step-title">간단히 알려주세요</h2>
@@ -481,8 +439,8 @@ function renderStep() {
         <div class="field">
           <div class="field-label">출생연도 <span style="opacity:0.5;font-size:11px;">기본 1990</span></div>
           <select id="birthYearInput" class="year-select">${yearOpts}</select>
-          <div class="hint">${fmtHint}</div>
         </div>
+        ${fmtSection}
         <div class="actions">
           ${prevBtn}
           <button type="button" class="btn btn-next" onclick="nextStep()">다음</button>
@@ -491,10 +449,30 @@ function renderStep() {
       break;
     }
     case 'region': {
+      const isHost = !!ROOM.isHost;
       const regionPicked = data.region || '';
       const isSeoulPicked = regionPicked.startsWith('서울');
       const seoulGu = isSeoulPicked ? regionPicked.replace(/^서울\s*/, '').trim() : '';
-      const showGu = ROOM.region_detail && (regionPicked === '서울' || isSeoulPicked);
+      const rd = ROOM.region_detail === true;
+      const showGu = rd && (regionPicked === '서울' || isSeoulPicked);
+      const rdSection = isHost
+        ? `
+        <div class="field">
+          <div class="field-label">지역 표시 방식 <span style="opacity:0.5;font-size:11px;">호스트가 모두에게 적용</span></div>
+          <div class="chip-row">
+            <button type="button" class="chip${!rd && !data.hide_region?' selected':''}" data-group="rdfmt" data-value="false">시·도만 (예: 서울)</button>
+            <button type="button" class="chip${rd && !data.hide_region?' selected':''}" data-group="rdfmt" data-value="true">서울은 구까지 (예: 강남)</button>
+            <button type="button" class="chip${data.hide_region?' selected':''}" data-group="rdfmt" data-value="hide">🔒 카드에 표시 안 함 (매칭에만 사용)</button>
+          </div>
+        </div>`
+        : `
+        <div class="field">
+          <div class="field-label">내 지역 공개</div>
+          <div class="chip-row">
+            <button type="button" class="chip${!data.hide_region?' selected':''}" data-group="hide_region" data-value="false">호스트 설정대로 표시 (${rd?'서울 구까지':'시·도만'})</button>
+            <button type="button" class="chip${data.hide_region?' selected':''}" data-group="hide_region" data-value="true">🔒 카드에 표시 안 함</button>
+          </div>
+        </div>`;
       body = `
         <div class="step-num">${stepNum} · 지역 <span style="opacity:0.6;font-weight:400;">(선택)</span></div>
         <h2 class="step-title">주로 활동하는 지역</h2>
@@ -510,6 +488,7 @@ function renderStep() {
           <div class="field-label" style="font-size:13px;color:#e8b84b;">서울 어디?</div>
           <div class="chip-row">${SEOUL_GU.map(g => `<button type="button" class="chip${seoulGu===g?' selected':''}" data-group="seoul-gu" data-value="${escHtml(g)}">${escHtml(g)}</button>`).join('')}</div>
         </div>` : ''}
+        ${rdSection}
         <div class="actions">
           ${prevBtn}
           <button type="button" class="btn btn-next" onclick="nextStep()">다음</button>
@@ -525,6 +504,9 @@ function renderStep() {
         <div class="field">
           <div class="chip-row">${INDUSTRIES.map(v => `<button type="button" class="chip${data.industry===v?' selected':''}" data-group="industry" data-value="${escHtml(v)}">${escHtml(v)}</button>`).join('')}</div>
         </div>
+        <div class="field">
+          <label class="chip df-check${data.hide_industry?' selected':''}" style="cursor:pointer;"><input type="checkbox" id="hide_industry"${data.hide_industry?' checked':''} style="display:none;"> 🔒 카드에 표시 안 함 (매칭에만 사용)</label>
+        </div>
         <div class="actions">
           ${prevBtn}
           <button type="button" class="btn btn-next" onclick="nextStep()">다음</button>
@@ -538,6 +520,11 @@ function renderStep() {
         <p class="step-sub">매칭 정확도가 올라가요.</p>
         <div class="field">
           <div class="chip-row mbti">${MBTIS.map(v => `<button type="button" class="chip${data.mbti===v?' selected':''}" data-group="mbti" data-value="${v}">${v}</button>`).join('')}</div>
+        </div>
+        <div class="field">
+          <div class="chip-row">
+            <button type="button" class="chip${data.mbti===null?' selected':''}" data-group="mbti" data-value="">모르겠어요 / 선택 안 함</button>
+          </div>
         </div>
         <div class="actions">
           ${prevBtn}
@@ -555,6 +542,28 @@ function renderStep() {
           <div class="chip-row">${INTERESTS.map(v => `<button type="button" class="chip${interestSet.has(v)?' selected':''}" data-group="interest" data-value="${escHtml(v)}">${escHtml(v)}</button>`).join('')}</div>
           <input type="text" id="interestInput" maxlength="60" placeholder="또는 직접 입력 (콤마로 여러 개)" value="${escHtml(data.interest || '')}" style="margin-top:14px;">
         </div>
+        <div class="field">
+          <label class="chip df-check${data.hide_interest?' selected':''}" style="cursor:pointer;"><input type="checkbox" id="hide_interest"${data.hide_interest?' checked':''} style="display:none;"> 🔒 카드에 표시 안 함 (매칭에만 사용)</label>
+        </div>
+        <div class="actions">
+          ${prevBtn}
+          <button type="button" class="btn btn-next" onclick="nextStep()">다음</button>
+        </div>
+      `;
+      break;
+    }
+    case 'photo': {
+      const savedPhoto = (() => { try { return localStorage.getItem(`ntable_photo_${ROOM_CODE}`) || ''; } catch (_) { return ''; } })();
+      body = `
+        <div class="step-num">${stepNum} · 프로필 사진 <span style="opacity:0.6;font-weight:400;">(선택)</span></div>
+        <h2 class="step-title">사진을 올릴까요?</h2>
+        <p class="step-sub">올리면 카드에 표시돼요. <strong>브라우저에만 저장</strong>, 서버에 안 남아요.</p>
+        <div class="field" style="text-align:center;">
+          <div id="photoPreview" style="width:140px;height:140px;border-radius:50%;background:rgba(212,168,67,0.12);border:2px dashed rgba(212,168,67,0.4);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:48px;overflow:hidden;">${savedPhoto ? `<img src="${escHtml(savedPhoto)}" style="width:100%;height:100%;object-fit:cover;">` : '📷'}</div>
+          <input type="file" id="photoInput" accept="image/*" style="display:none;" />
+          <button type="button" class="btn btn-skip" onclick="document.getElementById('photoInput').click();" style="width:100%;margin-bottom:8px;">${savedPhoto ? '사진 변경' : '📷 사진 선택'}</button>
+          ${savedPhoto ? `<button type="button" class="btn btn-skip" onclick="clearWizardPhoto()" style="width:100%;font-size:12px;color:#ff8a8a;border-color:rgba(255,138,138,0.3);">사진 제거</button>` : ''}
+        </div>
         <div class="actions">
           ${prevBtn}
           <button type="button" class="btn btn-next" onclick="nextStep()">다음</button>
@@ -567,18 +576,19 @@ function renderStep() {
         ? '호스트로 모임을 시작해요. 게스트들에게는 이렇게 보입니다.'
         : '아래 정보로 다른 참가자에게 보입니다.';
       const submitLabel = ROOM.isHost ? 'QR·참여코드 받기' : '입장하기';
+      const genderLabel = data.gender === 'male' ? '남성' : data.gender === 'female' ? '여성' : data.gender === 'unspecified' ? '선택 안 함' : '';
       body = `
         <div class="step-num">${stepNum} · 확인</div>
         <h2 class="step-title">이렇게 입장해요</h2>
         <p class="step-sub">${subText}</p>
         <div class="summary">
           <div class="summary-row"><span class="key">닉네임</span><span class="val">${escHtml(data.nickname)}</span></div>
-          ${row('성별', data.gender === 'male' ? '남성' : data.gender === 'female' ? '여성' : '')}
-          ${row('출생연도', data.birth_year ? data.birth_year + '년' : '')}
-          ${row('지역', data.region)}
-          ${row('업종', data.industry)}
-          ${row('MBTI', data.mbti)}
-          ${row('관심사', data.interest)}
+          ${rowH('성별', genderLabel, false)}
+          ${rowH('출생연도', data.birth_year ? data.birth_year + '년' : '', data.hide_birth_year)}
+          ${rowH('지역', data.region, data.hide_region)}
+          ${rowH('업종', data.industry, data.hide_industry)}
+          ${rowH('MBTI', data.mbti, false)}
+          ${rowH('관심사', data.interest, data.hide_interest)}
         </div>
         <div class="actions">
           ${prevBtn}
@@ -597,6 +607,14 @@ function renderStep() {
 function row(k, v) {
   if (v) return `<div class="summary-row"><span class="key">${k}</span><span class="val">${escHtml(v)}</span></div>`;
   return `<div class="summary-row"><span class="key">${k}</span><span class="val empty">생략</span></div>`;
+}
+function rowH(k, v, hidden) {
+  // hidden=true면 매칭에만 사용 (다른 게스트 카드에서 마스킹). 본인 확인엔 값+🔒 표시.
+  if (!v) return `<div class="summary-row"><span class="key">${k}</span><span class="val empty">생략</span></div>`;
+  if (hidden) {
+    return `<div class="summary-row"><span class="key">${k}</span><span class="val" style="opacity:0.55;">${escHtml(v)} <span style="font-size:10px;color:#9aa0ac;letter-spacing:0.04em;">🔒 카드 비공개</span></span></div>`;
+  }
+  return `<div class="summary-row"><span class="key">${k}</span><span class="val">${escHtml(v)}</span></div>`;
 }
 
 function bindStep(key) {
@@ -617,13 +635,16 @@ function bindStep(key) {
 }
 
 document.addEventListener('click', (e) => {
-  // df-check 라벨 (display 스텝 체크박스 chip) — selected 토글
+  // df-check 라벨 (hide 체크박스 chip) — selected 토글 + data 반영
   const dfChip = e.target.closest('.chip.df-check');
   if (dfChip) {
     const cb = dfChip.querySelector('input[type="checkbox"]');
     if (cb) {
-      // label 내장 checkbox라 native click이 toggle. 직접 검색은 클릭이 발생한 후
-      setTimeout(() => dfChip.classList.toggle('selected', cb.checked), 0);
+      setTimeout(() => {
+        dfChip.classList.toggle('selected', cb.checked);
+        if (cb.id === 'hide_industry') data.hide_industry = cb.checked;
+        if (cb.id === 'hide_interest') data.hide_interest = cb.checked;
+      }, 0);
     }
     return;
   }
@@ -632,6 +653,51 @@ document.addEventListener('click', (e) => {
   const group = chip.dataset.group;
   if (!group) return;
   const wasSelected = chip.classList.contains('selected');
+
+  // 호스트 출생연도 표시 방식 (decade/decade_half/exact/hide)
+  if (group === 'bfmt') {
+    document.querySelectorAll('.chip[data-group="bfmt"]').forEach(c => c.classList.remove('selected'));
+    chip.classList.add('selected');
+    const v = chip.dataset.value;
+    if (v === 'hide') {
+      data.hide_birth_year = true;
+    } else {
+      data.hide_birth_year = false;
+      // 호스트 결정 → server PATCH (방 규칙 변경)
+      ROOM.birth_year_format = v;
+      patchRoomDisplay({ birth_year_format: v });
+    }
+    return;
+  }
+  // 게스트 hide_birth_year 토글
+  if (group === 'hide_birth_year') {
+    document.querySelectorAll('.chip[data-group="hide_birth_year"]').forEach(c => c.classList.remove('selected'));
+    chip.classList.add('selected');
+    data.hide_birth_year = chip.dataset.value === 'true';
+    return;
+  }
+  // 호스트 지역 표시 방식 (false/true/hide)
+  if (group === 'rdfmt') {
+    document.querySelectorAll('.chip[data-group="rdfmt"]').forEach(c => c.classList.remove('selected'));
+    chip.classList.add('selected');
+    const v = chip.dataset.value;
+    if (v === 'hide') {
+      data.hide_region = true;
+    } else {
+      data.hide_region = false;
+      const newRd = v === 'true';
+      ROOM.region_detail = newRd;
+      patchRoomDisplay({ region_detail: newRd });
+    }
+    return;
+  }
+  // 게스트 hide_region 토글
+  if (group === 'hide_region') {
+    document.querySelectorAll('.chip[data-group="hide_region"]').forEach(c => c.classList.remove('selected'));
+    chip.classList.add('selected');
+    data.hide_region = chip.dataset.value === 'true';
+    return;
+  }
 
   if (group === 'interest') {
     // 관심사는 multi-select (0개~여러 개 OK)
@@ -717,35 +783,35 @@ function nextStep() {
   renderStep();
 }
 
-// 호스트 'display' step — 표시 설정 변경 → server PATCH → STEPS 재구성
-async function saveDisplayAndNext() {
-  const newDf = ['birth_year','region','industry','interest']
-    .filter(k => document.getElementById('df_' + k)?.checked);
-  const fmtChip = document.querySelector('.chip[data-group="bfmt"].selected');
-  const newFmt = fmtChip ? fmtChip.dataset.value : (ROOM.birth_year_format || 'decade_half');
-  const rdChip = document.querySelector('.chip[data-group="rd"].selected');
-  const newRd = rdChip ? rdChip.dataset.value === 'true' : (ROOM.region_detail === true);
-  const peChip = document.querySelector('.chip[data-group="pe"].selected');
-  const newPe = peChip ? peChip.dataset.value === 'true' : (ROOM.photo_enabled !== false);
+// 호스트 표시 방식 변경 시 server PATCH (인라인)
+async function patchRoomDisplay(payload) {
+  if (!ROOM.isHost) return;
   try {
     await fetch(`/api/rooms/${ROOM_CODE}/display`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        uuid: UUID,
-        display_fields: newDf,
-        birth_year_format: newFmt,
-        region_detail: newRd,
-        photo_enabled: newPe,
-      }),
+      body: JSON.stringify({ uuid: UUID, ...payload }),
     });
   } catch (_) {}
-  ROOM.display_fields = newDf;
-  ROOM.birth_year_format = newFmt;
-  ROOM.region_detail = newRd;
-  ROOM.photo_enabled = newPe;
-  rebuildSteps();
-  CURRENT = Math.min(CURRENT + 1, STEPS.length - 1);
+}
+
+// 사진 input 처리 + 제거
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'photoInput') {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target.result;
+      try { localStorage.setItem(`ntable_photo_${ROOM_CODE}`, dataUrl); } catch (_) {}
+      const preview = document.getElementById('photoPreview');
+      if (preview) preview.innerHTML = `<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover;">`;
+    };
+    reader.readAsDataURL(file);
+  }
+});
+function clearWizardPhoto() {
+  try { localStorage.removeItem(`ntable_photo_${ROOM_CODE}`); } catch (_) {}
   renderStep();
 }
 function prevStep() {
@@ -776,6 +842,10 @@ async function submitJoin() {
           gender: data.gender, birth_year: data.birth_year,
           region: data.region, industry: data.industry,
           mbti: data.mbti, interest: data.interest,
+          hide_birth_year: data.hide_birth_year,
+          hide_region: data.hide_region,
+          hide_industry: data.hide_industry,
+          hide_interest: data.hide_interest,
         },
       }),
     });
