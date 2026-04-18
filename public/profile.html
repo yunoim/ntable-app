@@ -321,9 +321,10 @@
     const uuid = localStorage.getItem('demo_uuid');
     let selectedGender = null;
 
-    // 출생연도 옵션
+    // 출생연도 옵션 (현재 - 10년 ~ 1940)
     const birthSelect = document.getElementById('birth-year');
-    for (let y = 2007; y >= 1975; y--) {
+    const _curYear = new Date().getFullYear();
+    for (let y = _curYear - 10; y >= 1940; y--) {
       const opt = document.createElement('option');
       opt.value = y;
       opt.textContent = y + '년';

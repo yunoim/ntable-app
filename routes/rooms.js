@@ -449,22 +449,29 @@ router.get('/rooms/:code/qr', async (req, res) => {
   }
 });
 
-// GET /api/stats — 랜딩 등 공개 페이지용 라이브 집계
-// 현재 열려있는 방 수 + 활성 참가자 총합 (waiting/열림 상태 기준)
+// GET /api/stats — 랜딩 등 공개 페이지용 집계
+// live: 현재 열려있는 방 + 활성 참가자 / cumulative: 누적 모임·참여자 (room_members 합산)
 router.get('/stats', async (req, res) => {
   res.set('Cache-Control', 'public, max-age=10');
   res.set('Access-Control-Allow-Origin', '*');
   try {
     const wsModule = require('./ws');
-    // 메모리 기준 활성 방 — WS 세션이 하나 이상 붙어있는 방
     const activeRooms = wsModule.getActiveRoomCodes ? wsModule.getActiveRoomCodes() : [];
     let participants = 0;
     for (const code of activeRooms) {
       participants += wsModule.getRoomClients(code).length;
     }
+    const [totalRoomsRow, totalAttendRow, uniquePeopleRow] = await Promise.all([
+      pool.query('SELECT COUNT(*)::int AS cnt FROM rooms'),
+      pool.query('SELECT COUNT(*)::int AS cnt FROM room_members'),
+      pool.query('SELECT COUNT(DISTINCT uuid)::int AS cnt FROM room_members'),
+    ]);
     res.json({
       active_rooms: activeRooms.length,
       participants,
+      total_rooms: totalRoomsRow.rows[0].cnt,
+      total_attendances: totalAttendRow.rows[0].cnt,
+      unique_people: uniquePeopleRow.rows[0].cnt,
       updated_at: new Date().toISOString(),
     });
   } catch (err) {
