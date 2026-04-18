@@ -85,6 +85,27 @@ async function initDB() {
       if (e.code !== '42701') throw e;
     }
 
+    // room_members — 방별 닉네임/프로필 스냅샷 (방 종료 시 CASCADE 자동 삭제)
+    // 같은 uuid 도 다른 방에서 다른 닉네임 가능. 같은 방 안에서 nickname unique.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS room_members (
+        id SERIAL PRIMARY KEY,
+        room_id INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+        uuid VARCHAR NOT NULL,
+        nickname VARCHAR(20) NOT NULL,
+        gender VARCHAR(10),
+        birth_year INTEGER,
+        region VARCHAR(50),
+        industry VARCHAR(50),
+        mbti VARCHAR(10),
+        interest VARCHAR(30),
+        instagram VARCHAR(50),
+        joined_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(room_id, nickname),
+        UNIQUE(room_id, uuid)
+      )
+    `);
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS room_state (
         room_id INTEGER PRIMARY KEY REFERENCES rooms(id),

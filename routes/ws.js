@@ -127,16 +127,22 @@ function init(server) {
       }
       const hostUuid = roomResult.rows[0].host_uuid;
 
-      const userResult = await pool.query(
-        'SELECT uuid, nickname FROM users WHERE uuid = $1',
-        [uuid]
+      // 방별 익명 구조 — room_members 에서 nickname 우선 조회. 없으면 legacy users.
+      const memberResult = await pool.query(
+        'SELECT nickname FROM room_members WHERE room_id = $1 AND uuid = $2',
+        [roomResult.rows[0].id, uuid]
       );
-      if (userResult.rows.length === 0) {
-        ws.close(4002, 'User not found');
-        return;
+      let nickname = memberResult.rows[0]?.nickname;
+      if (!nickname) {
+        const userResult = await pool.query(
+          'SELECT nickname FROM users WHERE uuid = $1', [uuid]
+        );
+        if (userResult.rows.length === 0) {
+          ws.close(4002, 'User not found');
+          return;
+        }
+        nickname = userResult.rows[0].nickname;
       }
-
-      const nickname = userResult.rows[0].nickname;
 
       // 같은 uuid가 이미 어디든 연결돼 있으면 기존 세션 종료 후 신규 세션이 인수
       // (네트워크 블립/새로고침/탭 전환 후 재접속 허용)

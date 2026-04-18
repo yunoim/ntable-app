@@ -216,6 +216,68 @@ router.post('/rooms/:code/approve', async (req, res) => {
   res.json({ approved: [target_uuid] });
 });
 
+// POST /api/rooms/:code/join — 방 입장 시 nickname + profile 스냅샷 등록 (방별 익명)
+// body: { uuid, nickname, profile?: { gender, birth_year, region, industry, mbti, interest, instagram } }
+router.post('/rooms/:code/join', async (req, res) => {
+  const { code } = req.params;
+  const { uuid, nickname } = req.body || {};
+  const profile = req.body?.profile || {};
+  if (!uuid || !nickname) return res.status(400).json({ error: 'uuid, nickname required' });
+  const nick = String(nickname).trim().slice(0, 20);
+  if (!nick) return res.status(400).json({ error: 'nickname empty' });
+
+  const room = await pool.query('SELECT id, status FROM rooms WHERE room_code = $1', [code]);
+  if (room.rows.length === 0) return res.status(404).json({ error: 'room not found' });
+  if (room.rows[0].status === 'closed') return res.status(410).json({ error: 'room closed' });
+  const room_id = room.rows[0].id;
+
+  // 같은 방·다른 uuid가 같은 nickname 사용 중인지 체크
+  const dup = await pool.query(
+    'SELECT uuid FROM room_members WHERE room_id = $1 AND nickname = $2',
+    [room_id, nick]
+  );
+  if (dup.rows.length && dup.rows[0].uuid !== uuid) {
+    return res.status(409).json({ error: 'NICKNAME_TAKEN', message: '이 방에서 이미 사용 중인 닉네임이에요' });
+  }
+
+  try {
+    await pool.query(
+      `INSERT INTO room_members (room_id, uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+       ON CONFLICT (room_id, uuid)
+       DO UPDATE SET nickname = EXCLUDED.nickname,
+                     gender = EXCLUDED.gender,
+                     birth_year = EXCLUDED.birth_year,
+                     region = EXCLUDED.region,
+                     industry = EXCLUDED.industry,
+                     mbti = EXCLUDED.mbti,
+                     interest = EXCLUDED.interest,
+                     instagram = EXCLUDED.instagram`,
+      [
+        room_id, uuid, nick,
+        profile.gender || null,
+        profile.birth_year || null,
+        profile.region || null,
+        profile.industry || null,
+        profile.mbti || null,
+        profile.interest || null,
+        profile.instagram || null,
+      ]
+    );
+    // users 테이블에도 uuid 보장 (FK 제약 호환)
+    await pool.query(
+      `INSERT INTO users (uuid, nickname) VALUES ($1, $2)
+       ON CONFLICT (uuid) DO NOTHING`,
+      [uuid, nick]
+    );
+    res.json({ ok: true, room_code: code, nickname: nick });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'NICKNAME_TAKEN' });
+    console.error('join error:', err);
+    res.status(500).json({ error: 'db error' });
+  }
+});
+
 // POST /api/tv/attach — 호스트가 페어링 코드 입력해서 TV를 자기 방에 연결
 router.post('/tv/attach', async (req, res) => {
   const { code, room_code, host_uuid } = req.body || {};
