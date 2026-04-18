@@ -51,6 +51,7 @@ router.post('/rooms', async (req, res) => {
   const display_mode = ['mobile', 'presenter'].includes(req.body.display_mode)
     ? req.body.display_mode : 'mobile';
   const photo_enabled = req.body.photo_enabled === false ? false : true;
+  const region_detail = req.body.region_detail === true ? true : false;
 
   // uuid 보장 — 신규 익명 사용자는 자동 등록 (방별 익명 구조)
   await pool.query(
@@ -82,8 +83,8 @@ router.post('/rooms', async (req, res) => {
   try {
     await client.query('BEGIN');
     const roomResult = await client.query(
-      `INSERT INTO rooms (room_code, title, host_uuid, host_role, status, question_count, questions_json, free_topics_json, pack_id, display_fields, birth_year_format, display_mode, photo_enabled)
-       VALUES ($1, $2, $3, $4, 'waiting', $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
+      `INSERT INTO rooms (room_code, title, host_uuid, host_role, status, question_count, questions_json, free_topics_json, pack_id, display_fields, birth_year_format, display_mode, photo_enabled, region_detail)
+       VALUES ($1, $2, $3, $4, 'waiting', $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`,
       [
         room_code, title, uuid, host_role, question_count,
         JSON.stringify(questionsSeed),
@@ -93,6 +94,7 @@ router.post('/rooms', async (req, res) => {
         birth_year_format,
         display_mode,
         photo_enabled,
+        region_detail,
       ]
     );
     const room_id = roomResult.rows[0].id;
@@ -102,7 +104,7 @@ router.post('/rooms', async (req, res) => {
       [room_id, JSON.stringify({ phase: 'waiting', current_tab: 'intro', question_index: 0 })]
     );
     await client.query('COMMIT');
-    res.json({ room_code, title, host_role, question_count, pack_id: pack.id, display_fields, birth_year_format, display_mode, photo_enabled });
+    res.json({ room_code, title, host_role, question_count, pack_id: pack.id, display_fields, birth_year_format, display_mode, photo_enabled, region_detail });
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('POST /api/rooms error:', err);
@@ -127,7 +129,7 @@ router.get('/packs', async (req, res) => {
 router.get('/rooms/:code', async (req, res) => {
   const { code } = req.params;
   const result = await pool.query(
-    'SELECT room_code, title, host_uuid, host_role, status, question_count, pack_id, display_fields, birth_year_format, display_mode, photo_enabled FROM rooms WHERE room_code = $1',
+    'SELECT room_code, title, host_uuid, host_role, status, question_count, pack_id, display_fields, birth_year_format, display_mode, photo_enabled, region_detail FROM rooms WHERE room_code = $1',
     [code]
   );
   if (result.rows.length === 0) return res.status(404).json({ error: 'room not found' });
@@ -216,6 +218,29 @@ router.post('/rooms/:code/approve', async (req, res) => {
   if (!target_uuid) return res.status(400).json({ error: 'target_uuid required' });
   wsModule.broadcastToRoom(code, { type: 'approved', uuid: target_uuid });
   res.json({ approved: [target_uuid] });
+});
+
+// GET /api/rooms/:code/members/:uuid — 특정 멤버 프로필 조회 (방별 익명 — room_members 우선)
+router.get('/rooms/:code/members/:uuid', async (req, res) => {
+  const { code, uuid } = req.params;
+  const room = await pool.query('SELECT id FROM rooms WHERE room_code = $1', [code]);
+  if (room.rows.length === 0) return res.status(404).json({ error: 'room not found' });
+  const m = await pool.query(
+    `SELECT uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram
+       FROM room_members WHERE room_id = $1 AND uuid = $2`,
+    [room.rows[0].id, uuid]
+  );
+  if (m.rows.length === 0) {
+    // legacy fallback
+    const u = await pool.query(
+      `SELECT uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram
+         FROM users WHERE uuid = $1`,
+      [uuid]
+    );
+    if (u.rows.length === 0) return res.status(404).json({ error: 'not found' });
+    return res.json(u.rows[0]);
+  }
+  res.json(m.rows[0]);
 });
 
 // GET /api/rooms/:code/me?uuid=X — 본인이 이 방에 join 했는지 확인

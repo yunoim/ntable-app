@@ -2321,7 +2321,7 @@ function renderQuestion() {
     const btn = document.createElement('button');
     btn.className = 'choice-btn' + (voted ? ' disabled' : '');
     btn.innerHTML = `<span class="choice-label">${label}</span>${escHtml(opt.replace(/^[AB]\.\s*/, ''))}`;
-    if (!voted) btn.onclick = () => submitVote(q.id, label, q);
+    if (!voted) btn.onclick = () => submitExploreVote(q.id, label, q);
     wrap.appendChild(btn);
   });
 
@@ -2330,7 +2330,7 @@ function renderQuestion() {
   document.getElementById('vBarB').style.width = '0%';
 }
 
-async function submitVote(questionId, answer, q) {
+async function submitExploreVote(questionId, answer, q) {
   if (STATE.votedQuestions.has(questionId)) return;
   STATE.votedQuestions.add(questionId);
 

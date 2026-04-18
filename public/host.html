@@ -1848,6 +1848,12 @@ function photoUnban(targetUuid, nickname) {
 }
 
 async function fetchUserProfile(uuid) {
+  // 방별 익명 — room_members 우선 (이 방의 닉/프로필 스냅샷)
+  try {
+    const res = await fetch(`/api/rooms/${state.roomCode}/members/${encodeURIComponent(uuid)}`);
+    if (res.ok) return await res.json();
+  } catch (_) {}
+  // legacy fallback
   try {
     const res = await api(`/api/me?uuid=${uuid}`);
     return res.ok ? await res.json() : {};
