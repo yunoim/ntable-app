@@ -550,6 +550,32 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+// PATCH /api/rooms/:code/settings — 호스트 대시보드에서 운영 옵션 변경
+// body: { uuid, question_count, free_chat_timer_minutes, free_chat_chat_enabled, free_chat_topic_card_enabled, host_role, display_mode }
+router.patch('/rooms/:code/settings', async (req, res) => {
+  const { code } = req.params;
+  const { uuid } = req.body;
+  if (!uuid) return res.status(400).json({ error: 'uuid required' });
+  const room = await pool.query('SELECT id, host_uuid FROM rooms WHERE room_code = $1', [code]);
+  if (room.rows.length === 0) return res.status(404).json({ error: 'room not found' });
+  if (room.rows[0].host_uuid !== uuid) return res.status(403).json({ error: 'host only' });
+  const updates = [];
+  const params = [];
+  let i = 1;
+  const qc = parseInt(req.body.question_count, 10);
+  if (Number.isFinite(qc) && qc >= 1 && qc <= 15) { updates.push(`question_count = $${i++}`); params.push(qc); }
+  const fcTimer = parseInt(req.body.free_chat_timer_minutes, 10);
+  if (Number.isFinite(fcTimer) && fcTimer >= 0 && fcTimer <= 60) { updates.push(`free_chat_timer_minutes = $${i++}`); params.push(fcTimer); }
+  if (typeof req.body.free_chat_chat_enabled === 'boolean') { updates.push(`free_chat_chat_enabled = $${i++}`); params.push(req.body.free_chat_chat_enabled); }
+  if (typeof req.body.free_chat_topic_card_enabled === 'boolean') { updates.push(`free_chat_topic_card_enabled = $${i++}`); params.push(req.body.free_chat_topic_card_enabled); }
+  if (['host_only', 'participant'].includes(req.body.host_role)) { updates.push(`host_role = $${i++}`); params.push(req.body.host_role); }
+  if (['mobile', 'presenter'].includes(req.body.display_mode)) { updates.push(`display_mode = $${i++}`); params.push(req.body.display_mode); }
+  if (updates.length === 0) return res.status(400).json({ error: 'nothing to update' });
+  params.push(code);
+  await pool.query(`UPDATE rooms SET ${updates.join(', ')} WHERE room_code = $${i}`, params);
+  res.json({ ok: true });
+});
+
 // PATCH /api/rooms/:code/display — 호스트가 join wizard 'display' step에서 결정
 // body: { uuid, display_fields, birth_year_format, region_detail, photo_enabled }
 router.patch('/rooms/:code/display', async (req, res) => {

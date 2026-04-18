@@ -1435,6 +1435,7 @@
       <span id="user-nick"></span>
       <span id="oauth-badge" class="oauth-badge" hidden></span>
       <button type="button" id="open-settings-btn" title="질문/주제/문항수 편집 (모임 시작 전)">설정 ⚙</button>
+      <button type="button" id="open-room-settings-btn" title="모임 운영 옵션 (자유대화·역할·화면)">⚙ 운영</button>
       <button type="button" onclick="location.href='/profile?next='+encodeURIComponent(location.pathname)">내 정보 ✎</button>
       <button type="button" onclick="logout()">정보 초기화</button>
     </div>
@@ -1554,6 +1555,53 @@
 </div>
 
 <!-- 설정 모달 (waiting 전용) -->
+<!-- 운영 옵션 모달 (탐구 문항 / 자유대화 / 호스트 역할 / 화면 형태) -->
+<div id="room-settings-modal" hidden role="dialog" aria-modal="true" style="position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;">
+  <div onclick="closeRoomSettings()" style="position:absolute;inset:0;background:rgba(0,0,0,0.6);"></div>
+  <div style="position:relative;background:#141d35;border:1px solid var(--gold-border);border-radius:18px;padding:24px;max-width:420px;width:calc(100% - 32px);max-height:85vh;overflow-y:auto;">
+    <button type="button" onclick="closeRoomSettings()" style="position:absolute;top:12px;right:12px;background:none;border:none;color:#c0c0c0;font-size:24px;cursor:pointer;">×</button>
+    <h3 style="margin:0 0 4px;font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--white);">⚙ 운영 옵션</h3>
+    <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:18px;">방 생성 후 언제든 변경 가능합니다.</div>
+
+    <div style="margin-bottom:20px;">
+      <label style="display:block;font-size:11px;color:var(--gold);letter-spacing:0.1em;margin-bottom:8px;">탐구 문항 수</label>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <input type="range" id="rs_qcount" min="1" max="15" step="1" style="flex:1;">
+        <span style="min-width:60px;text-align:right;color:var(--gold-light);font-weight:600;"><span id="rs_qcount_val">5</span>문항</span>
+      </div>
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <label style="display:block;font-size:11px;color:var(--gold);letter-spacing:0.1em;margin-bottom:8px;">자유대화 구성</label>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 13px;background:rgba(212,168,67,0.06);border:1px solid var(--gold-border);border-radius:18px;font-size:13px;cursor:pointer;color:var(--white-dim);"><input type="checkbox" id="rs_fc_timer"> ⏱ 타이머 15분</label>
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 13px;background:rgba(212,168,67,0.06);border:1px solid var(--gold-border);border-radius:18px;font-size:13px;cursor:pointer;color:var(--white-dim);"><input type="checkbox" id="rs_fc_chat"> 💬 익명채팅</label>
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 13px;background:rgba(212,168,67,0.06);border:1px solid var(--gold-border);border-radius:18px;font-size:13px;cursor:pointer;color:var(--white-dim);"><input type="checkbox" id="rs_fc_topic"> 🃏 주제카드</label>
+      </div>
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <label style="display:block;font-size:11px;color:var(--gold);letter-spacing:0.1em;margin-bottom:8px;">호스트 역할</label>
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="rs-chip" data-rs-role="participant" style="flex:1;padding:10px;background:rgba(212,168,67,0.06);border:1px solid var(--gold-border);border-radius:10px;font-size:13px;cursor:pointer;color:var(--white-dim);font-family:inherit;">🙋 참여자로 참가</button>
+        <button type="button" class="rs-chip" data-rs-role="host_only" style="flex:1;padding:10px;background:rgba(212,168,67,0.06);border:1px solid var(--gold-border);border-radius:10px;font-size:13px;cursor:pointer;color:var(--white-dim);font-family:inherit;">🎛️ 진행만 (집계·발표)</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <label style="display:block;font-size:11px;color:var(--gold);letter-spacing:0.1em;margin-bottom:8px;">호스트 화면 형태</label>
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="rs-chip" data-rs-mode="mobile" style="flex:1;padding:10px;background:rgba(212,168,67,0.06);border:1px solid var(--gold-border);border-radius:10px;font-size:13px;cursor:pointer;color:var(--white-dim);font-family:inherit;">📱 모바일</button>
+        <button type="button" class="rs-chip" data-rs-mode="presenter" style="flex:1;padding:10px;background:rgba(212,168,67,0.06);border:1px solid var(--gold-border);border-radius:10px;font-size:13px;cursor:pointer;color:var(--white-dim);font-family:inherit;">🖥 큰 화면</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">큰 화면 선택 시 페이지 새로고침이 필요합니다.</div>
+    </div>
+
+    <button type="button" onclick="saveRoomSettings()" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--gold),#a07828);color:var(--navy);border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">저장</button>
+    <div id="rs_status" style="font-size:12px;color:var(--success);text-align:center;margin-top:10px;min-height:16px;"></div>
+  </div>
+</div>
+
 <div id="settings-modal" hidden role="dialog" aria-modal="true" aria-labelledby="settings-title">
   <div class="settings-backdrop" onclick="closeSettings()"></div>
   <div class="settings-card">
@@ -1700,7 +1748,7 @@ async function loadRoomInfo() {
     // 호스트가 participant 면 본인 카드도 approvedUsers 에 포함
     if (state.hostRole === 'participant') {
       try {
-        const myRes = await fetch(`/api/rooms/${state.roomCode}/members/${encodeURIComponent(state.uuid)}`);
+        const myRes = await fetch(`/api/rooms/${state.roomCode}/members/${encodeURIComponent(state.uuid)}?viewer=${encodeURIComponent(state.uuid)}`);
         if (myRes.ok) {
           const me = await myRes.json();
           if (me.uuid && !state.approvedUsers.find(u => u.uuid === me.uuid)) {
@@ -1899,7 +1947,7 @@ function photoUnban(targetUuid, nickname) {
 async function fetchUserProfile(uuid) {
   // 모임별 익명 — room_members 우선 (이 모임의 닉/프로필 스냅샷)
   try {
-    const res = await fetch(`/api/rooms/${state.roomCode}/members/${encodeURIComponent(uuid)}`);
+    const res = await fetch(`/api/rooms/${state.roomCode}/members/${encodeURIComponent(uuid)}?viewer=${encodeURIComponent(state.uuid)}`);
     if (res.ok) return await res.json();
   } catch (_) {}
   // legacy fallback
@@ -3082,6 +3130,61 @@ async function saveSettings() {
 }
 
 document.getElementById('open-settings-btn')?.addEventListener('click', openSettings);
+
+// 운영 옵션 모달 (탐구 문항·자유대화·역할·화면)
+function openRoomSettings() {
+  const r = state.room || {};
+  document.getElementById('rs_qcount').value = r.question_count || 5;
+  document.getElementById('rs_qcount_val').textContent = r.question_count || 5;
+  document.getElementById('rs_fc_timer').checked = (parseInt(r.free_chat_timer_minutes, 10) || 0) > 0;
+  document.getElementById('rs_fc_chat').checked = r.free_chat_chat_enabled !== false;
+  document.getElementById('rs_fc_topic').checked = r.free_chat_topic_card_enabled !== false;
+  document.querySelectorAll('.rs-chip[data-rs-role]').forEach(c => c.style.background = c.dataset.rsRole === (r.host_role || 'participant') ? 'rgba(212,168,67,0.25)' : 'rgba(212,168,67,0.06)');
+  document.querySelectorAll('.rs-chip[data-rs-mode]').forEach(c => c.style.background = c.dataset.rsMode === (r.display_mode || 'mobile') ? 'rgba(212,168,67,0.25)' : 'rgba(212,168,67,0.06)');
+  document.getElementById('rs_status').textContent = '';
+  document.getElementById('room-settings-modal').hidden = false;
+}
+function closeRoomSettings() { document.getElementById('room-settings-modal').hidden = true; }
+document.getElementById('open-room-settings-btn')?.addEventListener('click', openRoomSettings);
+document.getElementById('rs_qcount')?.addEventListener('input', (e) => { document.getElementById('rs_qcount_val').textContent = e.target.value; });
+document.querySelectorAll('.rs-chip[data-rs-role]').forEach(c => c.addEventListener('click', () => {
+  document.querySelectorAll('.rs-chip[data-rs-role]').forEach(x => x.style.background = 'rgba(212,168,67,0.06)');
+  c.style.background = 'rgba(212,168,67,0.25)';
+}));
+document.querySelectorAll('.rs-chip[data-rs-mode]').forEach(c => c.addEventListener('click', () => {
+  document.querySelectorAll('.rs-chip[data-rs-mode]').forEach(x => x.style.background = 'rgba(212,168,67,0.06)');
+  c.style.background = 'rgba(212,168,67,0.25)';
+}));
+async function saveRoomSettings() {
+  const status = document.getElementById('rs_status');
+  const role = (Array.from(document.querySelectorAll('.rs-chip[data-rs-role]')).find(c => c.style.background.includes('0.25')) || {}).dataset?.rsRole || 'participant';
+  const mode = (Array.from(document.querySelectorAll('.rs-chip[data-rs-mode]')).find(c => c.style.background.includes('0.25')) || {}).dataset?.rsMode || 'mobile';
+  const payload = {
+    uuid: state.uuid,
+    question_count: parseInt(document.getElementById('rs_qcount').value, 10),
+    free_chat_timer_minutes: document.getElementById('rs_fc_timer').checked ? 15 : 0,
+    free_chat_chat_enabled: document.getElementById('rs_fc_chat').checked,
+    free_chat_topic_card_enabled: document.getElementById('rs_fc_topic').checked,
+    host_role: role,
+    display_mode: mode,
+  };
+  try {
+    const r = await fetch(`/api/rooms/${state.roomCode}/settings`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error('save failed');
+    Object.assign(state.room, payload);
+    status.style.color = 'var(--success)';
+    status.textContent = '저장됨 ✓';
+    setTimeout(() => { closeRoomSettings(); }, 600);
+    if (mode === 'presenter') setTimeout(() => location.reload(), 700);
+  } catch (e) {
+    status.style.color = 'var(--danger)';
+    status.textContent = '저장 실패';
+  }
+}
 document.getElementById('settings-save-btn')?.addEventListener('click', saveSettings);
 document.querySelectorAll('.settings-tab').forEach(btn => {
   btn.addEventListener('click', () => switchSettingsTab(btn.dataset.stab));
