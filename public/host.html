@@ -410,6 +410,109 @@
   }
   .sidebar-end-btn:hover { background: rgba(220,53,69,0.12); border-color: rgba(220,53,69,0.6); }
 
+  .sidebar-tv-btn {
+    margin-top: 8px;
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--gold-border);
+    color: var(--gold-light);
+    border-radius: 10px;
+    padding: 10px 0;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    transition: background 0.2s, border-color 0.2s;
+    font-family: inherit;
+  }
+  .sidebar-tv-btn:hover { background: var(--gold-dim); border-color: var(--gold); }
+
+  /* TV 연결 모달 */
+  #tvModal {
+    position: fixed; inset: 0; z-index: 1200;
+    background: rgba(10,15,30,0.88);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    backdrop-filter: blur(10px);
+  }
+  #tvModal[hidden] { display: none; }
+  .tv-modal-card {
+    background: var(--surface);
+    border: 1px solid var(--gold);
+    border-radius: 18px;
+    padding: 32px 28px 24px;
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+    position: relative;
+  }
+  .tv-modal-close {
+    position: absolute; top: 10px; right: 12px;
+    background: none; border: none;
+    color: var(--text-muted); font-size: 18px;
+    cursor: pointer; padding: 4px 8px;
+  }
+  .tv-modal-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--gold);
+    margin-bottom: 8px;
+  }
+  .tv-modal-step {
+    font-size: 13px;
+    color: var(--text);
+    margin: 14px 0;
+    line-height: 1.6;
+    text-align: left;
+  }
+  .tv-modal-step strong { color: var(--gold-light); }
+  .tv-modal-step .step-num {
+    display: inline-block;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--gold);
+    color: var(--navy);
+    font-weight: 700;
+    text-align: center; line-height: 22px;
+    margin-right: 8px;
+    font-size: 12px;
+  }
+  .tv-code-input {
+    width: 100%;
+    padding: 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--gold-border);
+    border-radius: 10px;
+    color: var(--white);
+    font-family: 'DM Sans', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-align: center;
+    margin-top: 8px;
+    text-transform: uppercase;
+  }
+  .tv-code-input:focus { outline: none; border-color: var(--gold); }
+  .tv-attach-btn {
+    margin-top: 14px;
+    width: 100%;
+    padding: 13px;
+    background: var(--gold);
+    color: var(--navy);
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .tv-attach-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .tv-attach-btn:hover:not(:disabled) { background: var(--gold-light); }
+  .tv-modal-msg { font-size: 12px; margin-top: 10px; min-height: 14px; }
+  .tv-modal-msg.err { color: #ff8a8a; }
+  .tv-modal-msg.ok { color: #7ee8a2; }
+
   #waiting-section {
     flex: 1;
     overflow-y: auto;
@@ -1290,6 +1393,7 @@
     <div id="room-code">—</div>
     <button type="button" id="qr-expand-btn" onclick="openQRModal()" aria-label="QR 크게 보기">🔍 QR 크게 보기</button>
     <button type="button" id="copy-url-btn">입장 링크 복사</button>
+    <button type="button" id="sidebar-tv-btn" class="sidebar-tv-btn" onclick="openTVModal()">📺 TV 연결</button>
     <button type="button" id="sidebar-end-btn" class="sidebar-end-btn" onclick="closeRoom()">🛑 모임 종료</button>
   </div>
   <div id="waiting-section">
@@ -1425,6 +1529,19 @@
 </div>
 
 <div id="toast"></div>
+
+<!-- TV 연결 모달 -->
+<div id="tvModal" hidden>
+  <div class="tv-modal-card">
+    <button type="button" class="tv-modal-close" onclick="closeTVModal()">✕</button>
+    <div class="tv-modal-title">📺 TV 연결</div>
+    <div class="tv-modal-step"><span class="step-num">1</span>TV 브라우저로 <strong>app.ntable.kr/tv</strong> 접속</div>
+    <div class="tv-modal-step"><span class="step-num">2</span>TV 화면에 표시된 <strong>6자리 코드</strong>를 아래에 입력</div>
+    <input type="text" id="tvCodeInput" class="tv-code-input" maxlength="6" placeholder="ABC123" autocapitalize="characters" autocomplete="off" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,''); document.getElementById('tvAttachBtn').disabled = this.value.length !== 6;" />
+    <button type="button" class="tv-attach-btn" id="tvAttachBtn" onclick="attachTV()" disabled>연결하기</button>
+    <div class="tv-modal-msg" id="tvModalMsg"></div>
+  </div>
+</div>
 
 <!-- 설정 모달 (waiting 전용) -->
 <div id="settings-modal" hidden role="dialog" aria-modal="true" aria-labelledby="settings-title">
@@ -2388,6 +2505,57 @@ function logout() {
   try { if (state.ws) state.ws.close(); } catch {}
   localStorage.removeItem('demo_uuid');
   location.href = '/';
+}
+
+// TV 연결 모달
+function openTVModal() {
+  const modal = document.getElementById('tvModal');
+  if (modal) modal.hidden = false;
+  document.getElementById('tvCodeInput')?.focus();
+  document.getElementById('tvModalMsg').className = 'tv-modal-msg';
+  document.getElementById('tvModalMsg').textContent = '';
+}
+function closeTVModal() {
+  const modal = document.getElementById('tvModal');
+  if (modal) modal.hidden = true;
+  document.getElementById('tvCodeInput').value = '';
+  document.getElementById('tvAttachBtn').disabled = true;
+}
+async function attachTV() {
+  const code = document.getElementById('tvCodeInput').value.trim().toUpperCase();
+  const msg = document.getElementById('tvModalMsg');
+  const btn = document.getElementById('tvAttachBtn');
+  if (code.length !== 6) return;
+  btn.disabled = true;
+  msg.className = 'tv-modal-msg';
+  msg.textContent = '연결 중…';
+  try {
+    const r = await fetch('/api/tv/attach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, room_code: state.roomCode, host_uuid: state.uuid }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      const errMap = {
+        INVALID_CODE: '코드를 찾을 수 없어요. TV 화면을 다시 확인해주세요.',
+        EXPIRED: '코드가 만료됐어요. TV 화면을 새로고침해주세요.',
+        ALREADY_ATTACHED: '이미 다른 방에 연결된 TV예요.',
+      };
+      msg.className = 'tv-modal-msg err';
+      msg.textContent = errMap[data.error] || `연결 실패: ${data.error || r.status}`;
+      btn.disabled = false;
+      return;
+    }
+    msg.className = 'tv-modal-msg ok';
+    msg.textContent = '✓ 연결 완료. TV 화면이 곧 전환됩니다.';
+    setTimeout(closeTVModal, 1500);
+    toast('TV 연결 완료');
+  } catch (e) {
+    msg.className = 'tv-modal-msg err';
+    msg.textContent = '연결 실패. 다시 시도해주세요.';
+    btn.disabled = false;
+  }
 }
 
 function kakaoShare() {

@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>ntable Presenter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+  body {
+    background: #0e1628;
+    color: #ffffff;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .root {
+    width: 100%; height: 100vh;
+    display: flex; flex-direction: column;
+  }
+
+  /* Header */
+  header {
+    padding: 24px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(212,168,67,0.25);
+    flex-shrink: 0;
+  }
+  .h-brand {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: 0.3em;
+    color: #d4a843;
+  }
+  .h-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 36px;
+    font-weight: 600;
+    color: #ffffff;
+    text-align: center;
+  }
+  .h-info {
+    display: flex; gap: 24px;
+    align-items: center;
+    font-size: 16px;
+    color: #c0c0c0;
+  }
+  .h-info strong { color: #e8b84b; font-size: 22px; }
+
+  /* Main */
+  main {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 48px;
+    overflow: hidden;
+  }
+
+  /* Phase: waiting/intro */
+  .waiting-grid {
+    display: flex;
+    gap: 56px;
+    width: 100%; height: 100%;
+    align-items: center;
+    justify-content: center;
+  }
+  .qr-side {
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .qr-side img {
+    width: 320px; height: 320px;
+    border-radius: 16px;
+    background: #fff;
+    padding: 12px;
+    display: block;
+  }
+  .qr-side .room-code {
+    font-family: 'DM Sans', monospace;
+    font-size: 56px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: #e8b84b;
+    margin-top: 24px;
+  }
+  .qr-side .qr-help {
+    margin-top: 16px;
+    font-size: 18px;
+    color: #c0c0c0;
+  }
+  .qr-side .qr-help strong { color: #ffffff; }
+
+  .members-side {
+    flex: 1;
+    display: flex; flex-direction: column;
+    height: 100%;
+  }
+  .members-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 30px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 24px;
+  }
+  .members-title strong { color: #e8b84b; }
+  .members-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 20px;
+    overflow-y: auto;
+    align-content: start;
+  }
+  .m-card {
+    background: rgba(212,168,67,0.06);
+    border: 1px solid rgba(212,168,67,0.35);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+  }
+  .m-avatar {
+    width: 100px; height: 100px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    background: rgba(212,168,67,0.18);
+    border: 2px solid rgba(212,168,67,0.4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 44px;
+    overflow: hidden;
+  }
+  .m-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .m-avatar.has-photo { font-size: 0; padding: 0; background: transparent; }
+  .m-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: #ffffff;
+    line-height: 1.2;
+  }
+  .m-meta {
+    font-size: 13px;
+    color: #c0c0c0;
+    margin-top: 4px;
+  }
+
+  /* Phase: explore */
+  .question-card {
+    text-align: center;
+    width: 100%;
+    max-width: 1100px;
+  }
+  .q-num {
+    font-size: 16px;
+    letter-spacing: 0.3em;
+    color: #d4a843;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .q-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(48px, 7vw, 96px);
+    font-weight: 600;
+    color: #ffffff;
+    line-height: 1.25;
+    margin-bottom: 56px;
+  }
+  .q-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+  }
+  .q-opt {
+    padding: 36px;
+    background: rgba(212,168,67,0.08);
+    border: 1px solid rgba(212,168,67,0.4);
+    border-radius: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .q-opt-label {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 26px;
+    font-weight: 600;
+    color: #e8b84b;
+    margin-bottom: 14px;
+  }
+  .q-opt-text {
+    font-size: 28px;
+    color: #ffffff;
+    line-height: 1.4;
+    margin-bottom: 24px;
+  }
+  .q-opt-bar {
+    height: 14px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 7px;
+    overflow: hidden;
+    position: relative;
+  }
+  .q-opt-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #d4a843, #e8b84b);
+    transition: width 0.5s;
+  }
+  .q-opt-count {
+    margin-top: 10px;
+    font-size: 18px;
+    color: #c0c0c0;
+    text-align: right;
+  }
+  .q-opt-count strong { color: #e8b84b; font-size: 24px; }
+
+  /* Phase: free / generic message */
+  .big-msg {
+    text-align: center;
+    max-width: 900px;
+  }
+  .big-msg .icon { font-size: 96px; margin-bottom: 24px; }
+  .big-msg h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 64px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 20px;
+    line-height: 1.2;
+  }
+  .big-msg p {
+    font-size: 24px;
+    color: #c0c0c0;
+    line-height: 1.6;
+  }
+
+  /* Phase: closing-mvp-result */
+  .mvp-display {
+    text-align: center;
+  }
+  .mvp-display .label {
+    font-size: 18px;
+    letter-spacing: 0.3em;
+    color: #d4a843;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+  }
+  .mvp-display .photo {
+    width: 280px; height: 280px;
+    margin: 0 auto 32px;
+    border-radius: 50%;
+    background: rgba(212,168,67,0.12);
+    border: 4px solid #d4a843;
+    box-shadow: 0 0 60px rgba(212,168,67,0.5);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 96px;
+    overflow: hidden;
+  }
+  .mvp-display .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .mvp-display .name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 72px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 14px;
+  }
+  .mvp-display .sub {
+    font-size: 22px;
+    color: #c0c0c0;
+  }
+
+  /* Phase: closing-match-result */
+  .pairs-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 24px;
+    width: 100%;
+    max-width: 1200px;
+  }
+  .pair {
+    padding: 28px;
+    background: rgba(212,168,67,0.08);
+    border: 1px solid rgba(212,168,67,0.45);
+    border-radius: 18px;
+    text-align: center;
+  }
+  .pair.mutual { border-color: #e8b84b; box-shadow: 0 0 30px rgba(232,184,75,0.3); }
+  .pair-type { font-size: 18px; color: #e8b84b; margin-bottom: 14px; font-weight: 600; }
+  .pair-names {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 32px;
+    font-weight: 600;
+    color: #ffffff;
+  }
+  .pair-names .heart { color: #ff8a8a; margin: 0 12px; }
+
+  /* Footer */
+  footer {
+    padding: 16px 48px;
+    border-top: 1px solid rgba(212,168,67,0.25);
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 14px; color: #c0c0c0;
+    flex-shrink: 0;
+  }
+  .progress {
+    display: flex; gap: 12px; font-size: 13px;
+  }
+  .progress span {
+    padding: 6px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(212,168,67,0.35);
+    color: #c0c0c0;
+  }
+  .progress span.active {
+    background: #d4a843;
+    color: #0e1628;
+    font-weight: 700;
+    border-color: #d4a843;
+  }
+  .progress span.done { color: #e8b84b; }
+
+  .conn-dot {
+    display: inline-block;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #7ee8a2; margin-right: 6px;
+    box-shadow: 0 0 8px rgba(126,232,162,0.5);
+  }
+  .conn-dot.dis { background: #ff8a8a; box-shadow: 0 0 8px rgba(255,138,138,0.5); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  main > * { animation: fadeUp 0.4s ease; }
+</style>
+</head>
+<body>
+<div class="root">
+  <header>
+    <div class="h-brand">ntable</div>
+    <div class="h-title" id="hTitle">—</div>
+    <div class="h-info">
+      <span><span class="conn-dot" id="connDot"></span><span id="connText">연결됨</span></span>
+      <span>참가자 <strong id="hMembers">0</strong></span>
+      <span>방 코드 <strong id="hRoom">—</strong></span>
+    </div>
+  </header>
+  <main id="main">
+    <div class="big-msg"><div class="icon">⏳</div><h1>로딩 중…</h1></div>
+  </main>
+  <footer>
+    <div>📺 큰 화면 모드 · 호스트는 모바일에서 진행</div>
+    <div class="progress" id="progress">
+      <span data-step="intro">소개</span>
+      <span data-step="explore">탐구</span>
+      <span data-step="free">자유대화</span>
+      <span data-step="closing">마무리</span>
+    </div>
+  </footer>
+</div>
+
+<script>
+const path = location.pathname.match(/\/room\/([^/]+)/);
+const ROOM_CODE = path ? path[1] : '';
+const STATE = {
+  ws: null,
+  room: null,
+  members: [],
+  photos: {},
+  intros: {},
+  questions: [],
+  currentQIdx: 0,
+  voteCounts: {},   // question_id → { A, B }
+  matchJson: null,
+  mvp: null,
+  currentPhase: 'waiting',
+  qrUrl: null,
+};
+
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function ageOf(year) { return year ? `${new Date().getFullYear() - year + 1}세` : ''; }
+function formatBirthYear(year, fmt) {
+  if (!year) return '';
+  if (fmt === 'decade_half') {
+    const age = new Date().getFullYear() - year + 1;
+    if (age < 20) return '10대';
+    const decade = Math.floor(age / 10) * 10;
+    const half = age % 10;
+    const label = half <= 3 ? '초' : half <= 6 ? '중' : '후';
+    return `${decade}${label}`;
+  }
+  return `${year}년생`;
+}
+
+async function init() {
+  if (!ROOM_CODE) { renderError('방 코드를 찾을 수 없어요'); return; }
+  try {
+    const r = await fetch(`/api/rooms/${ROOM_CODE}`);
+    if (!r.ok) { renderError('방 정보를 불러올 수 없어요'); return; }
+    STATE.room = await r.json();
+    document.getElementById('hTitle').textContent = STATE.room.title || ROOM_CODE;
+    document.getElementById('hRoom').textContent = ROOM_CODE;
+
+    const qr = await fetch(`/api/rooms/${ROOM_CODE}/qr`);
+    if (qr.ok) {
+      const j = await qr.json();
+      STATE.qrUrl = j.qr_data_url;
+    }
+
+    await loadMembers();
+    connectObserver();
+    renderWaiting();
+  } catch (e) {
+    renderError('서버 연결 실패');
+  }
+}
+
+async function loadMembers() {
+  try {
+    const r = await fetch(`/api/rooms/${ROOM_CODE}/members`);
+    if (r.ok) {
+      STATE.members = await r.json();
+      document.getElementById('hMembers').textContent = STATE.members.length;
+    }
+  } catch (_) {}
+}
+
+function connectObserver() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  STATE.ws = new WebSocket(`${proto}://${location.host}/ws/observer/${ROOM_CODE}`);
+  STATE.ws.onopen = () => {
+    setConn(true);
+    // 기존 참가자에게 사진/자기소개 다시 보내달라고 요청
+    try { STATE.ws.send(JSON.stringify({ type: 'request_photos' })); } catch (_) {}
+  };
+  STATE.ws.onmessage = (e) => {
+    let msg; try { msg = JSON.parse(e.data); } catch { return; }
+    handleMessage(msg);
+  };
+  STATE.ws.onclose = () => {
+    setConn(false);
+    setTimeout(connectObserver, 3000);
+  };
+  STATE.ws.onerror = () => { try { STATE.ws.close(); } catch (_) {} };
+}
+
+function setConn(connected) {
+  const dot = document.getElementById('connDot');
+  const txt = document.getElementById('connText');
+  dot.classList.toggle('dis', !connected);
+  txt.textContent = connected ? '연결됨' : '재연결 중…';
+}
+
+async function handleMessage(msg) {
+  switch (msg.type) {
+    case 'user_joined':
+    case 'user_left':
+    case 'approved':
+      await loadMembers();
+      if (STATE.currentPhase === 'waiting' || STATE.currentPhase === 'intro') renderForPhase();
+      break;
+    case 'state_update': {
+      const cur = msg.state?.current_tab || 'waiting';
+      const phase = msg.state?.phase || cur;
+      const qIdx = msg.state?.question_index;
+      if (qIdx !== undefined) STATE.currentQIdx = qIdx;
+      if (cur === 'explore' && STATE.questions.length === 0) await loadQuestions();
+      STATE.currentPhase = (cur === 'closing' && phase) ? phase : cur;
+      renderForPhase();
+      break;
+    }
+    case 'photo_update':
+      if (msg.photo) STATE.photos[msg.uuid] = msg.photo;
+      else delete STATE.photos[msg.uuid];
+      if (STATE.currentPhase === 'waiting' || STATE.currentPhase === 'intro') renderForPhase();
+      break;
+    case 'intro_update':
+      if (msg.intro) STATE.intros[msg.uuid] = msg.intro;
+      else delete STATE.intros[msg.uuid];
+      if (STATE.currentPhase === 'intro') renderForPhase();
+      break;
+    case 'photo_request':
+      // observer는 요청만 forward (서버에서 처리)
+      break;
+    case 'vote_result':
+      STATE.voteCounts[msg.question_id] = msg.counts;
+      if (STATE.currentPhase === 'explore') renderExplore();
+      break;
+    case 'mvp_announce':
+      STATE.mvp = msg.mvp;
+      if (STATE.currentPhase === 'closing-mvp-result') renderForPhase();
+      break;
+    case 'matching_result':
+      STATE.matchJson = msg.match_json;
+      if (STATE.currentPhase === 'closing-match-result') renderForPhase();
+      break;
+    case 'room_closed':
+      STATE.currentPhase = 'closed';
+      renderForPhase();
+      break;
+    case 'kicked':
+      // observer 무관
+      break;
+  }
+}
+
+async function loadQuestions() {
+  try {
+    const r = await fetch(`/api/rooms/${ROOM_CODE}/questions`);
+    if (r.ok) {
+      const j = await r.json();
+      STATE.questions = Array.isArray(j) ? j : (j.questions || []);
+    }
+  } catch (_) {}
+}
+
+function renderForPhase() {
+  setProgress(STATE.currentPhase);
+  switch (STATE.currentPhase) {
+    case 'waiting': renderWaiting(); break;
+    case 'intro': renderIntro(); break;
+    case 'explore': renderExplore(); break;
+    case 'free': renderFree(); break;
+    case 'closing': case 'closing-mvp': renderClosingVote('mvp'); break;
+    case 'closing-mvp-result': renderMVPResult(); break;
+    case 'closing-match': renderClosingVote('match'); break;
+    case 'closing-match-result': renderMatchResult(); break;
+    case 'closed': renderClosed(); break;
+    default: renderWaiting();
+  }
+}
+
+function setProgress(phase) {
+  const map = { waiting: 'intro', intro: 'intro', explore: 'explore', free: 'free' };
+  let key = map[phase];
+  if (!key && phase.startsWith('closing')) key = 'closing';
+  const order = ['intro', 'explore', 'free', 'closing'];
+  const idx = order.indexOf(key);
+  document.querySelectorAll('.progress span').forEach((el, i) => {
+    el.classList.toggle('active', i === idx);
+    el.classList.toggle('done', i < idx);
+  });
+}
+
+function memberCardHtml(m, big = false) {
+  const photo = STATE.photos[m.uuid];
+  const df = STATE.room?.display_fields || ['birth_year','region','industry','interest'];
+  const fmt = STATE.room?.birth_year_format || 'exact';
+  const bd = df.includes('birth_year') ? formatBirthYear(m.birth_year, fmt) : '';
+  const meta = [bd, df.includes('region') && m.region ? m.region : ''].filter(Boolean).join(' · ');
+  const avatar = photo
+    ? `<div class="m-avatar has-photo"><img src="${escHtml(photo)}" alt=""></div>`
+    : `<div class="m-avatar">👤</div>`;
+  return `<div class="m-card">${avatar}<div class="m-name">${escHtml(m.nickname)}</div>${meta?`<div class="m-meta">${escHtml(meta)}</div>`:''}</div>`;
+}
+
+function renderWaiting() {
+  const main = document.getElementById('main');
+  const qrSrc = STATE.qrUrl || '';
+  const cards = STATE.members.map(m => memberCardHtml(m)).join('') || '<div style="color:#c0c0c0;text-align:center;padding:40px;">참가자 입장을 기다리고 있어요…</div>';
+  main.innerHTML = `
+    <div class="waiting-grid">
+      <div class="qr-side">
+        ${qrSrc ? `<img src="${escHtml(qrSrc)}" alt="입장 QR">` : '<div style="width:320px;height:320px;background:#fff;border-radius:16px;display:flex;align-items:center;justify-content:center;color:#0e1628;">QR 로딩…</div>'}
+        <div class="room-code">${escHtml(ROOM_CODE)}</div>
+        <div class="qr-help">QR 스캔 또는 <strong>app.ntable.kr/room/${escHtml(ROOM_CODE)}</strong></div>
+      </div>
+      <div class="members-side">
+        <div class="members-title">참가자 <strong>${STATE.members.length}</strong>명</div>
+        <div class="members-grid">${cards}</div>
+      </div>
+    </div>`;
+}
+
+function renderIntro() {
+  const main = document.getElementById('main');
+  const cards = STATE.members.map(m => {
+    const html = memberCardHtml(m);
+    const intro = STATE.intros[m.uuid];
+    return intro
+      ? html.replace('</div>$', `<div class="m-meta" style="font-style:italic;color:#e8b84b;margin-top:8px;">"${escHtml(intro)}"</div></div>`)
+      : html;
+  }).join('');
+  main.innerHTML = `
+    <div style="width:100%;text-align:center;">
+      <div class="q-num">소개</div>
+      <h2 style="font-family:'Cormorant Garamond',serif;font-size:48px;color:#fff;margin-bottom:32px;">오늘 함께하는 사람들</h2>
+      <div class="members-grid" style="max-width:1200px;margin:0 auto;">${cards}</div>
+    </div>`;
+}
+
+function renderExplore() {
+  const q = STATE.questions[STATE.currentQIdx];
+  if (!q) {
+    document.getElementById('main').innerHTML = `<div class="big-msg"><div class="icon">📖</div><h1>탐구 단계</h1><p>질문이 곧 표시됩니다.</p></div>`;
+    return;
+  }
+  const counts = STATE.voteCounts[q.id] || { A: 0, B: 0 };
+  const total = (counts.A || 0) + (counts.B || 0);
+  const pctA = total ? Math.round((counts.A / total) * 100) : 50;
+  const pctB = total ? Math.round((counts.B / total) * 100) : 50;
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="question-card">
+      <div class="q-num">Q${STATE.currentQIdx + 1} / ${STATE.questions.length}</div>
+      <div class="q-text">${escHtml(q.text || q.question || '')}</div>
+      <div class="q-options">
+        <div class="q-opt">
+          <div class="q-opt-label">A</div>
+          <div class="q-opt-text">${escHtml(q.option_a || q.A || '')}</div>
+          <div class="q-opt-bar"><div class="q-opt-bar-fill" style="width:${pctA}%"></div></div>
+          <div class="q-opt-count"><strong>${counts.A || 0}</strong>표 · ${pctA}%</div>
+        </div>
+        <div class="q-opt">
+          <div class="q-opt-label">B</div>
+          <div class="q-opt-text">${escHtml(q.option_b || q.B || '')}</div>
+          <div class="q-opt-bar"><div class="q-opt-bar-fill" style="width:${pctB}%"></div></div>
+          <div class="q-opt-count"><strong>${counts.B || 0}</strong>표 · ${pctB}%</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderFree() {
+  document.getElementById('main').innerHTML = `<div class="big-msg"><div class="icon">💬</div><h1>자유롭게 대화하세요</h1><p>마음에 든 사람과 더 깊은 이야기를 나눠보세요.<br>호스트가 다음 단계로 안내해드립니다.</p></div>`;
+}
+
+function renderClosingVote(type) {
+  const labels = type === 'mvp'
+    ? { icon: '🏆', title: '오늘의 MVP를 뽑고 있어요', sub: '가장 인상 깊은 사람 한 명을 모바일에서 선택해주세요.' }
+    : { icon: '💘', title: '사랑의 작대기', sub: '또 만나고 싶은 사람을 모바일에서 선택해주세요.' };
+  document.getElementById('main').innerHTML = `<div class="big-msg"><div class="icon">${labels.icon}</div><h1>${labels.title}</h1><p>${labels.sub}</p></div>`;
+}
+
+function renderMVPResult() {
+  const mvp = STATE.mvp;
+  if (!mvp) {
+    document.getElementById('main').innerHTML = `<div class="big-msg"><div class="icon">🏆</div><h1>MVP 발표 대기 중</h1></div>`;
+    return;
+  }
+  const photo = mvp.uuid && STATE.photos[mvp.uuid];
+  document.getElementById('main').innerHTML = `
+    <div class="mvp-display">
+      <div class="label">🏆 오늘의 MVP</div>
+      <div class="photo">${photo ? `<img src="${escHtml(photo)}" alt="">` : '🏆'}</div>
+      <div class="name">${escHtml(mvp.nickname)}</div>
+      <div class="sub">${mvp.fi_count != null ? `투표 ${mvp.fi_count}표` : ''} · 가장 인상적인 사람</div>
+    </div>`;
+}
+
+function renderMatchResult() {
+  const mj = STATE.matchJson;
+  if (!mj || !mj.pairs || !mj.pairs.length) {
+    document.getElementById('main').innerHTML = `<div class="big-msg"><div class="icon">🌙</div><h1>오늘은 매칭이 없어요</h1><p>다음 모임에서 다시 만나요</p></div>`;
+    return;
+  }
+  const pairsHtml = mj.pairs.map(p => {
+    if (p.type === 'solo') {
+      return `<div class="pair"><div class="pair-type">🌙 솔로</div><div class="pair-names">${escHtml(p.a?.nickname || '')}</div></div>`;
+    }
+    const cls = p.type === 'mutual' ? 'mutual' : '';
+    const label = p.type === 'mutual' ? '💘 상호 매칭' : '✨ 추천 매칭';
+    return `<div class="pair ${cls}"><div class="pair-type">${label}</div><div class="pair-names">${escHtml(p.a?.nickname || '')}<span class="heart">❤</span>${escHtml(p.b?.nickname || '')}</div></div>`;
+  }).join('');
+  document.getElementById('main').innerHTML = `
+    <div style="width:100%;text-align:center;">
+      <h2 style="font-family:'Cormorant Garamond',serif;font-size:56px;color:#fff;margin-bottom:36px;">💘 오늘의 매칭 결과</h2>
+      <div class="pairs-list">${pairsHtml}</div>
+    </div>`;
+}
+
+function renderClosed() {
+  document.getElementById('main').innerHTML = `<div class="big-msg"><div class="icon">🎉</div><h1>모임이 종료됐어요</h1><p>오늘 함께해주신 모든 분들께 감사드립니다.</p></div>`;
+}
+
+function renderError(msg) {
+  document.getElementById('main').innerHTML = `<div class="big-msg"><div class="icon">⚠️</div><h1>${escHtml(msg)}</h1></div>`;
+}
+
+// 핑
+setInterval(() => {
+  if (STATE.ws && STATE.ws.readyState === WebSocket.OPEN) {
+    STATE.ws.send(JSON.stringify({ type: 'ping' }));
+  }
+}, 30000);
+
+init();
+</script>
+</body>
+</html>

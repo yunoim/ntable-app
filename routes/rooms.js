@@ -216,6 +216,25 @@ router.post('/rooms/:code/approve', async (req, res) => {
   res.json({ approved: [target_uuid] });
 });
 
+// POST /api/tv/attach — 호스트가 페어링 코드 입력해서 TV를 자기 방에 연결
+router.post('/tv/attach', async (req, res) => {
+  const { code, room_code, host_uuid } = req.body || {};
+  if (!code || !room_code || !host_uuid) {
+    return res.status(400).json({ error: 'code, room_code, host_uuid required' });
+  }
+  // 권한 검증
+  const room = await pool.query(
+    'SELECT host_uuid FROM rooms WHERE room_code = $1', [room_code]
+  );
+  if (room.rows.length === 0) return res.status(404).json({ error: 'room not found' });
+  if (room.rows[0].host_uuid !== host_uuid) return res.status(403).json({ error: 'not authorized' });
+
+  const wsModule = require('./ws');
+  const result = wsModule.attachTVToRoom(String(code).toUpperCase(), room_code);
+  if (!result.ok) return res.status(400).json({ error: result.error });
+  res.json({ ok: true });
+});
+
 // POST /api/rooms/:code/kick — 호스트가 특정 참가자를 방에서 추방
 router.post('/rooms/:code/kick', async (req, res) => {
   const { code } = req.params;

@@ -92,6 +92,12 @@ app.use('/api', adminAuthRouter);
 app.get('/room/:code/host', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'host.html'));
 });
+app.get('/room/:code/presenter', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'presenter.html'));
+});
+app.get('/tv', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'tv.html'));
+});
 app.get('/room/:code', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'guest.html'));
 });

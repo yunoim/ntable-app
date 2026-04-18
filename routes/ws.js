@@ -1,14 +1,30 @@
 const { WebSocketServer } = require('ws');
+const crypto = require('crypto');
 const { pool } = require('../db');
 const Sentry = require('../sentry');
 
 // rooms[room_code] = {
 //   clients: Map<uuid, ws>,
+//   observers: Set<ws>,        // TV 등 read-only 화면
 //   hostUuid: string,
 //   hostGraceTimer: Timeout|null,
-//   hostDisconnectedAt: number|null
+//   hostDisconnectedAt: number|null,
+//   photoBanned: Set<uuid>
 // }
 const rooms = {};
+
+// TV 페어링 세션 — tvSessions[token] = { ws, code, room_code|null, expires }
+const tvSessions = new Map();
+const pairCodeToToken = new Map(); // 'ABC123' → tv_token
+const PAIR_CODE_TTL_MS = 5 * 60 * 1000;
+
+function genPairCode() {
+  // 6자리 영숫자 (혼동 글자 제외)
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
 
 // 호스트 재접속 grace period (3시간 — 자유토킹 고려)
 const HOST_GRACE_MS = 3 * 60 * 60 * 1000;
@@ -31,6 +47,15 @@ function broadcastToRoom(room_code, message, excludeUuid = null, targetUuid = nu
     if (excludeUuid && uuid === excludeUuid) continue;
     if (ws.readyState === ws.OPEN) {
       ws.send(payload);
+    }
+  }
+
+  // TV/observer 들에게도 전송 (read-only 디스플레이)
+  if (room.observers && room.observers.size) {
+    for (const ws of room.observers) {
+      if (ws.readyState === ws.OPEN) {
+        try { ws.send(payload); } catch (_) {}
+      }
     }
   }
 }
@@ -63,6 +88,20 @@ function init(server) {
   const wss = new WebSocketServer({ server, path: undefined });
 
   wss.on('connection', async (ws, req) => {
+    // TV 페어링 WS: /ws/tv/{token}
+    const tvMatch = req.url.match(/^\/ws\/tv\/([0-9a-fA-F-]{8,})$/);
+    if (tvMatch) {
+      handleTVConnection(ws, tvMatch[1]);
+      return;
+    }
+
+    // Observer/Presenter WS: /ws/observer/{room_code}
+    const obsMatch = req.url.match(/^\/ws\/observer\/([A-Z0-9]{6})$/);
+    if (obsMatch) {
+      handleObserverConnection(ws, obsMatch[1]);
+      return;
+    }
+
     // URL: /ws/:room_code/:uuid
     const match = req.url.match(/^\/ws\/([A-Z0-9]{6})\/(.+)$/);
     if (!match) {
@@ -114,14 +153,16 @@ function init(server) {
       if (!rooms[room_code]) {
         rooms[room_code] = {
           clients: new Map(),
+          observers: new Set(),
           hostUuid,
           hostGraceTimer: null,
           hostDisconnectedAt: null,
-          photoBanned: new Set(), // 호스트가 photo_kick 한 uuid — 모임 동안 사진 재업로드 무시
+          photoBanned: new Set(),
         };
       } else {
         rooms[room_code].hostUuid = hostUuid;
         if (!rooms[room_code].photoBanned) rooms[room_code].photoBanned = new Set();
+        if (!rooms[room_code].observers) rooms[room_code].observers = new Set();
       }
       rooms[room_code].clients.set(uuid, ws);
 
@@ -329,4 +370,94 @@ function closeUserWS(room_code, uuid, code = 4006, reason = 'Closed') {
   return true;
 }
 
-module.exports = { init, broadcastToRoom, getRoomClients, getActiveRoomCodes, isUserActive, closeUserWS };
+// TV WS — 페어링 코드 발급, attach 대기
+function handleTVConnection(ws, token) {
+  const code = genPairCode();
+  const expires = Date.now() + PAIR_CODE_TTL_MS;
+  tvSessions.set(token, { ws, code, room_code: null, expires });
+  pairCodeToToken.set(code, token);
+
+  // TTL 만료 정리
+  setTimeout(() => {
+    const s = tvSessions.get(token);
+    if (s && !s.room_code) {
+      pairCodeToToken.delete(s.code);
+      tvSessions.delete(token);
+      try { ws.close(4007, 'Pair code expired'); } catch (_) {}
+    }
+  }, PAIR_CODE_TTL_MS);
+
+  try { ws.send(JSON.stringify({ type: 'pair_code', code, expires_in: Math.floor(PAIR_CODE_TTL_MS / 1000) })); } catch (_) {}
+
+  ws.on('message', (data) => {
+    try {
+      const msg = JSON.parse(data.toString());
+      if (msg.type === 'ping') ws.send(JSON.stringify({ type: 'pong' }));
+    } catch (_) {}
+  });
+
+  ws.on('close', () => {
+    const s = tvSessions.get(token);
+    if (s) {
+      pairCodeToToken.delete(s.code);
+      // 이미 attach 됐으면 observers Set에서 제거
+      if (s.room_code && rooms[s.room_code]) {
+        rooms[s.room_code].observers?.delete(ws);
+      }
+      tvSessions.delete(token);
+    }
+  });
+}
+
+// Observer WS (room presenter 전용 read-only)
+function handleObserverConnection(ws, room_code) {
+  if (!rooms[room_code]) {
+    rooms[room_code] = {
+      clients: new Map(),
+      observers: new Set(),
+      hostUuid: null,
+      hostGraceTimer: null,
+      hostDisconnectedAt: null,
+      photoBanned: new Set(),
+    };
+  }
+  if (!rooms[room_code].observers) rooms[room_code].observers = new Set();
+  rooms[room_code].observers.add(ws);
+
+  ws.on('message', (data) => {
+    try {
+      const msg = JSON.parse(data.toString());
+      if (msg.type === 'ping') ws.send(JSON.stringify({ type: 'pong' }));
+      // observer는 read-only — request_photos/request_intros 만 허용 (입장 후 sync 위해)
+      if (msg.type === 'request_photos') {
+        // observer 자신은 사진 없으니 그냥 broadcast (다른 참가자가 다시 보냄)
+        broadcastToRoom(room_code, { type: 'photo_request', requester_uuid: '_observer_' });
+      }
+    } catch (_) {}
+  });
+
+  ws.on('close', () => {
+    if (rooms[room_code]?.observers) rooms[room_code].observers.delete(ws);
+  });
+}
+
+// 페어링 코드 → room_code 연결 (호스트 attach API에서 호출)
+function attachTVToRoom(pairCode, room_code) {
+  const token = pairCodeToToken.get(pairCode);
+  if (!token) return { ok: false, error: 'INVALID_CODE' };
+  const session = tvSessions.get(token);
+  if (!session) return { ok: false, error: 'SESSION_GONE' };
+  if (session.expires < Date.now()) return { ok: false, error: 'EXPIRED' };
+  if (session.room_code) return { ok: false, error: 'ALREADY_ATTACHED' };
+
+  // observers Set에 추가하지 않음 (presenter.html에서 별도 observer ws 새로 연결)
+  session.room_code = room_code;
+  pairCodeToToken.delete(pairCode);
+
+  try {
+    session.ws.send(JSON.stringify({ type: 'attached', room_code }));
+  } catch (_) {}
+  return { ok: true };
+}
+
+module.exports = { init, broadcastToRoom, getRoomClients, getActiveRoomCodes, isUserActive, closeUserWS, attachTVToRoom };

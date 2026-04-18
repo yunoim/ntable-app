@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>ntable TV — 페어링</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #0e1628;
+    color: #ffffff;
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+  }
+  .root {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 40px;
+    text-align: center;
+  }
+  .brand {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 36px;
+    font-weight: 600;
+    letter-spacing: 0.4em;
+    color: #d4a843;
+    margin-bottom: 24px;
+  }
+  .label {
+    font-size: 18px;
+    letter-spacing: 0.18em;
+    color: #c0c0c0;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+  }
+  .code {
+    font-family: 'DM Sans', monospace;
+    font-size: clamp(96px, 16vw, 240px);
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: #e8b84b;
+    line-height: 1;
+    margin-bottom: 36px;
+    text-shadow: 0 0 30px rgba(232,184,75,0.4);
+  }
+  .help {
+    font-size: 22px;
+    color: #ffffff;
+    line-height: 1.6;
+    max-width: 720px;
+  }
+  .help strong { color: #e8b84b; }
+  .ttl {
+    margin-top: 28px;
+    font-size: 16px;
+    color: #c0c0c0;
+  }
+  .ttl strong { color: #e8b84b; font-weight: 600; }
+  .status {
+    margin-top: 24px;
+    font-size: 14px;
+    color: #c0c0c0;
+    opacity: 0.7;
+  }
+  .err {
+    color: #ff8a8a;
+    font-size: 18px;
+    margin-top: 20px;
+  }
+</style>
+</head>
+<body>
+<div class="root">
+  <div class="brand">ntable</div>
+  <div class="label">TV Pairing Code</div>
+  <div class="code" id="code">— — — — — —</div>
+  <div class="help">
+    호스트 모바일 화면에서 <strong>「TV 연결」</strong> 버튼을 누르고<br>
+    위 코드를 입력해주세요.
+  </div>
+  <div class="ttl"><strong id="ttlSec">300</strong>초 후 코드가 만료됩니다</div>
+  <div class="status" id="status">서버 연결 중…</div>
+  <div class="err" id="err" hidden></div>
+</div>
+
+<script>
+function genToken() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'tv-' + Math.random().toString(36).slice(2) + '-' + Date.now().toString(36);
+}
+
+const token = genToken();
+let ws = null;
+let ttl = 300;
+let ttlInterval = null;
+
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws/tv/${token}`);
+  ws.onopen = () => {
+    document.getElementById('status').textContent = '페어링 코드 발급 중…';
+  };
+  ws.onmessage = (e) => {
+    let msg;
+    try { msg = JSON.parse(e.data); } catch { return; }
+    if (msg.type === 'pair_code') {
+      document.getElementById('code').textContent = msg.code;
+      document.getElementById('status').textContent = '호스트 입력 대기 중…';
+      ttl = msg.expires_in || 300;
+      startTtl();
+    } else if (msg.type === 'attached') {
+      document.getElementById('status').textContent = '연결 완료. 화면 전환 중…';
+      try { ws.close(); } catch (_) {}
+      setTimeout(() => location.replace(`/room/${msg.room_code}/presenter`), 600);
+    }
+  };
+  ws.onclose = (e) => {
+    if (e.code === 4007) {
+      showErr('코드가 만료됐어요. 새로고침해주세요.');
+      return;
+    }
+    document.getElementById('status').textContent = '재연결 중…';
+    setTimeout(connect, 3000);
+  };
+  ws.onerror = () => { try { ws.close(); } catch (_) {} };
+}
+
+function startTtl() {
+  if (ttlInterval) clearInterval(ttlInterval);
+  ttlInterval = setInterval(() => {
+    ttl--;
+    document.getElementById('ttlSec').textContent = Math.max(0, ttl);
+    if (ttl <= 0) clearInterval(ttlInterval);
+  }, 1000);
+}
+
+function showErr(msg) {
+  const el = document.getElementById('err');
+  el.textContent = msg;
+  el.hidden = false;
+  document.getElementById('status').style.display = 'none';
+}
+
+// 핑 (TV 장기 연결 유지)
+setInterval(() => {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
+}, 30000);
+
+connect();
+</script>
+</body>
+</html>
