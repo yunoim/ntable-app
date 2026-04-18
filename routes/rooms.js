@@ -594,6 +594,23 @@ router.patch('/rooms/:code/settings', async (req, res) => {
   res.json({ ok: true });
 });
 
+// POST /api/rooms/:code/me/instagram — 본인 인스타만 빠르게 저장 (result.html 인라인 입력용)
+// body: { uuid, instagram }
+router.post('/rooms/:code/me/instagram', async (req, res) => {
+  const { code } = req.params;
+  const { uuid } = req.body;
+  if (!uuid) return res.status(400).json({ error: 'uuid required' });
+  let insta = String(req.body.instagram || '').trim().replace(/^@/, '').toLowerCase().replace(/[^a-z0-9._]/g, '');
+  if (insta.length > 50) insta = insta.slice(0, 50);
+  const room = await pool.query('SELECT id FROM rooms WHERE room_code = $1', [code]);
+  if (room.rows.length === 0) return res.status(404).json({ error: 'room not found' });
+  await pool.query(
+    'UPDATE room_members SET instagram = $1 WHERE room_id = $2 AND uuid = $3',
+    [insta || null, room.rows[0].id, uuid]
+  );
+  res.json({ ok: true, instagram: insta || null });
+});
+
 // PATCH /api/rooms/:code/display — 호스트가 join wizard 'display' step에서 결정
 // body: { uuid, display_fields, birth_year_format, region_detail, photo_enabled }
 router.patch('/rooms/:code/display', async (req, res) => {
