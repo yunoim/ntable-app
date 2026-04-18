@@ -287,7 +287,8 @@ async function init() {
 
     // 이미 join 했으면 바로 호스트/게스트 화면으로
     const meRes = await fetch(`/api/rooms/${ROOM_CODE}/me?uuid=${encodeURIComponent(UUID)}`);
-    if (meRes.ok) {
+    const me = meRes.ok ? await meRes.json() : { joined: false };
+    if (me.joined) {
       location.replace(ROOM.isHost ? `/room/${ROOM_CODE}/host` : `/room/${ROOM_CODE}`);
       return;
     }

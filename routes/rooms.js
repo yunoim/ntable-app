@@ -277,7 +277,7 @@ router.get('/rooms/:code/explore-result', async (req, res) => {
   res.json({ questions, members: members.rows });
 });
 
-// GET /api/rooms/:code/me?uuid=X — 본인이 이 방에 join 했는지 확인
+// GET /api/rooms/:code/me?uuid=X — 본인이 이 방에 join 했는지 확인 (200 + joined boolean)
 router.get('/rooms/:code/me', async (req, res) => {
   const { code } = req.params;
   const uuid = req.query.uuid;
@@ -289,8 +289,8 @@ router.get('/rooms/:code/me', async (req, res) => {
        FROM room_members WHERE room_id = $1 AND uuid = $2`,
     [room.rows[0].id, uuid]
   );
-  if (me.rows.length === 0) return res.status(404).json({ error: 'NOT_JOINED' });
-  res.json(me.rows[0]);
+  if (me.rows.length === 0) return res.json({ joined: false });
+  res.json({ joined: true, ...me.rows[0] });
 });
 
 // POST /api/rooms/:code/join — 방 입장 시 nickname + profile 스냅샷 등록 (방별 익명)

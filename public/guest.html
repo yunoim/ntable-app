@@ -1688,11 +1688,11 @@ const STATE = {
 
     // 본인이 이 방에 join 했는지 확인 — 안 했으면 /join 페이지로
     const meRes = await fetch(`/api/rooms/${STATE.roomCode}/me?uuid=${encodeURIComponent(STATE.uuid)}`);
-    if (!meRes.ok) {
+    const me = meRes.ok ? await meRes.json() : { joined: false };
+    if (!me.joined) {
       location.replace(`/room/${STATE.roomCode}/join`);
       return;
     }
-    const me = await meRes.json();
     STATE.myProfile = { uuid: STATE.uuid, nickname: me.nickname, ...me };
     renderMyProfile();
     switchScreen('waiting');
