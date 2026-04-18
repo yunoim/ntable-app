@@ -1367,6 +1367,7 @@
 </style>
 <script src="/sentry-init.js" data-page="host" defer></script>
 <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
 </head>
 <body>
 
@@ -2173,14 +2174,15 @@ function updatePrimaryButton() {
       btn.style.display = 'inline-flex';
       break;
     case 'ending':
-      // 1:1 모임은 매칭 발표 버튼 숨김 (탐구 결과만 발표)
+      // 1:1 모임은 매칭 발표 + action-bar 종료 버튼 모두 숨김 (mvp-card 안 종료 버튼만)
       if (state.oneOnOne) {
         btn.style.display = 'none';
+        closeBtn.style.display = 'none';
       } else {
         btn.textContent = '💘 매칭 발표';
         btn.style.display = 'inline-flex';
+        closeBtn.style.display = 'inline-flex';
       }
-      closeBtn.style.display = 'inline-flex';
       break;
   }
 }
@@ -2321,9 +2323,14 @@ function applyOneOnOneEnding() {
     if (substeps) substeps.style.display = 'none';
     state.oneOnOne = true;
     mvpCard.innerHTML = `
-      <div class="card-head">💑 1:1 모임 — 탐구 결과</div>
-      <div id="explore-result-list" style="margin-top:12px;font-size:13px;color:var(--text);line-height:1.7;">불러오는 중…</div>
-      <button type="button" class="csub-next-btn" style="margin-top:14px;" onclick="closeRoom()">모임 종료</button>`;
+      <div id="explore-result-card" style="background:transparent;">
+        <div class="card-head">💑 1:1 모임 — 탐구 결과</div>
+        <div id="explore-result-list" style="margin-top:12px;font-size:13px;color:var(--text);line-height:1.7;">불러오는 중…</div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:14px;">
+        <button type="button" class="csub-next-btn" style="flex:1;background:transparent;color:#e8b84b;border:1px solid rgba(212,168,67,0.5);" onclick="saveExploreResultImage('#explore-result-card')">📷 사진으로 저장</button>
+        <button type="button" class="csub-next-btn" style="flex:1;" onclick="closeRoom()">모임 종료</button>
+      </div>`;
     // 탐구 결과 fetch + 게스트에게도 phase broadcast
     if (!state.exploreResultFired) {
       state.exploreResultFired = true;
@@ -2340,27 +2347,74 @@ async function loadAndRenderExploreResult() {
     const r = await fetch(`/api/rooms/${state.roomCode}/explore-result`);
     if (!r.ok) { list.textContent = '결과를 불러올 수 없어요'; return; }
     const data = await r.json();
-    const myVotes = (data.members.find(m => m.uuid === state.uuid)?.votes_json) || {};
-    const others = data.members.filter(m => m.uuid !== state.uuid);
-    list.innerHTML = (data.questions || []).map((q, i) => {
-      const qid = q.id;
-      const myAns = myVotes[String(qid)] || '-';
-      const otherAns = others.length ? (others[0].votes_json?.[String(qid)] || '-') : '-';
-      const same = myAns !== '-' && myAns === otherAns;
-      const otherNick = others[0]?.nickname || '상대';
-      return `
-        <div style="padding:10px 12px;background:var(--surface-2);border-left:3px solid ${same?'#7ee8a2':'rgba(212,168,67,0.4)'};border-radius:8px;margin-bottom:10px;">
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Q${i+1}${same?' · 일치 ✓':''}</div>
-          <div style="color:#fff;font-weight:500;margin-bottom:6px;">${escHtml(q.question || '')}</div>
-          <div style="display:flex;gap:14px;font-size:12.5px;">
-            <div><span style="color:var(--gold)">나</span> · ${escHtml(myAns)}</div>
-            <div><span style="color:var(--gold)">${escHtml(otherNick)}</span> · ${escHtml(otherAns)}</div>
-          </div>
-        </div>
-      `;
-    }).join('') || '<div style="color:var(--text-muted);">아직 탐구 데이터가 없어요</div>';
+    list.innerHTML = renderExploreResultHtml(data, state.uuid);
+    // 사진 저장 버튼은 host.html에서는 mvp-card 외부에 추가됨 (loadAndRenderExploreResult 호출자에서)
   } catch (e) {
     list.textContent = '결과 로드 실패';
+  }
+}
+
+// 호스트·게스트 공용: explore-result 카드 HTML 생성
+function renderExploreResultHtml(data, myUuid) {
+  const myMember = data.members.find(m => m.uuid === myUuid);
+  const myVotes = (myMember && myMember.votes_json) || {};
+  const myNick = (myMember && myMember.nickname) || '나';
+  const cards = (data.questions || []).map((q, i) => {
+    const qid = q.id;
+    const opts = q.options || [];
+    const optA = String(opts[0] || '').replace(/^A\.\s*/, '');
+    const optB = String(opts[1] || '').replace(/^B\.\s*/, '');
+    const aPickers = data.members
+      .filter(m => m.votes_json && m.votes_json[String(qid)] === 'A')
+      .map(m => m.uuid === myUuid ? '나' : m.nickname);
+    const bPickers = data.members
+      .filter(m => m.votes_json && m.votes_json[String(qid)] === 'B')
+      .map(m => m.uuid === myUuid ? '나' : m.nickname);
+    const myAns = myVotes[String(qid)];
+    const sameAll = aPickers.length > 0 && bPickers.length === 0;
+    const sameAllB = bPickers.length > 0 && aPickers.length === 0;
+    const allMatch = sameAll || sameAllB;
+    return `
+      <div style="padding:14px 16px;background:rgba(212,168,67,0.06);border:1px solid ${allMatch?'#7ee8a2':'rgba(212,168,67,0.35)'};border-radius:12px;margin-bottom:12px;">
+        <div style="font-size:11px;letter-spacing:0.1em;color:#d4a843;margin-bottom:6px;">Q${i+1}${allMatch?' · 모두 일치 ✓':''}</div>
+        <div style="color:#fff;font-weight:600;font-size:14px;line-height:1.45;margin-bottom:12px;">${escHtml(q.question || '')}</div>
+        <div style="background:${myAns==='A'?'rgba(212,168,67,0.18)':'transparent'};border-left:3px solid ${myAns==='A'?'#e8b84b':'rgba(212,168,67,0.3)'};padding:8px 12px;border-radius:6px;margin-bottom:6px;">
+          <div style="font-size:12px;font-weight:700;color:#e8b84b;">A. ${escHtml(optA)}</div>
+          ${aPickers.length ? `<div style="font-size:11.5px;color:#c0c0c0;margin-top:4px;">→ ${aPickers.map(escHtml).join(', ')}</div>` : '<div style="font-size:11px;color:#6f7889;margin-top:4px;font-style:italic;">선택자 없음</div>'}
+        </div>
+        <div style="background:${myAns==='B'?'rgba(212,168,67,0.18)':'transparent'};border-left:3px solid ${myAns==='B'?'#e8b84b':'rgba(212,168,67,0.3)'};padding:8px 12px;border-radius:6px;">
+          <div style="font-size:12px;font-weight:700;color:#e8b84b;">B. ${escHtml(optB)}</div>
+          ${bPickers.length ? `<div style="font-size:11.5px;color:#c0c0c0;margin-top:4px;">→ ${bPickers.map(escHtml).join(', ')}</div>` : '<div style="font-size:11px;color:#6f7889;margin-top:4px;font-style:italic;">선택자 없음</div>'}
+        </div>
+      </div>
+    `;
+  }).join('');
+  return cards || '<div style="color:#6f7889;text-align:center;padding:20px;">아직 탐구 데이터가 없어요</div>';
+}
+
+// 결과 카드 사진으로 저장
+async function saveExploreResultImage(targetSelector) {
+  const card = document.querySelector(targetSelector);
+  if (!card) return;
+  if (typeof html2canvas === 'undefined') {
+    if (typeof toast === 'function') toast('이미지 라이브러리 로딩 중…');
+    return;
+  }
+  try {
+    const canvas = await html2canvas(card, {
+      backgroundColor: '#0e1628',
+      scale: 2,
+      logging: false,
+    });
+    const dataUrl = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.download = `ntable-result-${Date.now()}.png`;
+    link.href = dataUrl;
+    link.click();
+    if (typeof toast === 'function') toast('이미지 저장 완료');
+  } catch (e) {
+    console.error('save image fail', e);
+    if (typeof toast === 'function') toast('이미지 저장 실패');
   }
 }
 

@@ -247,11 +247,13 @@ router.get('/rooms/:code/members/:uuid', async (req, res) => {
 router.get('/rooms/:code/explore-result', async (req, res) => {
   const { code } = req.params;
   const room = await pool.query(
-    'SELECT id, questions_json FROM rooms WHERE room_code = $1', [code]
+    'SELECT id, questions_json, question_count FROM rooms WHERE room_code = $1', [code]
   );
   if (room.rows.length === 0) return res.status(404).json({ error: 'room not found' });
   const room_id = room.rows[0].id;
-  const questions = room.rows[0].questions_json || [];
+  const allQuestions = room.rows[0].questions_json || [];
+  const qcount = Number.isFinite(room.rows[0].question_count) ? room.rows[0].question_count : allQuestions.length;
+  const questions = allQuestions.slice(0, qcount); // 호스트가 정한 문항 수만큼만
   const members = await pool.query(
     `SELECT mr.uuid, mr.votes_json,
             COALESCE(rm.nickname, '익명') AS nickname
@@ -260,6 +262,18 @@ router.get('/rooms/:code/explore-result', async (req, res) => {
       WHERE mr.room_id = $1`,
     [room_id]
   );
+  // 모든 멤버 닉네임 (vote 안 한 사람도 표시 위해 room_members 별도 fetch)
+  const allMembers = await pool.query(
+    `SELECT uuid, nickname FROM room_members WHERE room_id = $1`,
+    [room_id]
+  );
+  // member_results에 없는 사람 추가
+  const haveUuids = new Set(members.rows.map(m => m.uuid));
+  for (const am of allMembers.rows) {
+    if (!haveUuids.has(am.uuid)) {
+      members.rows.push({ uuid: am.uuid, nickname: am.nickname, votes_json: {} });
+    }
+  }
   res.json({ questions, members: members.rows });
 });
 
