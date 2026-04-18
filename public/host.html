@@ -394,6 +394,22 @@
   }
   #copy-url-btn:hover { background: var(--gold-dim); border-color: var(--gold); }
 
+  .sidebar-end-btn {
+    margin-top: 8px;
+    width: 100%;
+    background: transparent;
+    border: 1px solid rgba(220,53,69,0.4);
+    color: #ff8a8a;
+    border-radius: 10px;
+    padding: 10px 0;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .sidebar-end-btn:hover { background: rgba(220,53,69,0.12); border-color: rgba(220,53,69,0.6); }
+
   #waiting-section {
     flex: 1;
     overflow-y: auto;
@@ -1192,6 +1208,12 @@
     }
     .mobile-share-row button:hover { background: rgba(212,168,67,0.2); }
     .mobile-share-row button:active { transform: scale(0.97); }
+    .mobile-share-row .mobile-end {
+      background: rgba(220,53,69,0.12);
+      border-color: rgba(220,53,69,0.4);
+      color: #ff8a8a;
+    }
+    .mobile-share-row .mobile-end:hover { background: rgba(220,53,69,0.22); }
   }
 </style>
 <script src="/sentry-init.js" data-page="host" defer></script>
@@ -1214,6 +1236,7 @@
       <button type="button" id="mobile-share-copy" aria-label="입장 링크 복사">📋 링크</button>
       <button type="button" id="mobile-share-qr" aria-label="QR 크게 보기">🔍 QR</button>
       <button type="button" id="mobile-share-kakao" aria-label="카카오로 초대" hidden>💛 카카오</button>
+      <button type="button" id="mobile-end-btn" class="mobile-end" aria-label="모임 종료" onclick="closeRoom()">🛑 종료</button>
     </div>
   </div>
   <div id="qr-wrap">
@@ -1221,6 +1244,7 @@
     <div id="room-code">—</div>
     <button type="button" id="qr-expand-btn" onclick="openQRModal()" aria-label="QR 크게 보기">🔍 QR 크게 보기</button>
     <button type="button" id="copy-url-btn">입장 링크 복사</button>
+    <button type="button" id="sidebar-end-btn" class="sidebar-end-btn" onclick="closeRoom()">🛑 모임 종료</button>
   </div>
   <div id="waiting-section">
     <div class="section-label">대기 중 <span class="section-count" id="waiting-count">0</span></div>
@@ -1548,6 +1572,9 @@ function handleWSMessage(msg) {
       if (!state.waitingUsers.find(u => u.uuid === msg.uuid)) {
         state.waitingUsers.push({ uuid: msg.uuid, nickname: msg.nickname });
         renderWaitingList();
+        // 새 대기자 발생 → 모바일에서 sidebar 자동 펼침 (호스트가 즉시 인지)
+        document.getElementById('sidebar')?.classList.add('expanded');
+        toast(`👋 ${msg.nickname || '새 참가자'} 입장 — 승인 대기 중`);
       }
       break;
     case 'user_left':

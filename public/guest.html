@@ -1571,19 +1571,23 @@ async function handleWSMessage(msg) {
 
     case 'state_update': {
       const { current_tab, question_index } = msg.state || {};
+      console.log('[guest] state_update', current_tab, 'q=', question_index, 'curScreen=', STATE.currentState);
       if (current_tab === 'intro') {
-        await loadIntroData();
         switchScreen('intro');
+        try { await loadIntroData(); } catch (e) { console.warn('loadIntroData', e); }
       } else if (current_tab === 'explore') {
         if (question_index !== undefined) STATE.currentQIndex = question_index;
-        await loadExploreData();
+        // 화면 먼저 전환 → 데이터 로드 실패해도 화면은 explore 로 이동
         switchScreen('explore');
-        renderQuestion();
+        try {
+          await loadExploreData();
+          renderQuestion();
+        } catch (e) { console.warn('loadExploreData', e); }
       } else if (current_tab === 'free') {
         switchScreen('free');
       } else if (current_tab === 'closing') {
-        await loadClosingData();
         switchScreen('closing');
+        try { await loadClosingData(); } catch (e) { console.warn('loadClosingData', e); }
       }
       break;
     }
