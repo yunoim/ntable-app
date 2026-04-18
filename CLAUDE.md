@@ -74,7 +74,7 @@
 - **결제/계좌/SMS/Discord 없음**
 - **동시 모임 수 제한 없음**, 최대 참가자 제한 없음
 - **호스트 자격**: 누구나 (prod에서는 게스트 3회 이상 시 자동 부여)
-- **관리자 페이지**: `/admin` (ADMIN_PASSWORD 환경변수 인증)
+- **관리자 페이지**: `/admin` (Google OAuth + admin_users 화이트리스트, super_admin: skb.yunho.im@gmail.com)
 
 ## 파일 구조 (병렬 개발 — 담당 파일만 수정)
 
@@ -143,7 +143,8 @@ ntable-app/
 - `ANTHROPIC_API_KEY` — sk-ant-... (없으면 규칙 기반 폴백)
 - `DATABASE_URL` — Railway 자동 주입
 - `PORT` — Railway 자동
-- `ADMIN_PASSWORD` — 미설정 시 `admin123`
+- `GOOGLE_CLIENT_ID` · `GOOGLE_CLIENT_SECRET` · `ADMIN_OAUTH_REDIRECT_URI` — 관리자 OAuth (필수)
+- `KAKAO_JS_KEY` — 호스트 카카오 공유 (선택, 없으면 카카오 버튼 숨김)
 - `PUBLIC_ORIGIN` — 선택
 
 ## 구현 완료 현황

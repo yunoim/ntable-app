@@ -318,10 +318,6 @@
       Google 로 로그인
     </button>
 
-    <div class="login-divider" id="loginDivider" hidden>또는 비밀번호</div>
-
-    <input type="password" id="passwordInput" placeholder="관리자 비밀번호" autocomplete="current-password" aria-label="관리자 비밀번호" />
-    <button type="button" id="loginBtn">로그인</button>
     <div class="login-err" id="loginErr"></div>
   </div>
 </div>
@@ -473,35 +469,24 @@ document.getElementById('googleLoginBtn')?.addEventListener('click', () => {
 
 if (token) showApp(); else showLogin();
 
-document.getElementById('loginBtn').addEventListener('click', login);
-document.getElementById('passwordInput').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') login();
-});
-
-async function login() {
-  const password = document.getElementById('passwordInput').value;
+// URL ?error=... (OAuth callback 실패 시) 표시
+(() => {
+  const err = new URLSearchParams(location.search).get('error');
+  if (!err) return;
+  const errMap = {
+    not_allowed: '허용된 관리자 계정이 아니에요.',
+    state_mismatch: '인증 세션이 만료됐어요. 다시 시도해주세요.',
+    email_unverified: 'Google 계정의 이메일 인증이 필요해요.',
+    no_code: '인증이 취소됐어요.',
+    server: '서버 오류가 발생했어요. 잠시 후 다시 시도해주세요.',
+  };
   const errEl = document.getElementById('loginErr');
-  errEl.textContent = '';
-  if (!password) { errEl.textContent = '비밀번호를 입력해주세요.'; return; }
-
-  try {
-    const r = await fetch('/api/panel/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
-    });
-    const data = await r.json();
-    if (!r.ok) { errEl.textContent = '비밀번호가 맞지 않아요.'; return; }
-    token = data.token;
-    localStorage.setItem(TOKEN_KEY, token);
-    showApp();
-  } catch {
-    errEl.textContent = '서버에 연결할 수 없어요.';
-  }
-}
+  if (errEl) errEl.textContent = errMap[err] || `로그인 실패: ${err}`;
+  // URL 정리 (새로고침 시 에러 안 남게)
+  history.replaceState(null, '', location.pathname);
+})();
 
 async function logout() {
-  // 서버 세션 무효화 (OAuth 토큰일 경우)
   try {
     await fetch('/api/admin/auth/logout', {
       method: 'POST',
@@ -511,7 +496,6 @@ async function logout() {
   localStorage.removeItem(TOKEN_KEY);
   token = '';
   showLogin();
-  document.getElementById('passwordInput').value = '';
 }
 
 async function api(path, opts = {}) {
