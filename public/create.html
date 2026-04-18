@@ -778,11 +778,15 @@
     function logout() {
       if (!confirm('이 기기에 저장된 닉네임·프로필 캐시를 모두 지울까요?\n다음 모임 입장 시 처음부터 입력하게 됩니다.')) return;
       try {
-        localStorage.removeItem('demo_uuid');
         localStorage.removeItem('preferred_nickname');
         localStorage.removeItem('profile_snapshot');
       } catch (_) {}
-      window.location.href = '/';
+      // create 페이지 그대로 두고 환영 문구/닉 표시만 갱신
+      const welcome = document.getElementById('welcomeMsg');
+      if (welcome) welcome.textContent = '지금 바로 모임을 열어보세요.';
+      const navUser = document.getElementById('topNavUser');
+      if (navUser) navUser.textContent = '';
+      alert('정보를 초기화했어요. 다음 모임 입장 시 처음부터 입력합니다.');
     }
 
     const titleInput = document.getElementById('titleInput');
