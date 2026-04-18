@@ -142,12 +142,12 @@ function init(server) {
           if (msg.type === 'ping') {
             ws.send(JSON.stringify({ type: 'pong' }));
           } else if (msg.type === 'chat') {
+            // 익명 채팅 — nickname 송출하지 않음 (uuid만 전달, 클라이언트에서 익명 라벨 매핑)
             const text = String(msg.message || '').slice(0, 500).trim();
             if (!text) return;
             broadcastToRoom(room_code, {
               type: 'chat',
               uuid,
-              nickname,
               message: text,
               ts: Date.now(),
             });

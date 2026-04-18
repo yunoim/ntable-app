@@ -1344,8 +1344,9 @@
 
       <div class="closing-grid">
         <div class="free-card">
-          <div class="card-head">🏆 MVP · 사랑의 작대기</div>
+          <div class="card-head">🏆 MVP 투표 — 가장 인상적인 사람</div>
           <div id="mvp-list"></div>
+          <div class="card-help" style="font-size:12px;color:var(--text-muted);margin-top:8px;line-height:1.5;">참가자가 직접 투표합니다. 호스트 화면은 실시간 집계만 표시.</div>
         </div>
         <div class="free-card" id="match-result-card" style="display:none;">
           <div class="card-head">💘 매칭 결과</div>
@@ -1888,12 +1889,20 @@ function updateMVPList() {
   ).join('');
 }
 
+function anonLabel(u) {
+  if (!u) return '익명';
+  const tail = String(u).replace(/-/g, '').slice(-4).toUpperCase();
+  return `익명#${tail}`;
+}
+
 function appendChatMsg(msg) {
   const log = document.getElementById('chat-log');
   if (log.querySelector('.empty-msg')) log.innerHTML = '';
   const div = document.createElement('div');
   div.className = 'chat-msg';
-  div.innerHTML = `<strong>${escHtml(msg.nickname || '익명')}</strong> · ${escHtml(msg.message || msg.text || '')}`;
+  const isMe = msg.uuid && msg.uuid === state.uuid;
+  const label = isMe ? '나(호스트)' : anonLabel(msg.uuid);
+  div.innerHTML = `<strong>${escHtml(label)}</strong> · ${escHtml(msg.message || msg.text || '')}`;
   log.appendChild(div);
   log.scrollTop = log.scrollHeight;
 }
@@ -2044,8 +2053,25 @@ function switchTab(tab) {
   document.querySelectorAll('.panel').forEach(panel => {
     panel.classList.toggle('active', panel.id === `panel-${tab}`);
   });
-  if (tab === 'ending') updateMVPList();
+  if (tab === 'ending') {
+    updateMVPList();
+    applyOneOnOneEnding();
+  }
   updatePrimaryButton();
+}
+
+// 1:1 (총 2명 이하)이면 MVP 카드 숨기고 자동 매칭 안내 표시
+function applyOneOnOneEnding() {
+  const total = state.approvedUsers.length + (state.hostRole === 'participant' ? 1 : 0);
+  const mvpCard = document.querySelector('#panel-ending .free-card');
+  if (!mvpCard) return;
+  if (total <= 2) {
+    mvpCard.innerHTML = `
+      <div class="card-head">💑 1:1 모임 — 자동 매칭</div>
+      <div class="card-help" style="font-size:13px;color:var(--text-muted);margin-top:10px;line-height:1.6;">
+        2명 이하라 MVP/작대기 투표가 생략됩니다. <strong style="color:var(--gold-light);">강제 매칭</strong> 버튼을 눌러 결과를 발표해주세요.
+      </div>`;
+  }
 }
 
 async function approveUser(uuid) {

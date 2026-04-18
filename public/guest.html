@@ -248,14 +248,69 @@
     box-shadow: 0 0 28px rgba(212,168,67,0.35);
   }
   .match-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .mvp-celebrate {
-    margin-top: 28px;
-    padding: 22px 18px 18px;
-    background: linear-gradient(135deg, rgba(212,168,67,0.18), rgba(212,168,67,0.04));
-    border: 1px solid rgba(212,168,67,0.45);
-    border-radius: 16px;
-    text-align: center;
+  /* MVP 별도 overlay (매칭 위에 먼저 띄움) */
+  #mvpOverlay {
+    position: fixed; inset: 0; z-index: 1100;
+    background: rgba(10,15,30,0.92);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.3s ease;
   }
+  #mvpOverlay[hidden] { display: none; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .mvp-card {
+    background: linear-gradient(135deg, rgba(212,168,67,0.22), rgba(212,168,67,0.06));
+    border: 2px solid var(--gold);
+    border-radius: 22px;
+    padding: 38px 28px 28px;
+    text-align: center;
+    max-width: 360px;
+    width: 100%;
+    position: relative;
+    box-shadow: 0 0 60px rgba(212,168,67,0.4);
+    animation: mvpPop 0.45s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes mvpPop {
+    from { opacity: 0; transform: scale(0.85); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .mvp-close {
+    position: absolute; top: 12px; right: 12px;
+    background: transparent; border: none;
+    color: var(--text-muted); font-size: 18px;
+    cursor: pointer; padding: 4px 8px;
+  }
+  .mvp-close:hover { color: var(--white); }
+  .mvp-next-btn {
+    margin-top: 20px;
+    background: var(--gold);
+    color: var(--navy);
+    border: none;
+    border-radius: 10px;
+    padding: 12px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .mvp-next-btn:hover { background: var(--gold-light); }
+
+  .oneonone-msg {
+    text-align: center;
+    padding: 60px 24px;
+    max-width: 320px;
+    margin: 0 auto;
+  }
+  .oneonone-icon { font-size: 48px; margin-bottom: 16px; }
+  .oneonone-msg h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    color: var(--white);
+    margin-bottom: 12px;
+    line-height: 1.35;
+  }
+  .oneonone-msg p { color: var(--text-muted); font-size: 13px; }
   .mvp-label {
     font-family: 'DM Sans', sans-serif;
     font-size: 11px;
@@ -361,7 +416,25 @@
     padding: 40px 24px;
     padding-top: calc(40px + env(safe-area-inset-top));
     gap: 28px;
+    position: relative;
   }
+  .waiting-logout {
+    position: absolute;
+    top: calc(14px + env(safe-area-inset-top));
+    right: 16px;
+    background: transparent;
+    border: 1px solid var(--gold-border);
+    color: var(--gold-light);
+    border-radius: 16px;
+    padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    z-index: 5;
+    transition: background 0.2s;
+  }
+  .waiting-logout:hover { background: rgba(212,168,67,0.12); }
   .waiting-msg { text-align: center; max-width: 320px; }
   .waiting-msg h2 {
     font-family: 'Cormorant Garamond', serif;
@@ -1183,6 +1256,18 @@
   </div>
 </div>
 
+<!-- MVP 발표 — 매칭 결과 위에 먼저 띄우는 별도 overlay -->
+<div id="mvpOverlay" hidden>
+  <div class="mvp-card">
+    <button type="button" class="mvp-close" onclick="closeMVPOverlay()" aria-label="닫기">✕</button>
+    <div class="mvp-label">🏆 오늘의 MVP</div>
+    <div class="mvp-photo" id="mvpPhoto"></div>
+    <div class="mvp-name" id="mvpName"></div>
+    <div class="mvp-sub" id="mvpSub"></div>
+    <button type="button" class="mvp-next-btn" onclick="closeMVPOverlay()">매칭 결과 보기 →</button>
+  </div>
+</div>
+
 <!-- Matching Result Overlay -->
 <div id="matchingOverlay">
   <div class="matching-card">
@@ -1196,12 +1281,6 @@
       📸 인스타그램 공개하기
     </button>
     <div class="insta-result-box" id="instaResultBox"></div>
-    <div class="mvp-celebrate" id="mvpCelebrate" hidden>
-      <div class="mvp-label">🏆 오늘의 MVP</div>
-      <div class="mvp-photo" id="mvpPhoto"></div>
-      <div class="mvp-name" id="mvpName"></div>
-      <div class="mvp-sub" id="mvpSub"></div>
-    </div>
   </div>
 </div>
 
@@ -1222,6 +1301,7 @@
 
 <!-- Waiting Screen -->
 <div class="screen" id="screenWaiting">
+  <button type="button" class="waiting-logout" onclick="guestLogout()" aria-label="로그아웃">로그아웃</button>
   <div class="waiting-msg">
     <h2>호스트 승인을<br>기다리고 있어요</h2>
     <p id="waitingStatus">방금 도착. 호스트가 확인 중이에요.</p>
@@ -1518,7 +1598,14 @@ function connectWS() {
     } catch (_) {}
     try { STATE.ws.send(JSON.stringify({ type: 'request_photos' })); } catch (_) {}
   };
-  STATE.ws.onclose = () => {
+  STATE.ws.onclose = (e) => {
+    console.log('[guest] ws.onclose', e.code, e.reason);
+    // 서버가 방 종료로 닫으면 곧장 설문으로 (room_closed broadcast 누락 fallback)
+    if (e.code === 4005 || /closed/i.test(e.reason || '')) {
+      try { localStorage.setItem('pending_survey', STATE.roomCode); } catch (_) {}
+      location.replace(`/survey?room=${STATE.roomCode}`);
+      return;
+    }
     updateConnDot('reconnecting');
     stopPing();
     if (STATE.wsRetries < STATE.MAX_RETRIES) {
@@ -1602,7 +1689,7 @@ async function handleWSMessage(msg) {
       showQuestionCard(msg.text);
       break;
     case 'chat':
-      appendChat(msg.message, msg.uuid === STATE.uuid ? 'mine' : 'theirs');
+      appendChat(msg.message, msg.uuid === STATE.uuid ? 'mine' : 'theirs', msg.uuid);
       break;
     case 'matching_result':
       STATE.matchResult = msg.match_json;
@@ -1622,8 +1709,11 @@ async function handleWSMessage(msg) {
       break;
     case 'room_closed':
       // 게스트가 중간에 이탈해도 다음 로그인 때 자동 유도되도록 저장
+      console.log('[guest] room_closed received → /survey');
       try { localStorage.setItem('pending_survey', STATE.roomCode); } catch (_) {}
-      location.href = `/survey?room=${STATE.roomCode}`;
+      // overlay 등 떠있어도 즉시 redirect (browser navigation 우선)
+      try { if (STATE.ws) STATE.ws.close(); } catch (_) {}
+      location.replace(`/survey?room=${STATE.roomCode}`);
       break;
 
     case 'photo_update':
@@ -1992,17 +2082,24 @@ function sendChat() {
   input.value = '';
 }
 
-function appendChat(message, side) {
+function anonLabel(u) {
+  if (!u) return '익명';
+  const tail = String(u).replace(/-/g, '').slice(-4).toUpperCase();
+  return `익명#${tail}`;
+}
+
+function appendChat(message, side, fromUuid) {
   const area = document.getElementById('chatArea');
   const wrap = document.createElement('div');
   wrap.className = `chat-bubble-wrap ${side}`;
 
   const now = new Date();
   const time = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+  const label = side === 'mine' ? '나' : anonLabel(fromUuid);
 
   wrap.innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:${side==='mine'?'flex-end':'flex-start'};gap:3px">
-      <div class="chat-time">${time}</div>
+      <div class="chat-time">${escHtml(label)} · ${time}</div>
       <div class="chat-bubble ${side}">${escHtml(message)}</div>
     </div>`;
   area.appendChild(wrap);
@@ -2011,6 +2108,13 @@ function appendChat(message, side) {
 
 function escHtml(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function guestLogout() {
+  if (!confirm('이 방에서 나가고 로그아웃할까요?')) return;
+  try { if (STATE.ws) STATE.ws.close(); } catch (_) {}
+  try { localStorage.removeItem('demo_uuid'); } catch (_) {}
+  location.href = '/';
 }
 
 // ─── PHOTO (서버 저장 X — WS broadcast 휘발성) ──────
@@ -2175,6 +2279,19 @@ async function loadClosingData() {
     } catch(_) {}
   }
   document.getElementById('closingRoomTag').textContent = STATE.roomCode;
+
+  // 1:1 (총 2명 이하)이면 MVP/작대기 투표 자동 스킵 — 매칭만 자동 표시
+  const isOneOnOne = STATE.members.length <= 2;
+  const content = document.querySelector('.closing-content');
+  if (isOneOnOne && content) {
+    content.innerHTML = `
+      <div class="oneonone-msg">
+        <div class="oneonone-icon">💑</div>
+        <h2>1:1 모임이라 자동 매칭돼요</h2>
+        <p>호스트가 모임을 마무리하면 결과 카드가 나타납니다.</p>
+      </div>`;
+    return;
+  }
   renderVoteList('mvpList', 'mvp');
   renderVoteList('matchList', 'match');
 }
@@ -2287,13 +2404,13 @@ function showMatchingResult(matchJson) {
     if (photoWrap) photoWrap.hidden = true;
   }
 
-  // MVP 발표
+  // MVP 발표 — 별도 overlay로 먼저 띄움 (매칭 결과는 아래에 이미 준비됨)
   const mvp = matchJson && matchJson.mvp;
-  const mvpBox = document.getElementById('mvpCelebrate');
+  const mvpOverlay = document.getElementById('mvpOverlay');
   const mvpPhoto = document.getElementById('mvpPhoto');
   const mvpName = document.getElementById('mvpName');
   const mvpSub = document.getElementById('mvpSub');
-  if (mvp && mvp.nickname && mvpBox) {
+  if (mvp && mvp.nickname && mvpOverlay) {
     const mvpUuid = mvp.uuid;
     const isMe = mvpUuid && mvpUuid === STATE.uuid;
     const photo = mvpUuid && STATE.photos[mvpUuid];
@@ -2304,12 +2421,17 @@ function showMatchingResult(matchJson) {
     mvpSub.textContent = (mvp.fi_count != null)
       ? `투표 ${mvp.fi_count}표 — 오늘 가장 인상적인 사람`
       : '오늘 가장 인상적인 사람';
-    mvpBox.hidden = false;
-  } else if (mvpBox) {
-    mvpBox.hidden = true;
+    mvpOverlay.hidden = false;
+  } else if (mvpOverlay) {
+    mvpOverlay.hidden = true;
   }
 
   overlay.classList.add('show');
+}
+
+function closeMVPOverlay() {
+  const el = document.getElementById('mvpOverlay');
+  if (el) el.hidden = true;
 }
 
 async function revealInstagram() {

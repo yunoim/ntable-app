@@ -308,7 +308,7 @@
 
       <div class="form-group">
         <label>인스타그램 아이디</label>
-        <input type="text" id="instagram" placeholder="@ 제외하고 입력" maxlength="50" aria-label="인스타그램 아이디" />
+        <input type="text" id="instagram" placeholder="@ 제외하고 입력 (영어/숫자/. _)" maxlength="50" aria-label="인스타그램 아이디" inputmode="email" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" pattern="[a-z0-9._]+" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9._]/g,'')" />
       </div>
 
       <button type="button" class="btn-primary" id="save-btn" disabled>저장</button>
