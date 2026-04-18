@@ -608,6 +608,72 @@
           <div class="qcount-hint">큰 화면은 노트북·태블릿·모니터에 띄우는 발표용 레이아웃입니다.</div>
         </div>
 
+        <div class="field-group">
+          <label>참가자 사진 업로드</label>
+          <div class="display-fields-row">
+            <label class="df-chip"><input type="radio" name="photoEnabled" value="true" checked> 📷 허용</label>
+            <label class="df-chip"><input type="radio" name="photoEnabled" value="false"> 🚫 비허용</label>
+          </div>
+          <div class="qcount-hint">허용 시 참가자가 본인 사진을 카드에 올릴 수 있어요. (서버 미저장)</div>
+        </div>
+
+        <div class="field-group">
+          <label>호스트 본인 정보 (게스트가 보게 될 카드 미리 채우기)</label>
+          <div class="qcount-hint" style="margin-bottom:10px;">선택 사항. 모임 시작 전까지 host 화면에서 수정 가능.</div>
+          <div style="display:flex;gap:8px;margin-bottom:10px;">
+            <button type="button" class="df-chip host-gender-btn" data-value="male">남성</button>
+            <button type="button" class="df-chip host-gender-btn" data-value="female">여성</button>
+          </div>
+          <input type="number" id="hostBirthYear" placeholder="출생연도 (예: 1990)" min="1940" max="2015" style="width:100%;padding:11px;background:rgba(212,168,67,0.06);border:1px solid rgba(212,168,67,0.4);border-radius:10px;color:#fff;font-family:inherit;font-size:14px;margin-bottom:10px;">
+          <details style="margin-top:6px;">
+            <summary style="cursor:pointer;color:var(--gold-light);font-size:13px;padding:6px 0;">+ 더 자세히 (지역·업종·MBTI·관심사)</summary>
+            <div style="margin-top:10px;">
+              <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">지역</div>
+              <div class="display-fields-row host-region-row">
+                <button type="button" class="df-chip host-chip" data-group="region" data-value="서울">서울</button>
+                <button type="button" class="df-chip host-chip" data-group="region" data-value="경기">경기</button>
+                <button type="button" class="df-chip host-chip" data-group="region" data-value="인천">인천</button>
+                <button type="button" class="df-chip host-chip" data-group="region" data-value="부산">부산</button>
+                <button type="button" class="df-chip host-chip" data-group="region" data-value="대구">대구</button>
+                <button type="button" class="df-chip host-chip" data-group="region" data-value="대전">대전</button>
+                <button type="button" class="df-chip host-chip" data-group="region" data-value="광주">광주</button>
+                <button type="button" class="df-chip host-chip" data-group="region" data-value="기타">기타</button>
+              </div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:12px;">업종</div>
+              <div class="display-fields-row host-industry-row">
+                <button type="button" class="df-chip host-chip" data-group="industry" data-value="IT/개발">IT/개발</button>
+                <button type="button" class="df-chip host-chip" data-group="industry" data-value="디자인">디자인</button>
+                <button type="button" class="df-chip host-chip" data-group="industry" data-value="마케팅/광고">마케팅/광고</button>
+                <button type="button" class="df-chip host-chip" data-group="industry" data-value="금융/회계">금융/회계</button>
+                <button type="button" class="df-chip host-chip" data-group="industry" data-value="교육">교육</button>
+                <button type="button" class="df-chip host-chip" data-group="industry" data-value="서비스업">서비스업</button>
+                <button type="button" class="df-chip host-chip" data-group="industry" data-value="기타">기타</button>
+              </div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:12px;">MBTI</div>
+              <div class="display-fields-row host-mbti-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">
+                <button type="button" class="df-chip host-chip" data-group="mbti" data-value="INTJ">INTJ</button>
+                <button type="button" class="df-chip host-chip" data-group="mbti" data-value="INTP">INTP</button>
+                <button type="button" class="df-chip host-chip" data-group="mbti" data-value="ENTJ">ENTJ</button>
+                <button type="button" class="df-chip host-chip" data-group="mbti" data-value="ENTP">ENTP</button>
+                <button type="button" class="df-chip host-chip" data-group="mbti" data-value="INFJ">INFJ</button>
+                <button type="button" class="df-chip host-chip" data-group="mbti" data-value="INFP">INFP</button>
+                <button type="button" class="df-chip host-chip" data-group="mbti" data-value="ENFJ">ENFJ</button>
+                <button type="button" class="df-chip host-chip" data-group="mbti" data-value="ENFP">ENFP</button>
+                <button type="button" class="df-chip host-chip" data-group="mbti" data-value="ISTJ">ISTJ</button>
+                <button type="button" class="df-chip host-chip" data-group="mbti" data-value="ISFJ">ISFJ</button>
+                <button type="button" class="df-chip host-chip" data-group="mbti" data-value="ESTJ">ESTJ</button>
+                <button type="button" class="df-chip host-chip" data-group="mbti" data-value="ESFJ">ESFJ</button>
+                <button type="button" class="df-chip host-chip" data-group="mbti" data-value="ISTP">ISTP</button>
+                <button type="button" class="df-chip host-chip" data-group="mbti" data-value="ISFP">ISFP</button>
+                <button type="button" class="df-chip host-chip" data-group="mbti" data-value="ESTP">ESTP</button>
+                <button type="button" class="df-chip host-chip" data-group="mbti" data-value="ESFP">ESFP</button>
+              </div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:12px;">관심사</div>
+              <input type="text" id="hostInterest" placeholder="예: 등산, 영화, 카페" maxlength="30" style="width:100%;padding:11px;background:rgba(212,168,67,0.06);border:1px solid rgba(212,168,67,0.4);border-radius:10px;color:#fff;font-family:inherit;font-size:14px;margin-top:6px;">
+            </div>
+          </details>
+        </div>
+
         <button type="button" class="submit-btn" id="createBtn" onclick="createRoom()" disabled>
           모임 만들기
         </button>
@@ -813,6 +879,34 @@
       document.getElementById('createBtn').disabled = !ready;
     }
 
+    // 호스트 셀프 프로필 chip 핸들러
+    document.addEventListener('click', (e) => {
+      const chip = e.target.closest('.host-chip, .host-gender-btn');
+      if (!chip) return;
+      const group = chip.dataset.group || 'gender';
+      const row = chip.closest('.display-fields-row, .field-group') ||
+                  chip.parentElement;
+      if (!row) return;
+      const sel = chip.classList.contains('selected');
+      // 같은 그룹 안 모든 chip 해제
+      const peerSelector = chip.classList.contains('host-gender-btn')
+        ? '.host-gender-btn'
+        : `.host-chip[data-group="${group}"]`;
+      document.querySelectorAll(peerSelector).forEach(c => c.classList.remove('selected'));
+      if (!sel) chip.classList.add('selected');
+    });
+
+    function getHostProfile() {
+      const gender = document.querySelector('.host-gender-btn.selected')?.dataset.value || null;
+      const birthYearRaw = document.getElementById('hostBirthYear')?.value || '';
+      const birth_year = parseInt(birthYearRaw, 10) || null;
+      const region = document.querySelector('.host-chip[data-group="region"].selected')?.dataset.value || null;
+      const industry = document.querySelector('.host-chip[data-group="industry"].selected')?.dataset.value || null;
+      const mbti = document.querySelector('.host-chip[data-group="mbti"].selected')?.dataset.value || null;
+      const interest = (document.getElementById('hostInterest')?.value || '').trim() || null;
+      return { gender, birth_year, region, industry, mbti, interest };
+    }
+
     async function createRoom() {
       const rawTitle = titleInput.value.trim();
       const hostNickname = (document.getElementById('hostNicknameInput')?.value || '').trim();
@@ -837,19 +931,21 @@
         const birth_year_format = (document.querySelector('input[name=birthFmt]:checked') || {}).value || 'exact';
         const host_role = (document.querySelector('input[name=hostRole]:checked') || {}).value || DEFAULT_HOST_ROLE;
         const display_mode = (document.querySelector('input[name=displayMode]:checked') || {}).value || 'mobile';
+        const photo_enabled = (document.querySelector('input[name=photoEnabled]:checked') || {}).value !== 'false';
         const res = await fetch('/api/rooms', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uuid, title, host_role, question_count, pack_id: selectedPack, display_fields, birth_year_format, display_mode })
+          body: JSON.stringify({ uuid, title, host_role, question_count, pack_id: selectedPack, display_fields, birth_year_format, display_mode, photo_enabled })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || '방 생성 실패');
 
-        // 호스트도 room_members 등록 (방별 익명 닉네임)
+        // 호스트도 room_members 등록 (방별 익명 닉네임 + 셀프 프로필)
+        const hostProfile = getHostProfile();
         const joinRes = await fetch(`/api/rooms/${data.room_code}/join`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uuid, nickname: hostNickname }),
+          body: JSON.stringify({ uuid, nickname: hostNickname, profile: hostProfile }),
         });
         if (!joinRes.ok) {
           const je = await joinRes.json().catch(() => ({}));

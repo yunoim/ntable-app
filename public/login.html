@@ -129,7 +129,13 @@
   </div>
 
   <div class="guest-info">
-    참가자라면 호스트가 보내준 <strong>링크</strong> 또는 <strong>QR</strong>로 바로 입장하세요.
+    <div style="font-size:14px;color:#ffffff;margin-bottom:10px;font-weight:600;">참가자세요?</div>
+    호스트가 보내준 <strong>링크</strong> 또는 <strong>QR</strong>로 바로 입장하거나<br>
+    아래 <strong>참여 코드</strong>를 입력하세요.
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <input type="text" id="joinCodeInput" maxlength="6" placeholder="ABC123" autocapitalize="characters" autocomplete="off" style="flex:1;padding:12px;background:rgba(212,168,67,0.06);border:1px solid rgba(212,168,67,0.4);border-radius:10px;color:#ffffff;font-size:18px;font-weight:700;letter-spacing:0.18em;text-align:center;font-family:'DM Sans',monospace;text-transform:uppercase;" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,''); document.getElementById('joinCodeBtn').disabled = this.value.length !== 6;" />
+      <button type="button" id="joinCodeBtn" disabled style="padding:0 18px;background:#e8b84b;color:#0a0f1e;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">입장</button>
+    </div>
   </div>
 
   <div class="footer-info">
@@ -166,6 +172,19 @@ document.getElementById('openRoomBtn').addEventListener('click', () => {
 
 // 페이지 로드 시 uuid 자동 보장 (백그라운드)
 ensureUuid();
+
+// 참여 코드 입장
+document.getElementById('joinCodeBtn').addEventListener('click', () => {
+  const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
+  if (code.length !== 6) return;
+  ensureUuid();
+  location.href = `/room/${code}`;
+});
+document.getElementById('joinCodeInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !document.getElementById('joinCodeBtn').disabled) {
+    document.getElementById('joinCodeBtn').click();
+  }
+});
 </script>
 </body>
 </html>

@@ -85,6 +85,13 @@ async function initDB() {
       if (e.code !== '42701') throw e;
     }
 
+    // 게스트 사진 업로드 허용 여부 (호스트가 결정)
+    try {
+      await client.query(`ALTER TABLE rooms ADD COLUMN photo_enabled BOOLEAN DEFAULT TRUE`);
+    } catch (e) {
+      if (e.code !== '42701') throw e;
+    }
+
     // room_members — 방별 닉네임/프로필 스냅샷 (방 종료 시 CASCADE 자동 삭제)
     // 같은 uuid 도 다른 방에서 다른 닉네임 가능. 같은 방 안에서 nickname unique.
     await client.query(`
