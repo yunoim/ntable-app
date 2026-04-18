@@ -612,6 +612,14 @@
           <div class="qcount-hint">허용 시 참가자가 본인 사진을 카드에 올릴 수 있어요. (서버 미저장)</div>
         </div>
 
+        <div class="field-group">
+          <label>지역 세부 표시</label>
+          <div class="display-fields-row">
+            <label class="df-chip"><input type="radio" name="regionDetail" value="false" checked> 시·도만 (예: 서울)</label>
+            <label class="df-chip"><input type="radio" name="regionDetail" value="true"> 서울은 구까지 (예: 서울 강남)</label>
+          </div>
+        </div>
+
 
         <button type="button" class="submit-btn" id="createBtn" onclick="createRoom()" disabled>
           모임 만들기
@@ -827,10 +835,11 @@
         const host_role = (document.querySelector('input[name=hostRole]:checked') || {}).value || DEFAULT_HOST_ROLE;
         const display_mode = (document.querySelector('input[name=displayMode]:checked') || {}).value || 'mobile';
         const photo_enabled = (document.querySelector('input[name=photoEnabled]:checked') || {}).value !== 'false';
+        const region_detail = (document.querySelector('input[name=regionDetail]:checked') || {}).value === 'true';
         const res = await fetch('/api/rooms', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uuid, title, host_role, question_count, pack_id: selectedPack, display_fields, birth_year_format, display_mode, photo_enabled })
+          body: JSON.stringify({ uuid, title, host_role, question_count, pack_id: selectedPack, display_fields, birth_year_format, display_mode, photo_enabled, region_detail })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || '방 생성 실패');
