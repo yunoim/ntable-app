@@ -182,6 +182,12 @@ function init(server) {
 
       // user_joined broadcast (자신 제외)
       broadcastToRoom(room_code, { type: 'user_joined', uuid, nickname }, uuid);
+      // 자동 입장 (2026-04-19) — 호스트 승인 절차 폐지. 참가자는 즉시 approved.
+      // 호스트는 강퇴 권한 유지. 부적절 사용자는 사후 차단.
+      // (호스트 본인은 approved broadcast 받지만 무시 — 호스트 화면에는 자기 카드 항상 표시)
+      if (uuid !== hostUuid) {
+        broadcastToRoom(room_code, { type: 'approved', uuid });
+      }
 
       ws.on('message', async (data) => {
         try {

@@ -1427,10 +1427,13 @@
     <button type="button" id="sidebar-end-btn" class="sidebar-end-btn" onclick="closeRoom()">🛑 모임 종료</button>
   </div>
   <div id="waiting-section">
-    <div class="section-label">대기 중 <span class="section-count" id="waiting-count">0</span></div>
-    <button type="button" id="approve-all-btn">전체 승인</button>
-    <div id="waiting-list"></div>
-    <div class="section-label" style="margin-top:22px;">참가자 <span class="section-count" id="approved-count">0</span></div>
+    <!-- 자동 입장 (2026-04-19) — 승인 절차 폐지. 참가자는 즉시 입장. 호스트는 강퇴 권한 유지. -->
+    <div id="waiting-area" hidden>
+      <div class="section-label">대기 중 <span class="section-count" id="waiting-count">0</span></div>
+      <button type="button" id="approve-all-btn">전체 승인</button>
+      <div id="waiting-list"></div>
+    </div>
+    <div class="section-label">참가자 <span class="section-count" id="approved-count">0</span></div>
     <div id="approved-list"></div>
   </div>
 </aside>
@@ -1874,7 +1877,7 @@ function handleWSMessage(msg) {
         renderWaitingList();
         // 새 대기자 발생 → 모바일에서 sidebar 자동 펼침 (호스트가 즉시 인지)
         document.getElementById('sidebar')?.classList.add('expanded');
-        toast(`👋 ${msg.nickname || '새 참가자'} 입장 — 승인 대기 중`);
+        toast(`👋 ${msg.nickname || '새 참가자'} 입장`);
       }
       break;
     case 'user_left':
