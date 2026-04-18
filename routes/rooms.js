@@ -491,7 +491,7 @@ router.get('/stats', async (req, res) => {
 });
 
 // PATCH /api/rooms/:code/display — 호스트가 join wizard 'display' step에서 결정
-// body: { uuid, display_fields, birth_year_format }
+// body: { uuid, display_fields, birth_year_format, region_detail, photo_enabled }
 router.patch('/rooms/:code/display', async (req, res) => {
   const { code } = req.params;
   const { uuid } = req.body;
@@ -505,12 +505,18 @@ router.patch('/rooms/:code/display', async (req, res) => {
     : null;
   const birth_year_format = ['exact', 'decade_half', 'decade'].includes(req.body.birth_year_format)
     ? req.body.birth_year_format : null;
-  if (!display_fields && !birth_year_format) return res.status(400).json({ error: 'nothing to update' });
+  const region_detail = typeof req.body.region_detail === 'boolean' ? req.body.region_detail : null;
+  const photo_enabled = typeof req.body.photo_enabled === 'boolean' ? req.body.photo_enabled : null;
+  if (!display_fields && !birth_year_format && region_detail === null && photo_enabled === null) {
+    return res.status(400).json({ error: 'nothing to update' });
+  }
   const updates = [];
   const params = [];
   let i = 1;
   if (display_fields) { updates.push(`display_fields = $${i++}`); params.push(JSON.stringify(display_fields)); }
   if (birth_year_format) { updates.push(`birth_year_format = $${i++}`); params.push(birth_year_format); }
+  if (region_detail !== null) { updates.push(`region_detail = $${i++}`); params.push(region_detail); }
+  if (photo_enabled !== null) { updates.push(`photo_enabled = $${i++}`); params.push(photo_enabled); }
   params.push(code);
   await pool.query(`UPDATE rooms SET ${updates.join(', ')} WHERE room_code = $${i}`, params);
   res.json({ ok: true });

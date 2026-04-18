@@ -393,16 +393,19 @@ function renderStep() {
       `;
       break;
     case 'display': {
-      // 호스트 전용 — display_fields + birth_year_format 결정 → server PATCH
+      // 호스트 전용 — display_fields + birth_year_format + region_detail + photo_enabled
       const isCouples = ROOM.pack_id === 'couples';
       const df = Array.isArray(ROOM.display_fields)
         ? ROOM.display_fields
         : ['birth_year','region','industry','interest'];
       const fmt = ROOM.birth_year_format || (isCouples ? 'exact' : 'decade_half');
+      const rd = ROOM.region_detail === true;
+      const pe = ROOM.photo_enabled !== false;
       body = `
         <div class="step-num">${stepNum} · 표시 설정 <span style="opacity:0.6;font-weight:400;">(호스트)</span></div>
         <h2 class="step-title">카드에 어떤 정보를 보일지 정하세요</h2>
         <p class="step-sub">게스트들에게도 같은 방식으로 적용됩니다.</p>
+
         <div class="field">
           <div class="field-label">참가자 카드에 표시할 정보</div>
           <div class="chip-row">
@@ -413,15 +416,34 @@ function renderStep() {
           </div>
           <div class="hint">체크한 항목만 다른 참가자 카드에 노출됩니다.</div>
         </div>
+
         <div class="field">
           <div class="field-label">출생연도 표시 방식</div>
           <div class="chip-row">
             <button type="button" class="chip${fmt==='decade'?' selected':''}" data-group="bfmt" data-value="decade">30대 (가장 익명)</button>
-            <button type="button" class="chip${fmt==='decade_half'?' selected':''}" data-group="bfmt" data-value="decade_half">30초·중·후</button>
-            <button type="button" class="chip${fmt==='exact'?' selected':''}" data-group="bfmt" data-value="exact">정확한 연도</button>
+            <button type="button" class="chip${fmt==='decade_half'?' selected':''}" data-group="bfmt" data-value="decade_half">30초·중·후 (권장)</button>
+            <button type="button" class="chip${fmt==='exact'?' selected':''}" data-group="bfmt" data-value="exact">정확한 연도 (1990)</button>
           </div>
-          ${isCouples ? '<div class="hint">둘이서는 권장값이 "정확한 연도"입니다.</div>' : '<div class="hint">권장: 30초·중·후 (익명성 유지하면서 또래 식별)</div>'}
+          ${isCouples ? '<div class="hint">둘이서는 권장값이 "정확한 연도"입니다.</div>' : ''}
         </div>
+
+        <div class="field">
+          <div class="field-label">지역 세부 표시</div>
+          <div class="chip-row">
+            <button type="button" class="chip${!rd?' selected':''}" data-group="rd" data-value="false">시·도만 (예: 서울)</button>
+            <button type="button" class="chip${rd?' selected':''}" data-group="rd" data-value="true">서울은 구까지 (예: 서울 강남)</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-label">참가자 사진 업로드</div>
+          <div class="chip-row">
+            <button type="button" class="chip${pe?' selected':''}" data-group="pe" data-value="true">📷 허용</button>
+            <button type="button" class="chip${!pe?' selected':''}" data-group="pe" data-value="false">🚫 비허용</button>
+          </div>
+          <div class="hint">허용 시 참가자가 본인 사진을 카드에 올릴 수 있어요. (브라우저에만 저장 · 새로고침 시 사라짐)</div>
+        </div>
+
         <div class="actions">
           ${prevBtn}
           <button type="button" class="btn btn-next" onclick="saveDisplayAndNext()">다음</button>
@@ -701,15 +723,27 @@ async function saveDisplayAndNext() {
     .filter(k => document.getElementById('df_' + k)?.checked);
   const fmtChip = document.querySelector('.chip[data-group="bfmt"].selected');
   const newFmt = fmtChip ? fmtChip.dataset.value : (ROOM.birth_year_format || 'decade_half');
+  const rdChip = document.querySelector('.chip[data-group="rd"].selected');
+  const newRd = rdChip ? rdChip.dataset.value === 'true' : (ROOM.region_detail === true);
+  const peChip = document.querySelector('.chip[data-group="pe"].selected');
+  const newPe = peChip ? peChip.dataset.value === 'true' : (ROOM.photo_enabled !== false);
   try {
     await fetch(`/api/rooms/${ROOM_CODE}/display`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uuid: UUID, display_fields: newDf, birth_year_format: newFmt }),
+      body: JSON.stringify({
+        uuid: UUID,
+        display_fields: newDf,
+        birth_year_format: newFmt,
+        region_detail: newRd,
+        photo_enabled: newPe,
+      }),
     });
   } catch (_) {}
   ROOM.display_fields = newDf;
   ROOM.birth_year_format = newFmt;
+  ROOM.region_detail = newRd;
+  ROOM.photo_enabled = newPe;
   rebuildSteps();
   CURRENT = Math.min(CURRENT + 1, STEPS.length - 1);
   renderStep();
