@@ -1,4 +1,4 @@
-# ntable-demo — 데모 형상 개발 허브
+# ntable-app — 데모 형상 개발 허브
 
 > **Notion 동기화**: 2026-04-17
 > **목적**: 누구나 호스트가 되어 실제 모임을 열고 진행할 수 있는 경량 플랫폼
@@ -18,14 +18,14 @@
 작업이 **파일 수정/생성/삭제를 포함하면** 반드시 로그 DB에 기록. 예외 없음.
 
 **기록 프로세스:**
-1. **Dedup Key 생성**: `YYYYMMDD-ntable-demo-<slug>` (예: `20260417-ntable-demo-ws-fix`)
+1. **Dedup Key 생성**: `YYYYMMDD-ntable-app-<slug>` (예: `20260417-ntable-app-ws-fix`)
 2. **Data Source에서 Dedup Key 검색** (`data_source_url: collection://b49ce025-ec70-4ffa-b2cf-d6c57bb5db93`)
 3. 결과에 따라 분기:
    - **없으면**: `notion-create-pages` 로 신규 생성
    - **있으면**: `notion-update-page` 로 기존 항목 업데이트 (Files Changed 누적, Status 갱신)
 4. 필수 필드:
    - `Task` (title): 간결한 작업명
-   - `Project`: `ntable-demo`
+   - `Project`: `ntable-app`
    - `Status`: `in_progress` / `done` / `blocked` / `reverted`
    - `Type` (multi): feature/bugfix/refactor/docs/config/test
    - `date:Date:start`: 오늘 날짜 (ISO-8601)
@@ -54,8 +54,8 @@
 
 | 항목 | 내용 |
 |------|------|
-| 로컬 경로 | `C:\Users\quite\Documents\ntable-demo\` |
-| GitHub | `yunoim/ntable-demo` |
+| 로컬 경로 | `C:\Users\quite\Documents\ntable-app\` |
+| GitHub | `yunoim/ntable-app` |
 | 배포 | Railway (GitHub push → 자동 배포) |
 | 도메인 | https://app.ntable.kr (Cloudflare DNS only + Railway SSL) · demo.ntable.kr 는 전환기 301 redirect |
 | 스택 | Node.js / Express / PostgreSQL / WebSocket(ws) |
@@ -79,7 +79,7 @@
 ## 파일 구조 (병렬 개발 — 담당 파일만 수정)
 
 ```
-ntable-demo/
+ntable-app/
 ├── server.js           # 앱 진입점
 ├── db.js               # DB 연결
 ├── routes/
@@ -197,12 +197,12 @@ ntable-demo/
 
 ```
 Task: "ws.js chat broadcast 누락 수정"
-Project: ntable-demo
+Project: ntable-app
 Status: done
 Type: [bugfix]
 date:Date:start: 2026-04-17
 Files Changed: routes/ws.js
 Summary: ping만 처리하던 ws.js에 chat 메시지 broadcast 핸들러 추가. 자유대화 채팅 복구.
-Dedup Key: 20260417-ntable-demo-ws-chat-broadcast
-Commit: https://github.com/yunoim/ntable-demo/commit/abc123
+Dedup Key: 20260417-ntable-app-ws-chat-broadcast
+Commit: https://github.com/yunoim/ntable-app/commit/abc123
 ```
