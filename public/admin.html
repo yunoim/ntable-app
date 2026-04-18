@@ -266,6 +266,7 @@
   }
 </style>
 <script src="/sentry-init.js" data-page="admin" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js" defer></script>
 </head>
 <body>
 
@@ -292,6 +293,7 @@
 
   <nav class="tabs">
     <button type="button" class="tab-btn active" data-tab="dashboard">대시보드</button>
+    <button type="button" class="tab-btn" data-tab="insights">인사이트</button>
     <button type="button" class="tab-btn" data-tab="rooms">방 관리</button>
     <button type="button" class="tab-btn" data-tab="users">유저</button>
     <button type="button" class="tab-btn" data-tab="surveys">후기</button>
@@ -303,6 +305,24 @@
       <div class="stats-grid" id="statsGrid"></div>
       <div class="section-h">최근 방 (10개)</div>
       <div class="table-wrap" id="dashRecentRooms"></div>
+    </div>
+
+    <!-- Insights -->
+    <div class="panel" id="panel-insights">
+      <div class="section-h">실시간 스냅샷</div>
+      <div class="stats-grid" id="liveSnapGrid"></div>
+
+      <div class="section-h">팩 사용 분포 (전체 기간)</div>
+      <div class="table-wrap" id="packsUsageTable"></div>
+
+      <div class="section-h">NPS · 만족도 주간 추이 (최근 12주)</div>
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
+        <canvas id="npsChart" height="120"></canvas>
+      </div>
+
+      <div class="section-h">매칭 성공률 (최근 30일)</div>
+      <div class="stats-grid" id="matchSummaryGrid"></div>
+      <div class="table-wrap" id="matchRoomsTable"></div>
     </div>
 
     <!-- Rooms -->
@@ -430,6 +450,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
     document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === `panel-${tab}`));
     if (tab === 'dashboard') loadDashboard();
+    else if (tab === 'insights') loadInsights();
     else if (tab === 'rooms') loadRooms();
     else if (tab === 'users') loadUsers();
     else if (tab === 'surveys') loadSurveys();
@@ -471,6 +492,138 @@ function renderStats(s) {
       <div class="stat-sub">/ 전체 ${s.surveys.total}</div>
     </div>
   `;
+}
+
+// ── Insights ───────────────────────────────────────────────────────
+let npsChartInstance = null;
+
+async function loadInsights() {
+  try {
+    const [live, packs, nps, match] = await Promise.all([
+      api('/api/panel/live-snapshot'),
+      api('/api/panel/packs-usage'),
+      api('/api/panel/nps-trend'),
+      api('/api/panel/match-success'),
+    ]);
+    renderLiveSnap(live);
+    renderPacksUsage(packs);
+    renderNpsTrend(nps);
+    renderMatchSuccess(match);
+  } catch (e) { errToast(e.message); }
+}
+
+function renderLiveSnap(s) {
+  const grid = document.getElementById('liveSnapGrid');
+  grid.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">지금 진행 중인 모임</div>
+      <div class="stat-value">${s.active_rooms}</div>
+      <div class="stat-sub">WS 활성 세션 기준</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">지금 참여 중인 사람</div>
+      <div class="stat-value">${s.participants}</div>
+      <div class="stat-sub">호스트 포함 동시 접속</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">오늘 생성된 방</div>
+      <div class="stat-value">${s.rooms_created_today}</div>
+      <div class="stat-sub">자정 기준 누적</div>
+    </div>
+  `;
+}
+
+function renderPacksUsage(rows) {
+  const wrap = document.getElementById('packsUsageTable');
+  if (!rows || !rows.length) {
+    wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;">데이터 없음</div>';
+    return;
+  }
+  const total = rows.reduce((a, r) => a + r.rooms, 0);
+  const tbody = rows.map(r => {
+    const pct = total ? ((r.rooms / total) * 100).toFixed(1) : '0';
+    return `<tr>
+      <td data-label="팩">${escHtml(r.pack_id)}</td>
+      <td data-label="전체 방">${r.rooms} <span style="color:var(--text-muted);">(${pct}%)</span></td>
+      <td data-label="종료">${r.closed}</td>
+      <td data-label="최근 7일">${r.last_7d}</td>
+    </tr>`;
+  }).join('');
+  wrap.innerHTML = `<table>
+    <thead><tr><th>팩</th><th>전체 방</th><th>종료</th><th>최근 7일</th></tr></thead>
+    <tbody>${tbody}</tbody>
+  </table>`;
+}
+
+function renderNpsTrend(rows) {
+  const canvas = document.getElementById('npsChart');
+  if (!canvas || !window.Chart) return;
+  const labels = rows.map(r => new Date(r.week).toISOString().slice(5, 10));
+  const npsData = rows.map(r => r.avg_nps);
+  const satData = rows.map(r => r.avg_satisfaction);
+  const responseData = rows.map(r => r.responses);
+
+  if (npsChartInstance) npsChartInstance.destroy();
+  npsChartInstance = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'NPS (0~10)', data: npsData, borderColor: '#d4a843', backgroundColor: 'rgba(212,168,67,0.15)', tension: 0.3, yAxisID: 'y' },
+        { label: '만족도 (1~5)', data: satData, borderColor: '#7ee8a2', backgroundColor: 'rgba(126,232,162,0.1)', tension: 0.3, yAxisID: 'y1' },
+        { label: '응답수', data: responseData, borderColor: '#888', backgroundColor: 'rgba(200,200,200,0.05)', tension: 0, yAxisID: 'y2', type: 'bar' },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#e6dfc9' } } },
+      scales: {
+        x: { ticks: { color: '#999' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y:  { position: 'left', ticks: { color: '#d4a843' }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true, max: 10 },
+        y1: { position: 'right', ticks: { color: '#7ee8a2' }, grid: { drawOnChartArea: false }, beginAtZero: true, max: 5 },
+        y2: { display: false, beginAtZero: true },
+      },
+    },
+  });
+}
+
+function renderMatchSuccess(data) {
+  const grid = document.getElementById('matchSummaryGrid');
+  const s = data.summary || {};
+  const rate = s.match_rate != null ? `${Math.round(s.match_rate * 100)}%` : '—';
+  grid.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">30일 내 종료된 모임</div>
+      <div class="stat-value">${s.total_rooms_30d || 0}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">매칭 쌍 발생 방</div>
+      <div class="stat-value">${s.rooms_with_match_30d || 0}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">매칭 발생률</div>
+      <div class="stat-value">${rate}</div>
+      <div class="stat-sub">쌍이 하나라도 만들어진 방 비율</div>
+    </div>
+  `;
+
+  const wrap = document.getElementById('matchRoomsTable');
+  const rows = data.rooms || [];
+  if (!rows.length) {
+    wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;">최근 30일 종료된 모임 없음</div>';
+    return;
+  }
+  const tbody = rows.map(r => `<tr>
+    <td data-label="방 코드">${escHtml(r.room_code)}</td>
+    <td data-label="제목">${escHtml(r.title || '-')}</td>
+    <td data-label="참가자">${r.participants || 0}</td>
+    <td data-label="매칭 쌍">${r.pair_count || 0}</td>
+    <td data-label="종료일">${new Date(r.created_at).toISOString().slice(0, 10)}</td>
+  </tr>`).join('');
+  wrap.innerHTML = `<table>
+    <thead><tr><th>방 코드</th><th>제목</th><th>참가자</th><th>매칭 쌍</th><th>생성일</th></tr></thead>
+    <tbody>${tbody}</tbody>
+  </table>`;
 }
 
 // ── Rooms ──────────────────────────────────────────────────────────

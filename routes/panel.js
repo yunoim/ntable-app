@@ -233,4 +233,115 @@ router.get('/panel/surveys', requireAdmin, async (req, res) => {
   }
 });
 
+// GET /api/panel/live-snapshot — 실시간 방·참가자 (WS 메모리)
+router.get('/panel/live-snapshot', requireAdmin, async (req, res) => {
+  try {
+    const wsModule = require('./ws');
+    const codes = wsModule.getActiveRoomCodes ? wsModule.getActiveRoomCodes() : [];
+    let participants = 0;
+    const rooms = [];
+    for (const code of codes) {
+      const members = wsModule.getRoomClients(code);
+      participants += members.length;
+      rooms.push({ room_code: code, members: members.length });
+    }
+    // 오늘 0시 이후 생성된 방 수
+    const today = await pool.query(
+      `SELECT COUNT(*)::int AS cnt FROM rooms WHERE created_at >= CURRENT_DATE`
+    );
+    res.json({
+      active_rooms: codes.length,
+      participants,
+      rooms_created_today: today.rows[0].cnt,
+      rooms,
+      updated_at: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('[panel] live-snapshot error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/panel/packs-usage — 팩별 방 생성 분포
+router.get('/panel/packs-usage', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT COALESCE(pack_id, '(unknown)') AS pack_id,
+              COUNT(*)::int AS rooms,
+              COUNT(*) FILTER (WHERE status = 'closed')::int AS closed,
+              COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days')::int AS last_7d
+         FROM rooms
+        GROUP BY pack_id
+        ORDER BY rooms DESC`
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('[panel] packs-usage error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/panel/nps-trend — 주간 NPS 평균·응답수
+router.get('/panel/nps-trend', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT DATE_TRUNC('week', created_at)::date AS week,
+              COUNT(*)::int AS responses,
+              AVG(nps)::float AS avg_nps,
+              AVG(satisfaction)::float AS avg_satisfaction,
+              SUM(CASE WHEN revisit THEN 1 ELSE 0 END)::int AS revisit_yes
+         FROM survey_responses
+        WHERE created_at >= NOW() - INTERVAL '12 weeks'
+        GROUP BY week
+        ORDER BY week ASC`
+    );
+    res.json(rows.map(r => ({
+      week: r.week,
+      responses: r.responses,
+      avg_nps: r.avg_nps ? Number(r.avg_nps.toFixed(2)) : null,
+      avg_satisfaction: r.avg_satisfaction ? Number(r.avg_satisfaction.toFixed(2)) : null,
+      revisit_rate: r.responses ? Number((r.revisit_yes / r.responses).toFixed(2)) : null,
+    })));
+  } catch (err) {
+    console.error('[panel] nps-trend error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/panel/match-success — 매칭 성공률 (match_json.pairs 의 mutual 비율)
+router.get('/panel/match-success', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT r.room_code, r.title, r.created_at,
+              (SELECT COUNT(*)::int FROM member_results mr WHERE mr.room_id = r.id) AS participants,
+              COALESCE(
+                (SELECT jsonb_array_length(mr2.match_json->'pairs')
+                   FROM member_results mr2
+                  WHERE mr2.room_id = r.id AND mr2.match_json ? 'pairs'
+                  LIMIT 1),
+                0
+              )::int AS pair_count
+         FROM rooms r
+        WHERE r.status = 'closed'
+          AND r.created_at >= NOW() - INTERVAL '30 days'
+        ORDER BY r.created_at DESC
+        LIMIT 50`
+    );
+    // 요약 집계
+    const totalRooms = rows.length;
+    const roomsWithPairs = rows.filter(r => r.pair_count > 0).length;
+    res.json({
+      rooms: rows,
+      summary: {
+        total_rooms_30d: totalRooms,
+        rooms_with_match_30d: roomsWithPairs,
+        match_rate: totalRooms ? Number((roomsWithPairs / totalRooms).toFixed(2)) : null,
+      },
+    });
+  } catch (err) {
+    console.error('[panel] match-success error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
