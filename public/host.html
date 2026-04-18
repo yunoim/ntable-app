@@ -790,6 +790,20 @@
     color: var(--text-muted);
   }
   #user-nick { color: var(--gold-light); }
+  .oauth-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    padding: 3px 9px;
+    border: 1px solid var(--gold-border, rgba(212,168,67,0.35));
+    border-radius: 999px;
+    color: var(--gold-light);
+    background: rgba(212,168,67,0.08);
+    letter-spacing: 0.04em;
+    font-weight: 500;
+  }
+  .oauth-badge[hidden] { display: none; }
   #user-menu button {
     background: transparent;
     border: 1px solid rgba(212,168,67,0.2);
@@ -1047,32 +1061,6 @@
     color: var(--gold);
     margin-bottom: 18px;
   }
-  #timer-display {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: clamp(70px, 8vw, 120px);
-    font-weight: 600;
-    color: var(--gold);
-    text-align: center;
-    line-height: 1;
-    padding: 20px 0 24px;
-    letter-spacing: 0.02em;
-  }
-  .timer-controls { display: flex; gap: 10px; margin-bottom: 12px; }
-  .timer-control-btn {
-    flex: 1;
-    background: var(--surface-2);
-    border: 1px solid rgba(212,168,67,0.14);
-    color: var(--white);
-    border-radius: 10px;
-    padding: 12px 0;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    font-family: inherit;
-    transition: border-color 0.2s;
-  }
-  .timer-control-btn:hover { border-color: var(--gold); }
-
   .question-selector {
     display: flex; flex-direction: column; gap: 8px;
     max-height: 220px; overflow-y: auto;
@@ -1336,7 +1324,6 @@
     .free-grid, .closing-grid { grid-template-columns: 1fr; gap: 14px; margin-bottom: 18px; }
     .free-card { padding: 20px 16px; }
     .card-head { margin-bottom: 14px; }
-    #timer-display { font-size: clamp(54px, 14vw, 80px); padding: 12px 0 16px; }
 
     #action-bar {
       padding: 12px 14px; flex-direction: column; gap: 8px;
@@ -1446,6 +1433,7 @@
     </div>
     <div id="user-menu">
       <span id="user-nick"></span>
+      <span id="oauth-badge" class="oauth-badge" hidden></span>
       <button type="button" id="open-settings-btn" title="질문/주제/문항수 편집 (모임 시작 전)">설정 ⚙</button>
       <button type="button" onclick="location.href='/profile?next='+encodeURIComponent(location.pathname)">내 정보 ✎</button>
       <button type="button" onclick="logout()">정보 초기화</button>
@@ -1483,13 +1471,8 @@
 
       <div class="free-grid">
         <div class="free-card">
-          <div class="card-head">⏱ 셔플 타이머</div>
-          <div id="timer-display">20:00</div>
-          <div class="timer-controls">
-            <button type="button" class="timer-control-btn" id="timer-minus">− 5분</button>
-            <button type="button" class="timer-control-btn" id="timer-toggle">▶ 시작</button>
-            <button type="button" class="timer-control-btn" id="timer-plus">+ 5분</button>
-          </div>
+          <div class="card-head">🔀 자리 셔플</div>
+          <p style="font-size:13px;color:var(--text-muted);line-height:1.55;margin-bottom:14px;">대화가 정체되면 한 번 눌러 자리를 섞을 시간을 알려주세요.</p>
           <button type="button" class="btn btn-outline" id="nudge-now-btn" style="width:100%;">지금 셔플 발동 🔀</button>
         </div>
 
@@ -1619,7 +1602,7 @@
     <div class="qr-modal-brand">ntable</div>
     <img id="qr-modal-img" class="qr-modal-img" src="" alt="방 입장 QR 코드 (확대)" />
     <div class="qr-modal-code" id="qr-modal-code">—</div>
-    <div class="qr-modal-hint">카메라로 스캔하거나 링크를 복사해서 공유하세요</div>
+    <div class="qr-modal-hint">📨 게스트 초대 — QR 또는 링크를 공유해 주세요.<br>참가자가 들어오면 호스트 도구에서 승인하면 됩니다.</div>
     <button type="button" id="qr-modal-copy" class="qr-modal-copy-btn">입장 링크 복사</button>
   </div>
 </div>
@@ -1642,10 +1625,6 @@ const state = {
   intros: {}, // uuid → 한줄 자기소개 (서버 미저장)
   bannedPhotos: new Set(), // photo_kick 한 uuid (서버에서도 추적, host UI 반영용)
   mvpList: [],
-  timerMinutes: 20,
-  timerSeconds: 0,
-  timerInterval: null,
-  timerRunning: false,
   ws: null,
   wsReconnectTimer: null,
   pongInterval: null,
@@ -1672,9 +1651,28 @@ function init() {
   loadQR();
   loadQuestions();
   loadFreeTopics();
+  loadOAuthBadge();
   connectWS();
   bindEvents();
   updatePrimaryButton();
+}
+
+async function loadOAuthBadge() {
+  try {
+    const tok = localStorage.getItem('user_token');
+    if (!tok) return;
+    const r = await fetch('/api/auth/me', { headers: { 'x-user-token': tok } });
+    if (!r.ok) return;
+    const me = await r.json();
+    if (!me.authed) return;
+    const provider = me.google ? 'Google' : me.kakao ? 'Kakao' : '';
+    if (!provider) return;
+    const badge = document.getElementById('oauth-badge');
+    if (!badge) return;
+    badge.textContent = `🔐 ${provider}`;
+    badge.title = me.email || me.name || provider + ' 로그인됨';
+    badge.hidden = false;
+  } catch (_) {}
 }
 
 async function loadRoomInfo() {
@@ -1726,8 +1724,17 @@ async function loadQR() {
   try {
     const res = await fetch(`/api/rooms/${state.roomCode}/qr`);
     const data = await res.json();
-    if (data.qr_data_url) img.src = data.qr_data_url;
-    else img.style.display = 'none';
+    if (data.qr_data_url) {
+      img.src = data.qr_data_url;
+      // 호스트가 방에 처음 도착하면 게스트 초대 모달을 자동 노출 (세션당 1회)
+      try {
+        const flag = `host_invite_shown_${state.roomCode}`;
+        if (!sessionStorage.getItem(flag)) {
+          sessionStorage.setItem(flag, '1');
+          setTimeout(() => openQRModal(), 400);
+        }
+      } catch (_) {}
+    } else img.style.display = 'none';
   } catch { img.style.display = 'none'; }
 }
 
@@ -1941,7 +1948,10 @@ function renderApprovedList() {
     } else if (isBanned) {
       photoBtn = `<button type="button" class="approved-unban" title="사진 차단 해제" onclick="photoUnban('${escHtml(u.uuid)}','${escHtml(u.nickname)}')">↺</button>`;
     }
-    const kickBtn = `<button type="button" class="approved-kick-btn" title="이 참가자 강퇴" onclick="kickUser('${escHtml(u.uuid)}','${escHtml(u.nickname)}')">강퇴</button>`;
+    const isSelf = u.uuid === state.uuid;
+    const kickBtn = isSelf
+      ? `<span class="approved-name" style="font-size:11px;color:var(--gold-light);opacity:0.85;">나</span>`
+      : `<button type="button" class="approved-kick-btn" title="이 참가자 강퇴" onclick="kickUser('${escHtml(u.uuid)}','${escHtml(u.nickname)}')">강퇴</button>`;
     el.innerHTML = `${photoHtml}<span class="approved-name">${escHtml(u.nickname)}</span>${photoBtn}${kickBtn}`;
     list.appendChild(el);
   }
@@ -2275,9 +2285,6 @@ function bindEvents() {
     updateState({ phase: 'closing-match-result', current_tab: 'closing' });
   });
 
-  document.getElementById('timer-minus').addEventListener('click', () => adjustTimer(-5));
-  document.getElementById('timer-plus').addEventListener('click', () => adjustTimer(5));
-  document.getElementById('timer-toggle').addEventListener('click', toggleTimer);
   document.getElementById('nudge-now-btn').addEventListener('click', sendNudge);
   document.getElementById('throw-card-btn').addEventListener('click', throwCard);
   document.getElementById('close-room-btn').addEventListener('click', closeRoom);
@@ -2602,45 +2609,6 @@ async function submitHostVote(question_id, answer) {
     });
     renderQuestion();
   } catch { delete state.myVotes[question_id]; }
-}
-
-function adjustTimer(delta) {
-  if (state.timerRunning) return;
-  state.timerMinutes = Math.max(1, state.timerMinutes + delta);
-  state.timerSeconds = 0;
-  updateTimerDisplay();
-}
-function updateTimerDisplay() {
-  const m = String(state.timerMinutes).padStart(2, '0');
-  const s = String(state.timerSeconds).padStart(2, '0');
-  document.getElementById('timer-display').textContent = `${m}:${s}`;
-}
-function toggleTimer() {
-  const btn = document.getElementById('timer-toggle');
-  if (state.timerRunning) {
-    clearInterval(state.timerInterval);
-    state.timerRunning = false;
-    btn.textContent = '▶ 시작';
-  } else {
-    state.timerRunning = true;
-    btn.textContent = '⏸ 정지';
-    state.timerInterval = setInterval(() => {
-      if (state.timerSeconds === 0) {
-        if (state.timerMinutes === 0) {
-          clearInterval(state.timerInterval);
-          state.timerRunning = false;
-          btn.textContent = '▶ 시작';
-          sendNudge();
-          return;
-        }
-        state.timerMinutes--;
-        state.timerSeconds = 59;
-      } else {
-        state.timerSeconds--;
-      }
-      updateTimerDisplay();
-    }, 1000);
-  }
 }
 
 async function sendNudge() {

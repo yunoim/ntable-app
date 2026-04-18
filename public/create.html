@@ -560,8 +560,8 @@
         <div class="field-group">
           <label>탐구 문항 수</label>
           <div class="qcount-row">
-            <input type="range" id="qcountSlider" class="qcount-slider" min="1" max="15" value="10" step="1" aria-label="탐구 문항 수 (1~15)" />
-            <span class="qcount-value"><span id="qcountValue">10</span>문항</span>
+            <input type="range" id="qcountSlider" class="qcount-slider" min="1" max="15" value="2" step="1" aria-label="탐구 문항 수 (1~15)" />
+            <span class="qcount-value"><span id="qcountValue">2</span>문항</span>
           </div>
           <div class="qcount-hint">짧은 아이스브레이크는 1~3, 깊이 대화하려면 많이</div>
         </div>
@@ -709,13 +709,9 @@
       });
       // 설정 영역 펼치기
       document.getElementById('packSetup').hidden = false;
-      // 추천 문항 수·기본 제목 세팅
+      // 자동 제목만 채워주고, 문항 수는 사용자 선택(default 2) 유지
       const pack = packs.find(p => p.id === packId);
       if (pack) {
-        const target = Math.min(Math.max(pack.question_count > 10 ? 10 : pack.question_count, 1), 15);
-        qcountSlider.value = target;
-        qcountValue.textContent = target;
-        // 자동 제목: "{팩 이름} · MM.DD"
         const d = new Date();
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const dd = String(d.getDate()).padStart(2, '0');
@@ -731,37 +727,10 @@
       checkReady();
     }
 
-    // 히어로 "둘이서 시작하기" — 1-tap 방 생성
-    async function quickStartCouples() {
-      const btn = document.getElementById('quickCouplesBtn');
-      btn.disabled = true;
-      btn.textContent = '생성 중...';
-      const errMsg = document.getElementById('errorMsg');
-      errMsg.textContent = '';
-      try {
-        const d = new Date();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        const res = await fetch('/api/rooms', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            uuid,
-            title: `둘이서 · ${mm}.${dd}`,
-            host_role: DEFAULT_HOST_ROLE,
-            question_count: 10,
-            pack_id: 'couples',
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || '방 생성 실패');
-        // 호스트도 게스트와 동일한 wizard 로 닉/프로필 입력
-        window.location.href = `/room/${data.room_code}/join`;
-      } catch (err) {
-        errMsg.textContent = err.message;
-        btn.disabled = false;
-        btn.textContent = '둘이서 시작하기 →';
-      }
+    // 히어로 "둘이서 시작하기" — couples 팩으로 packSetup 펼침 (문항 수 등 옵션 노출)
+    function quickStartCouples() {
+      if (!packs.length) return;
+      selectPack('couples');
     }
     document.getElementById('quickCouplesBtn').addEventListener('click', quickStartCouples);
 
