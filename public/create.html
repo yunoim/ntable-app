@@ -604,18 +604,34 @@
     <div class="welcome" id="welcomeMsg">지금 바로 모임을 열어보세요.</div>
 
     <div class="card">
-      <!-- 5개 방 카드 (1-tap = 즉시 방 생성 + 호스트 대시보드) -->
+      <!-- 둘이서만 1-tap 히어로 (복원 — 2026-04-19 spec) -->
+      <div class="couples-hero" id="couplesHero">
+        <span class="couples-hero-eyebrow">💞 둘이서만</span>
+        <h3>지금 마주앉은 사람과</h3>
+        <p>2인 전용 팩으로 1분 안에 바로 시작. 친구·썸·연인·1:1 멘토링 뭐든.</p>
+        <button type="button" class="couples-hero-btn" id="quickCouplesBtn">둘이서 시작하기 →</button>
+      </div>
+
+      <div class="group-section-header">그룹·다인원 팩</div>
+
+      <!-- 4개 그룹 방 카드 (couples는 hero로 분리) -->
       <div class="pack-grid" id="packGrid"></div>
 
-      <!-- ⚙ 상세 설정 (파워유저용 — 기본 접힘) -->
+      <!-- ⚙ 상세 설정 — 미노출 (2026-04-19 spec) -->
+      <!--
       <div class="advanced-toggle">
         <button type="button" id="advancedBtn" aria-expanded="false" aria-controls="advancedPanel">
           ⚙ 상세 설정 <span class="caret">▼</span>
         </button>
         <div class="advanced-dirty-hint" id="advancedDirtyHint" data-dirty="false">변경한 옵션은 다음 방 클릭 시 적용됩니다</div>
       </div>
+      -->
+      <div class="advanced-toggle" hidden>
+        <button type="button" id="advancedBtn" aria-expanded="false">⚙ 상세 설정 <span class="caret">▼</span></button>
+        <div class="advanced-dirty-hint" id="advancedDirtyHint" data-dirty="false"></div>
+      </div>
 
-      <div class="advanced-panel" id="advancedPanel" hidden>
+      <div class="advanced-panel" id="advancedPanel" hidden style="display:none !important;">
         <div class="field-group">
           <label>탐구 문항 수</label>
           <div class="qcount-row">
@@ -798,8 +814,15 @@
     function loadPacks() {
       const grid = document.getElementById('packGrid');
       grid.innerHTML = '';
-      ROOM_KITS.forEach(kit => grid.appendChild(renderRoomCard(kit)));
+      // couples는 hero로 별도 — grid에서 제외
+      ROOM_KITS.filter(k => k.id !== 'couples').forEach(kit => grid.appendChild(renderRoomCard(kit)));
     }
+
+    // 둘이서 hero 1-tap
+    document.getElementById('quickCouplesBtn').addEventListener('click', () => {
+      const couples = ROOM_KITS.find(k => k.id === 'couples');
+      if (couples) createRoomFromKit(couples);
+    });
 
     async function createRoomFromKit(kit) {
       const errMsg = document.getElementById('errorMsg');
