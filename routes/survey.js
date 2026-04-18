@@ -193,6 +193,7 @@ router.get('/result', async (req, res) => {
     const mr = mrRes.rows[0] || {};
     const match_json = mr.match_json || {};
     const fi_count = mr.fi_count || 0;
+    const myVotes = mr.votes_json || {};
 
     // 베스트 매칭 상대 찾기 — match_json.pairs에서 내 uuid 기준 상대 탐색
     // 구조: { pairs: [{ type, a: {uuid, nickname}, b: {uuid, nickname} }], mvp: {...} }
@@ -229,6 +230,23 @@ router.get('/result', async (req, res) => {
             match_uuid = pair.a?.uuid || null;
             break;
           }
+        }
+      }
+    }
+
+    // 매칭 상대와의 공통 답변 수
+    let match_common = 0;
+    let match_total_answered = 0;
+    if (match_uuid) {
+      const partnerRes = await pool.query(
+        'SELECT votes_json FROM member_results WHERE uuid = $1 AND room_id = $2',
+        [match_uuid, room_id]
+      );
+      const partnerVotes = (partnerRes.rows[0] && partnerRes.rows[0].votes_json) || {};
+      for (const [qid, ans] of Object.entries(myVotes)) {
+        if (partnerVotes[qid] != null) {
+          match_total_answered += 1;
+          if (partnerVotes[qid] === ans) match_common += 1;
         }
       }
     }
@@ -275,7 +293,7 @@ router.get('/result', async (req, res) => {
       avg_satisfaction: hostAgg.rows[0].avg_satisfaction ? Number(hostAgg.rows[0].avg_satisfaction.toFixed(2)) : null,
     };
 
-    res.json({ match_nickname, match_uuid, fi_count, participants, question_highlights, host_summary });
+    res.json({ match_nickname, match_uuid, fi_count, match_common, match_total_answered, participants, question_highlights, host_summary });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'db error' });

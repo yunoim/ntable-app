@@ -334,6 +334,19 @@
     line-height: 1.6;
   }
   .match-sub strong { color: var(--gold-light); font-weight: 600; }
+  .match-common-chip {
+    position: relative;
+    display: inline-block;
+    margin-top: 14px;
+    padding: 8px 14px;
+    background: rgba(212,168,67,0.08);
+    border: 1px solid rgba(212,168,67,0.3);
+    border-radius: 10px;
+    font-size: 12.5px;
+    color: var(--white-dim);
+    letter-spacing: 0.02em;
+  }
+  .match-common-chip strong { color: var(--gold-light); font-weight: 700; }
   .fi-badge {
     display: inline-flex;
     align-items: center;
@@ -345,7 +358,7 @@
     padding: 7px 14px;
     font-size: 12.5px;
     font-weight: 600;
-    margin-top: 14px;
+    margin-top: 10px;
     position: relative;
   }
   .match-fallback-frame {
@@ -691,12 +704,18 @@
       const escMatch = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       if (data.match_nickname) {
         matchedUuid = data.match_uuid || null;
+        const common = data.match_common || 0;
+        const totalAns = data.match_total_answered || 0;
+        const commonChip = totalAns > 0
+          ? `<div class="match-common-chip">✦ ${totalAns}문항 중 <strong>${common}개</strong> 같은 선택</div>`
+          : '';
         matchEl.innerHTML = `
           <div class="match-frame">
             <div class="match-eyebrow">오늘의 인연</div>
             <div class="match-heart">💛</div>
             <div class="match-name">${escMatch(data.match_nickname)}</div>
             <div class="match-sub">서로의 선택이 가장 많이 닿았어요</div>
+            ${commonChip}
             ${data.fi_count ? `<div class="fi-badge">❤️ ${data.fi_count}명이 나에게 관심 표시</div>` : ''}
           </div>
         `;
