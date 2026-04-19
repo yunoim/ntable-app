@@ -2828,6 +2828,10 @@ function renderExploreResultHtml(data, myUuid) {
   const myMember = data.members.find(m => m.uuid === myUuid);
   const myVotes = (myMember && myMember.votes_json) || {};
   const myNick = (myMember && myMember.nickname) || '나';
+  // 라운드별 집계 요약 — 각 문항의 다수 판정을 한 줄에 모아 전체 흐름 한눈에
+  const roundSummary = [];
+  let allMatchCount = 0;
+  let splitRound = null; // 가장 의견이 갈린 (|a-b| 최소, 동률 우선) 라운드
   const cards = (data.questions || []).map((q, i) => {
     const qid = q.id;
     const opts = q.options || [];
@@ -2847,6 +2851,23 @@ function renderExploreResultHtml(data, myUuid) {
     const total = aCount + bCount;
     const majoritySide = total > 0 && aCount !== bCount ? (aCount > bCount ? 'A' : 'B') : null;
     const tied = total > 0 && aCount === bCount;
+    if (allMatch) allMatchCount += 1;
+    roundSummary.push({
+      idx: i + 1,
+      allMatch,
+      majoritySide,
+      tied,
+      aCount,
+      bCount,
+      total,
+    });
+    // split 후보: total>=2 에서 차이가 가장 작은 라운드 (동률 > 1표 차 > ...)
+    if (total >= 2) {
+      const gap = Math.abs(aCount - bCount);
+      if (!splitRound || gap < splitRound.gap) {
+        splitRound = { idx: i + 1, question: q.question || '', aCount, bCount, gap, optA, optB };
+      }
+    }
     const headerExtra = allMatch
       ? ' · 모두 일치 ✓'
       : majoritySide
@@ -2869,7 +2890,37 @@ function renderExploreResultHtml(data, myUuid) {
       </div>
     `;
   }).join('');
-  return cards || '<div style="color:#6f7889;text-align:center;padding:20px;">아직 탐구 데이터가 없어요</div>';
+  if (!cards) {
+    return '<div style="color:#6f7889;text-align:center;padding:20px;">아직 탐구 데이터가 없어요</div>';
+  }
+  // 라운드별 다수의견 요약 — 전체 흐름 한눈에
+  const pips = roundSummary.map(r => {
+    const label = r.allMatch ? '✓' : (r.majoritySide || (r.tied ? '=' : '·'));
+    const bg = r.allMatch ? '#7ee8a2' : (r.majoritySide ? 'rgba(212,168,67,0.35)' : 'rgba(212,168,67,0.12)');
+    const color = r.allMatch ? '#0e1628' : '#f0d78d';
+    const title = r.allMatch
+      ? `Q${r.idx} · 모두 일치`
+      : r.majoritySide
+        ? `Q${r.idx} · 다수 ${r.majoritySide} (${r.majoritySide==='A'?r.aCount:r.bCount}/${r.total})`
+        : r.tied ? `Q${r.idx} · 동률 (${r.aCount}:${r.bCount})` : `Q${r.idx} · 표 없음`;
+    return `<span title="${title}" style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:${bg};color:${color};font-size:11px;font-weight:700;letter-spacing:0.02em;">${escHtml(String(label))}</span>`;
+  }).join('');
+  const totalQs = roundSummary.length;
+  const splitLine = splitRound
+    ? `<div style="font-size:11.5px;color:#c0c0c0;margin-top:8px;line-height:1.5;">🔥 의견 갈린 라운드 · <span style="color:#e8b84b;font-weight:600;">Q${splitRound.idx}</span> <span style="color:#8892a6;">(${splitRound.aCount}:${splitRound.bCount})</span></div>`
+    : '';
+  const matchLine = totalQs > 0
+    ? `<div style="font-size:11.5px;color:#c0c0c0;line-height:1.5;">✅ 모두 일치 <span style="color:#7ee8a2;font-weight:700;">${allMatchCount}</span> / ${totalQs}</div>`
+    : '';
+  const summary = `
+    <div style="padding:12px 14px;background:rgba(212,168,67,0.08);border:1px dashed rgba(212,168,67,0.35);border-radius:12px;margin-bottom:14px;">
+      <div style="font-size:10.5px;letter-spacing:0.12em;color:#d4a843;margin-bottom:8px;">ROUND SUMMARY</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">${pips}</div>
+      ${matchLine}
+      ${splitLine}
+    </div>
+  `;
+  return summary + cards;
 }
 
 // 결과 카드 사진으로 저장

@@ -386,6 +386,49 @@
     font-family: 'DM Sans', sans-serif;
     font-weight: 600;
   }
+  /* 전원 일치(압도적) — major 위에 한 단계 강조 */
+  .q-opt.sweep {
+    border-color: #a8f5c1;
+    box-shadow: 0 0 48px rgba(126,232,162,0.4);
+    animation: sweepPulse 2.2s ease-in-out infinite;
+  }
+  .q-opt.sweep .q-opt-label::after { content: ' · 전원 일치'; }
+  @keyframes sweepPulse {
+    0%, 100% { box-shadow: 0 0 48px rgba(126,232,162,0.4); }
+    50%      { box-shadow: 0 0 80px rgba(168,245,193,0.7); }
+  }
+
+  /* 탐구 인사이트 배너 — 투표 총원/응답률 */
+  .q-insight {
+    margin-top: 28px;
+    font-size: 18px;
+    color: #c0c0c0;
+    letter-spacing: 0.04em;
+    text-align: center;
+  }
+  .q-insight strong { color: #e8b84b; font-weight: 700; }
+  .q-insight .split { color: #ff8a8a; font-weight: 700; }
+  .q-insight .unan { color: #7ee8a2; font-weight: 700; }
+
+  /* 매칭 결과 stagger + 인사이트 */
+  .pairs-list .pair { animation: cardStagger 0.55s ease both; }
+  .pairs-list .pair:nth-child(1) { animation-delay: 0.05s; }
+  .pairs-list .pair:nth-child(2) { animation-delay: 0.15s; }
+  .pairs-list .pair:nth-child(3) { animation-delay: 0.25s; }
+  .pairs-list .pair:nth-child(4) { animation-delay: 0.35s; }
+  .pairs-list .pair:nth-child(5) { animation-delay: 0.45s; }
+  .pairs-list .pair:nth-child(6) { animation-delay: 0.55s; }
+  .pairs-list .pair:nth-child(n+7) { animation-delay: 0.65s; }
+  .match-insight {
+    margin: 0 auto 32px;
+    max-width: 900px;
+    font-size: 20px;
+    color: #c0c0c0;
+    letter-spacing: 0.04em;
+    text-align: center;
+  }
+  .match-insight .mutual-n { color: #ff8aaa; font-weight: 700; font-size: 24px; }
+  .match-insight .rec-n   { color: #e8b84b; font-weight: 700; font-size: 24px; }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -681,30 +724,52 @@ function renderExplore() {
     return;
   }
   const counts = STATE.voteCounts[q.id] || { A: 0, B: 0 };
-  const total = (counts.A || 0) + (counts.B || 0);
-  const pctA = total ? Math.round((counts.A / total) * 100) : 50;
-  const pctB = total ? Math.round((counts.B / total) * 100) : 50;
-  const aMajor = total > 0 && counts.A > counts.B;
-  const bMajor = total > 0 && counts.B > counts.A;
+  const aN = counts.A || 0, bN = counts.B || 0;
+  const total = aN + bN;
+  const pctA = total ? Math.round((aN / total) * 100) : 50;
+  const pctB = total ? Math.round((bN / total) * 100) : 50;
+  const aMajor = total > 0 && aN > bN;
+  const bMajor = total > 0 && bN > aN;
+  // 전원 일치(압도적) — 한쪽이 0, 응답 2명 이상
+  const sweepA = total >= 2 && bN === 0;
+  const sweepB = total >= 2 && aN === 0;
+  const memberCount = (STATE.members || []).length;
+  // 응답률 인사이트
+  let insight;
+  if (total === 0) {
+    insight = `<span>응답 대기 중…</span>`;
+  } else if (sweepA || sweepB) {
+    insight = `<span class="unan">전원이 ${sweepA ? 'A' : 'B'}를 선택했어요</span> · ${total}명`;
+  } else if (aN === bN) {
+    insight = `<span class="split">완벽한 동률</span> · A ${aN} : B ${bN}`;
+  } else {
+    const gap = Math.abs(aN - bN);
+    const close = gap === 1 && total >= 3;
+    insight = close
+      ? `<span class="split">1표 차 접전</span> · ${total}명 응답`
+      : `다수 <strong>${aMajor ? 'A' : 'B'}</strong> (${aMajor ? aN : bN}/${total})`;
+  }
+  const responded = memberCount > 0 ? ` · <strong>${total}</strong>/${memberCount}명 응답` : '';
   const main = document.getElementById('main');
   main.innerHTML = `
     <div class="question-card">
       <div class="q-num">Q${STATE.currentQIdx + 1} / ${STATE.questions.length}</div>
       <div class="q-text">${escHtml(q.text || q.question || '')}</div>
       <div class="q-options">
-        <div class="q-opt${aMajor?' major':''}">
+        <div class="q-opt${sweepA?' major sweep':aMajor?' major':''}">
           <div class="q-opt-label">A</div>
           <div class="q-opt-text">${escHtml(q.option_a || q.A || '')}</div>
           <div class="q-opt-bar"><div class="q-opt-bar-fill" style="width:${pctA}%"></div></div>
-          <div class="q-opt-count"><strong>${counts.A || 0}</strong>표 · ${pctA}%</div>
+          <div class="q-opt-count"><strong>${aN}</strong>표 · ${pctA}%</div>
         </div>
-        <div class="q-opt${bMajor?' major':''}">
+        <div class="q-opt${sweepB?' major sweep':bMajor?' major':''}">
           <div class="q-opt-label">B</div>
           <div class="q-opt-text">${escHtml(q.option_b || q.B || '')}</div>
           <div class="q-opt-bar"><div class="q-opt-bar-fill" style="width:${pctB}%"></div></div>
-          <div class="q-opt-count"><strong>${counts.B || 0}</strong>표 · ${pctB}%</div>
+          <div class="q-opt-count"><strong>${bN}</strong>표 · ${pctB}%</div>
         </div>
       </div>
+      <div class="q-insight">${insight}${responded}</div>
     </div>`;
 }
 
@@ -754,7 +819,16 @@ function renderMatchResult() {
     document.getElementById('main').innerHTML = `<div class="big-msg"><div class="icon">🌙</div><h1>오늘은 매칭이 없어요</h1><p>다음 모임에서 다시 만나요</p></div>`;
     return;
   }
-  const pairsHtml = mj.pairs.map(p => {
+  // 우선순위: 상호(mutual) → 추천(recommended) → 솔로(solo) 순으로 스태거
+  const priority = { mutual: 0, recommended: 1, solo: 2 };
+  const sortedPairs = [...mj.pairs].sort((a, b) => (priority[a.type] ?? 3) - (priority[b.type] ?? 3));
+  let mutualN = 0, recN = 0, soloN = 0;
+  for (const p of sortedPairs) {
+    if (p.type === 'mutual') mutualN += 1;
+    else if (p.type === 'solo') soloN += 1;
+    else recN += 1;
+  }
+  const pairsHtml = sortedPairs.map(p => {
     if (p.type === 'solo') {
       return `<div class="pair"><div class="pair-type">🌙 솔로</div><div class="pair-names">${escHtml(p.a?.nickname || '')}</div></div>`;
     }
@@ -762,9 +836,17 @@ function renderMatchResult() {
     const label = p.type === 'mutual' ? '💘 상호 매칭' : '✨ 추천 매칭';
     return `<div class="pair ${cls}"><div class="pair-type">${label}</div><div class="pair-names">${escHtml(p.a?.nickname || '')}<span class="heart">❤</span>${escHtml(p.b?.nickname || '')}</div></div>`;
   }).join('');
+  const insightParts = [];
+  if (mutualN) insightParts.push(`<span class="mutual-n">${mutualN}</span>쌍 상호 매칭`);
+  if (recN)   insightParts.push(`<span class="rec-n">${recN}</span>쌍 추천 매칭`);
+  if (soloN)  insightParts.push(`솔로 ${soloN}명`);
+  const insight = insightParts.length
+    ? `<div class="match-insight">${insightParts.join(' · ')}</div>`
+    : '';
   document.getElementById('main').innerHTML = `
     <div style="width:100%;text-align:center;">
-      <h2 style="font-family:'Cormorant Garamond',serif;font-size:56px;color:#fff;margin-bottom:36px;">💘 오늘의 매칭 결과</h2>
+      <h2 style="font-family:'Cormorant Garamond',serif;font-size:56px;color:#fff;margin-bottom:24px;">💘 오늘의 매칭 결과</h2>
+      ${insight}
       <div class="pairs-list">${pairsHtml}</div>
     </div>`;
 }
