@@ -24,9 +24,9 @@ router.post('/survey', async (req, res) => {
     if (roomRes.rows.length === 0) return res.status(404).json({ error: 'room not found' });
     const { id: room_id, host_uuid } = roomRes.rows[0];
 
-    // 참여 이력 검증 — 방에 실제 참여한 사람만 설문 가능
+    // 참여 이력 검증 — 모임에 join 한 사람이면 OK (투표 안 했어도 후기 작성 가능)
     const part = await pool.query(
-      'SELECT 1 FROM member_results WHERE uuid = $1 AND room_id = $2',
+      'SELECT 1 FROM room_members WHERE uuid = $1 AND room_id = $2',
       [uuid, room_id]
     );
     if (part.rows.length === 0) {
@@ -83,8 +83,9 @@ router.get('/survey/eligibility', async (req, res) => {
     if (roomRes.rows.length === 0) return res.json({ eligible: false, reason: 'ROOM_NOT_FOUND' });
     const { id: room_id, host_uuid, title } = roomRes.rows[0];
 
+    // 모임 join 여부만 체크 — 투표 없이 들어왔다 나간 사람도 후기 가능
     const part = await pool.query(
-      'SELECT 1 FROM member_results WHERE uuid = $1 AND room_id = $2',
+      'SELECT 1 FROM room_members WHERE uuid = $1 AND room_id = $2',
       [uuid, room_id]
     );
     if (part.rows.length === 0) return res.json({ eligible: false, reason: 'NOT_PARTICIPANT' });
@@ -137,9 +138,9 @@ router.post('/connections', async (req, res) => {
     if (roomRes.rows.length === 0) return res.status(404).json({ error: 'room not found' });
     const room_id = roomRes.rows[0].id;
 
-    // 참여자 검증
+    // 참여자 검증 — 모임에 join 한 사람이면 OK (투표 없어도 사랑의 작대기 가능)
     const part = await pool.query(
-      'SELECT 1 FROM member_results WHERE uuid = $1 AND room_id = $2',
+      'SELECT 1 FROM room_members WHERE uuid = $1 AND room_id = $2',
       [uuid, room_id]
     );
     if (part.rows.length === 0) return res.status(403).json({ error: 'NOT_PARTICIPANT' });
