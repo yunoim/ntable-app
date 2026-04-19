@@ -229,6 +229,18 @@
     font-weight: 600;
     position: relative;
   }
+  .share-match-line {
+    position: relative;
+    margin: 4px auto 16px;
+    padding: 9px 14px;
+    background: rgba(212,168,67,0.10);
+    border: 1px solid rgba(212,168,67,0.32);
+    border-radius: 999px;
+    font-size: 13.5px;
+    color: var(--white-dim);
+    display: inline-block;
+    letter-spacing: 0.02em;
+  }
   .share-actions { display: flex; gap: 10px; }
   .share-btn {
     flex: 1;
@@ -586,6 +598,7 @@
         <div class="share-card-emoji" id="share-emoji">✨</div>
         <div class="share-card-type" id="share-type">탐구형</div>
         <div class="share-card-text" id="personality-text"></div>
+        <div id="share-match-line" class="share-match-line" style="display:none;"></div>
         <div class="share-card-footer">오늘의 모임 유형 · ntable.kr</div>
       </div>
       <div class="share-actions">
@@ -657,7 +670,8 @@
       const r = await fetch(`/api/personality?uuid=${uuid}&room_code=${room_code}`);
       const data = await r.json();
       document.getElementById('personality-loading').style.display = 'none';
-      document.getElementById('share-emoji').textContent = data.emoji || '✨';
+      // 본인 이모지(wizard 선택) 우선, 없으면 성향 이모지
+      document.getElementById('share-emoji').textContent = data.my_emoji || data.emoji || '✨';
       document.getElementById('share-type').textContent = data.personality || '탐구형';
       document.getElementById('personality-text').textContent = data.text || '분석 결과를 불러올 수 없어요.';
       document.getElementById('personality-body').style.display = 'block';
@@ -665,6 +679,20 @@
       document.getElementById('personality-loading').innerHTML = '<span style="color:var(--subtext)">분석 결과를 불러올 수 없어요.</span>';
     }
   }
+
+  // 매칭 정보가 결과 fetch 후 share-card에도 반영 — loadResult에서 호출
+  function updateShareMatchLine(data) {
+    const el = document.getElementById('share-match-line');
+    if (!el) return;
+    if (!data.match_nickname) { el.style.display = 'none'; return; }
+    const totalAns = data.match_total_answered || 0;
+    const common = data.match_common || 0;
+    const pct = totalAns > 0 ? Math.round(common / totalAns * 100) : 0;
+    const partnerEmoji = data.match_emoji || '💛';
+    el.innerHTML = `<span style="font-size:18px;">${partnerEmoji}</span> ${escMatchSafe(data.match_nickname)} <span style="color:var(--gold-light);font-weight:700;">${pct}%</span> 호환`;
+    el.style.display = 'block';
+  }
+  function escMatchSafe(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
   // 본인 사진 (모임 중 업로드한 것이 localStorage에 남아 있을 때만) 인스타 카드 포함 옵션
   function setupPhotoToggle() {
@@ -779,6 +807,9 @@
     try {
       const r = await fetch(`/api/result?uuid=${uuid}&room_code=${room_code}`);
       const data = await r.json();
+
+      // share-card에도 매칭 한 줄 추가 (이미지 저장·인스타 공유 시 노출)
+      if (typeof updateShareMatchLine === 'function') updateShareMatchLine(data);
 
       const matchEl = document.getElementById('match-content');
       const escMatch = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');

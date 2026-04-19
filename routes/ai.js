@@ -171,17 +171,27 @@ router.get('/personality', async (req, res) => {
   }
 
   try {
-    // 1) 유저 프로필 조회
-    const userResult = await pool.query(
-      'SELECT uuid, nickname, gender, birth_year, mbti, interest FROM users WHERE uuid = $1',
-      [uuid]
+    // 1) 유저 프로필 조회 (방별 nickname/emoji 우선 — room_members)
+    const memberResult = await pool.query(
+      `SELECT rm.uuid, rm.nickname, rm.emoji, rm.gender, rm.birth_year, rm.mbti, rm.interest
+         FROM room_members rm
+         JOIN rooms r ON r.id = rm.room_id
+        WHERE rm.uuid = $1 AND r.room_code = $2`,
+      [uuid, room_code]
     );
-
-    if (userResult.rows.length === 0) {
-      return res.status(404).json({ error: '유저를 찾을 수 없습니다.' });
+    let profile;
+    if (memberResult.rows.length > 0) {
+      profile = memberResult.rows[0];
+    } else {
+      const userResult = await pool.query(
+        'SELECT uuid, nickname, emoji, gender, birth_year, mbti, interest FROM users WHERE uuid = $1',
+        [uuid]
+      );
+      if (userResult.rows.length === 0) {
+        return res.status(404).json({ error: '유저를 찾을 수 없습니다.' });
+      }
+      profile = userResult.rows[0];
     }
-
-    const profile = userResult.rows[0];
 
     // 2) 투표 결과 조회
     const resultRow = await pool.query(
@@ -208,7 +218,8 @@ router.get('/personality', async (req, res) => {
       nickname: profile.nickname,
       personality: personalityKey,
       text: result.text,
-      emoji: result.emoji
+      emoji: result.emoji,
+      my_emoji: profile.emoji || null, // 사용자가 wizard에서 선택한 본인 이모지
     });
 
   } catch (err) {
