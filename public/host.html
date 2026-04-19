@@ -2241,6 +2241,8 @@ function renderApprovedList() {
   list.innerHTML = '';
   count.textContent = state.approvedUsers.length;
   renderHostStats();
+  // intro 단계 시작 버튼 실시간 갱신 (참가자 증감 반영)
+  if (typeof updatePrimaryButton === 'function' && state.activeTab === 'intro') updatePrimaryButton();
   if (!state.approvedUsers.length) {
     list.innerHTML = '<div class="empty-msg">아직 없어요</div>';
     return;
@@ -2520,7 +2522,20 @@ function updatePrimaryButton() {
     case 'intro':
       btn.textContent = '모임 시작';
       btn.style.display = 'inline-flex';
-      if (hint) hint.style.display = '';
+      // 최소 2명(호스트 포함) 이상이어야 시작 가능 — 시각 feedback
+      {
+        const total = state.approvedUsers.length + (state.hostRole === 'host_only' ? 0 : 0);
+        // approvedUsers 이미 호스트 본인 포함 (participant인 경우 init에서 push됨)
+        const canStart = total >= 2;
+        btn.disabled = !canStart;
+        btn.style.opacity = canStart ? '' : '0.5';
+        btn.style.cursor = canStart ? '' : 'not-allowed';
+        if (hint) {
+          hint.textContent = canStart ? '모임 중간에도 입장이 가능해요' : `참가자 ${total}/2 — 최소 2명부터 시작할 수 있어요`;
+          hint.style.color = canStart ? '' : '#ff8a8a';
+          hint.style.display = '';
+        }
+      }
       break;
     case 'explore':
       if (state.currentQIdx < state.questions.length - 1) {
