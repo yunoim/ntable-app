@@ -2462,9 +2462,12 @@ function renderCarousel() {
     const avatarEmoji = genderAvatar(m.gender);
     const isMe = m.uuid === STATE.uuid;
     const photo = STATE.photos[m.uuid];
+    // 우선순위: 사진(레거시) > 사용자 선택 emoji > 성별 default emoji
+    const userEmoji = m.emoji || '';
+    const displayChar = userEmoji || avatarEmoji;
     const avatarHtml = photo
       ? `<div class="member-avatar has-photo"><img src="${escHtml(photo)}" alt=""></div>`
-      : `<div class="member-avatar">${avatarEmoji}</div>`;
+      : `<div class="member-avatar">${escHtml(displayChar)}</div>`;
 
     const intro = STATE.intros[m.uuid];
     const introHtml = intro ? `<div class="member-intro">"${escHtml(intro)}"</div>` : '';

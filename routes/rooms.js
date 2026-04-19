@@ -220,7 +220,7 @@ router.get('/rooms/:code/members', async (req, res) => {
   // room_members 우선 (방별 익명 + hide 정보), 없으면 users fallback
   const placeholders = clients.map((_, i) => `$${i + 2}`).join(',');
   const members = await pool.query(
-    `SELECT uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram,
+    `SELECT uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram, emoji,
             hide_birth_year, hide_region, hide_industry, hide_interest, hide_instagram
        FROM room_members
       WHERE room_id = $1 AND uuid IN (${placeholders})`,
@@ -299,14 +299,14 @@ router.get('/rooms/:code/members/:uuid', async (req, res) => {
   if (room.rows.length === 0) return res.status(404).json({ error: 'room not found' });
   const isHostViewer = viewer && room.rows[0].host_uuid && viewer === room.rows[0].host_uuid;
   const m = await pool.query(
-    `SELECT uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram,
+    `SELECT uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram, emoji,
             hide_birth_year, hide_region, hide_industry, hide_interest, hide_instagram
        FROM room_members WHERE room_id = $1 AND uuid = $2`,
     [room.rows[0].id, uuid]
   );
   if (m.rows.length === 0) {
     const u = await pool.query(
-      `SELECT uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram
+      `SELECT uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram, emoji
          FROM users WHERE uuid = $1`,
       [uuid]
     );
@@ -375,7 +375,7 @@ router.get('/rooms/:code/me', async (req, res) => {
   const room = await pool.query('SELECT id FROM rooms WHERE room_code = $1', [code]);
   if (room.rows.length === 0) return res.status(404).json({ error: 'room not found' });
   const me = await pool.query(
-    `SELECT nickname, gender, birth_year, region, industry, mbti, interest, instagram,
+    `SELECT nickname, gender, birth_year, region, industry, mbti, interest, instagram, emoji,
             hide_birth_year, hide_region, hide_industry, hide_interest, hide_instagram
        FROM room_members WHERE room_id = $1 AND uuid = $2`,
     [room.rows[0].id, uuid]
@@ -410,8 +410,8 @@ router.post('/rooms/:code/join', async (req, res) => {
 
   try {
     await pool.query(
-      `INSERT INTO room_members (room_id, uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram, hide_birth_year, hide_region, hide_industry, hide_interest, hide_instagram)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+      `INSERT INTO room_members (room_id, uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram, emoji, hide_birth_year, hide_region, hide_industry, hide_interest, hide_instagram)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
        ON CONFLICT (room_id, uuid)
        DO UPDATE SET nickname = EXCLUDED.nickname,
                      gender = EXCLUDED.gender,
@@ -421,6 +421,7 @@ router.post('/rooms/:code/join', async (req, res) => {
                      mbti = EXCLUDED.mbti,
                      interest = EXCLUDED.interest,
                      instagram = EXCLUDED.instagram,
+                     emoji = EXCLUDED.emoji,
                      hide_birth_year = EXCLUDED.hide_birth_year,
                      hide_region = EXCLUDED.hide_region,
                      hide_industry = EXCLUDED.hide_industry,
@@ -435,6 +436,7 @@ router.post('/rooms/:code/join', async (req, res) => {
         profile.mbti || null,
         profile.interest || null,
         profile.instagram || null,
+        (typeof profile.emoji === 'string' && profile.emoji) ? profile.emoji.slice(0, 8) : null,
         profile.hide_birth_year === true,
         profile.hide_region === true,
         profile.hide_industry === true,
@@ -735,7 +737,7 @@ router.patch('/rooms/:code/me/profile', async (req, res) => {
   const room_id = room.rows[0].id;
 
   const allowed = [
-    'gender', 'birth_year', 'region', 'industry', 'mbti', 'interest', 'instagram',
+    'gender', 'birth_year', 'region', 'industry', 'mbti', 'interest', 'instagram', 'emoji',
     'hide_birth_year', 'hide_region', 'hide_industry', 'hide_interest', 'hide_instagram',
   ];
   const updates = [];
@@ -752,6 +754,9 @@ router.patch('/rooms/:code/me/profile', async (req, res) => {
       if (!Number.isFinite(v) || v < 1900 || v > 2100) v = null;
     } else if (k === 'gender' && v != null) {
       v = String(v).slice(0, 20);
+    } else if (k === 'emoji' && v != null) {
+      v = String(v).slice(0, 8);
+      if (!v) v = null;
     } else if (k.startsWith('hide_')) {
       v = v === true || v === 'true';
     } else if (typeof v === 'string') {

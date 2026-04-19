@@ -203,7 +203,9 @@ router.get('/result', async (req, res) => {
     let top_matches = []; // [{uuid, nickname, score, common, same}, ...] sorted desc
     {
       const allVotesRes = await pool.query(
-        `SELECT mr.uuid, mr.votes_json, COALESCE(rm.nickname, u.nickname) AS nickname
+        `SELECT mr.uuid, mr.votes_json,
+                COALESCE(rm.nickname, u.nickname) AS nickname,
+                COALESCE(rm.emoji, u.emoji) AS emoji
            FROM member_results mr
            LEFT JOIN room_members rm ON rm.room_id = mr.room_id AND rm.uuid = mr.uuid
            LEFT JOIN users u ON u.uuid = mr.uuid
@@ -221,19 +223,22 @@ router.get('/result', async (req, res) => {
           }
         }
         if (common === 0) continue;
-        scored.push({ uuid: row.uuid, nickname: row.nickname, score: same / common, common, same });
+        scored.push({ uuid: row.uuid, nickname: row.nickname, emoji: row.emoji, score: same / common, common, same });
       }
       scored.sort((a, b) => b.score - a.score);
       if (scored[0]) { match_uuid = scored[0].uuid; match_nickname = scored[0].nickname; }
-      // top 3 (베스트 포함) — 동률은 같이 노출
+      // top 3 (베스트 포함)
       top_matches = scored.slice(0, 3).map(s => ({
         uuid: s.uuid,
         nickname: s.nickname,
+        emoji: s.emoji || null,
         same: s.same,
         common: s.common,
         pct: Math.round(s.score * 100),
       }));
     }
+    // 베스트 매칭 상대 emoji
+    const match_emoji = (top_matches[0] && top_matches[0].emoji) || null;
 
     // 매칭 상대와의 공통 답변 수 + 대표 픽 (최대 2개)
     let match_common = 0;
@@ -322,7 +327,7 @@ router.get('/result', async (req, res) => {
       avg_satisfaction: hostAgg.rows[0].avg_satisfaction ? Number(hostAgg.rows[0].avg_satisfaction.toFixed(2)) : null,
     };
 
-    res.json({ match_nickname, match_uuid, fi_count, match_common, match_total_answered, match_common_picks, top_matches, participants, question_highlights, host_summary });
+    res.json({ match_nickname, match_uuid, match_emoji, fi_count, match_common, match_total_answered, match_common_picks, top_matches, participants, question_highlights, host_summary });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'db error' });

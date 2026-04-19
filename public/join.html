@@ -289,7 +289,7 @@ let CURRENT = 0;
 let STEPS = [];           // step keys: 'nick','basic','region','industry','mbti','interest','confirm'
 const data = {
   nickname: '', gender: null, birth_year: null, region: null,
-  industry: null, mbti: null, interest: null, instagram: null,
+  industry: null, mbti: null, interest: null, instagram: null, emoji: null,
   // 카드 비공개 (매칭에만 사용, 다른 게스트 카드에서 마스킹)
   hide_birth_year: false, hide_region: false, hide_industry: false, hide_interest: false, hide_instagram: false,
 };
@@ -335,7 +335,7 @@ async function init() {
     }
     // edit 모드 — 기존 데이터를 wizard data로 prefill
     if (me.joined && isEdit) {
-      ['nickname','gender','birth_year','region','industry','mbti','interest','instagram'].forEach(k => {
+      ['nickname','gender','birth_year','region','industry','mbti','interest','instagram','emoji'].forEach(k => {
         if (me[k] != null) data[k] = me[k];
       });
       ['hide_birth_year','hide_region','hide_industry','hide_interest','hide_instagram'].forEach(k => {
@@ -387,7 +387,7 @@ async function prefillFromCache() {
       if (r.ok) {
         const me = await r.json();
         if (me.authed) {
-          ['gender','birth_year','region','industry','mbti','interest','instagram'].forEach(k => {
+          ['gender','birth_year','region','industry','mbti','interest','instagram','emoji'].forEach(k => {
             if (me[k]) data[k] = me[k];
           });
         }
@@ -401,7 +401,7 @@ async function prefillFromCache() {
     const profStr = localStorage.getItem('profile_snapshot');
     if (profStr) {
       const p = JSON.parse(profStr);
-      ['gender','birth_year','region','industry','mbti','interest','instagram'].forEach(k => {
+      ['gender','birth_year','region','industry','mbti','interest','instagram','emoji'].forEach(k => {
         if (p[k] && !data[k]) data[k] = p[k];
       });
     }
@@ -630,17 +630,25 @@ function renderStep() {
       break;
     }
     case 'photo': {
-      const savedPhoto = (() => { try { return localStorage.getItem(`ntable_photo_${ROOM_CODE}`) || ''; } catch (_) { return ''; } })();
+      // 'photo' step → 'emoji' step으로 전환 (2026-04-19) — 사진 업로드 폐기, 이모지 단일화
+      const EMOJI_CHOICES = ['🐰','🐯','🦁','🦊','🐻','🐼','🐶','🐱','🦄','🐸','🦉','🦋','🌸','🌷','🌙','⭐','🔥','✨','🍀','💎'];
+      const curEmoji = data.emoji || '';
+      const isPreset = EMOJI_CHOICES.includes(curEmoji);
+      const previewInner = curEmoji ? `<span style="font-size:72px;line-height:1;">${escHtml(curEmoji)}</span>` : '🙂';
       body = `
-        <div class="step-num">${stepNum} · 프로필 사진 <span style="opacity:0.6;font-weight:400;">(선택)</span></div>
-        <h2 class="step-title">사진을 올릴까요?</h2>
-        <p class="step-sub">올리면 카드에 표시돼요. <strong>브라우저에만 저장</strong>, 서버에 안 남아요.</p>
-        <div class="step-tip"><span class="step-tip-icon">📸</span><span>사진을 올리면 <strong>매칭 결과 카드</strong>에 얼굴이 함께 노출돼서 인연이 더 잘 기억돼요.</span></div>
+        <div class="step-num">${stepNum} · 나를 표현하는 이모지 <span style="opacity:0.6;font-weight:400;">(선택)</span></div>
+        <h2 class="step-title">나를 표현하는 이모지를<br>하나 입력해주세요</h2>
+        <p class="step-sub">참가자 카드와 매칭 결과에 표시돼요. 아래에서 골라도 되고 직접 입력도 OK.</p>
         <div class="field" style="text-align:center;">
-          <div id="photoPreview" style="width:140px;height:140px;border-radius:50%;background:rgba(212,168,67,0.12);border:2px dashed rgba(212,168,67,0.4);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:48px;overflow:hidden;">${savedPhoto ? `<img src="${escHtml(savedPhoto)}" style="width:100%;height:100%;object-fit:cover;">` : '📷'}</div>
-          <input type="file" id="photoInput" accept="image/*" style="display:none;" />
-          <button type="button" class="btn btn-skip" onclick="document.getElementById('photoInput').click();" style="width:100%;margin-bottom:8px;">${savedPhoto ? '사진 변경' : '📷 사진 선택'}</button>
-          ${savedPhoto ? `<button type="button" class="btn btn-skip" onclick="clearWizardPhoto()" style="width:100%;font-size:12px;color:#ff8a8a;border-color:rgba(255,138,138,0.3);">사진 제거</button>` : ''}
+          <div id="emojiPreview" style="width:140px;height:140px;border-radius:50%;background:rgba(212,168,67,0.12);border:2px dashed rgba(212,168,67,0.4);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;overflow:hidden;">${previewInner}</div>
+          <input type="text" id="emojiInput" maxlength="4" value="${escHtml(curEmoji)}" placeholder="🙂 직접 입력 (예: 🦄)" style="width:100%;text-align:center;font-size:24px;padding:14px;background:rgba(212,168,67,0.06);border:1px solid var(--gold-border);border-radius:10px;color:#fff;font-family:inherit;letter-spacing:0.04em;">
+        </div>
+        <div class="field">
+          <div class="field-label" style="font-size:13px;color:#e8b84b;">또는 골라서</div>
+          <div class="chip-row" style="gap:6px;flex-wrap:wrap;">
+            ${EMOJI_CHOICES.map(e => `<button type="button" class="chip emoji-chip${curEmoji===e?' selected':''}" data-emoji="${e}" style="font-size:24px;padding:8px 12px;">${e}</button>`).join('')}
+            ${curEmoji ? `<button type="button" class="chip emoji-chip" data-emoji="" style="font-size:13px;padding:8px 12px;color:#ff8a8a;">지우기</button>` : ''}
+          </div>
         </div>
         <div class="actions">
           ${prevBtn}
@@ -889,25 +897,31 @@ async function patchRoomDisplay(payload) {
   } catch (_) {}
 }
 
-// 사진 input 처리 + 제거
-document.addEventListener('change', (e) => {
-  if (e.target.id === 'photoInput') {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target.result;
-      try { localStorage.setItem(`ntable_photo_${ROOM_CODE}`, dataUrl); } catch (_) {}
-      const preview = document.getElementById('photoPreview');
-      if (preview) preview.innerHTML = `<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover;">`;
-    };
-    reader.readAsDataURL(file);
-  }
+// 이모지 선택/입력 핸들러
+document.addEventListener('click', (e) => {
+  const chip = e.target.closest('.emoji-chip');
+  if (!chip) return;
+  const v = chip.dataset.emoji || '';
+  data.emoji = v || null;
+  // input value 동기화 + preview 갱신
+  const inp = document.getElementById('emojiInput');
+  if (inp) inp.value = v;
+  const preview = document.getElementById('emojiPreview');
+  if (preview) preview.innerHTML = v ? `<span style="font-size:72px;line-height:1;">${v}</span>` : '🙂';
+  // chip selected 토글
+  document.querySelectorAll('.emoji-chip').forEach(c => c.classList.toggle('selected', c.dataset.emoji === v && v));
 });
-function clearWizardPhoto() {
-  try { localStorage.removeItem(`ntable_photo_${ROOM_CODE}`); } catch (_) {}
-  renderStep();
-}
+document.addEventListener('input', (e) => {
+  if (e.target.id !== 'emojiInput') return;
+  // 첫 글리프(이모지) 추출 — 결합 문자(zwj)는 그대로 두고 4자 cap
+  const v = (e.target.value || '').slice(0, 4);
+  data.emoji = v || null;
+  const preview = document.getElementById('emojiPreview');
+  if (preview) preview.innerHTML = v ? `<span style="font-size:72px;line-height:1;">${v}</span>` : '🙂';
+  document.querySelectorAll('.emoji-chip').forEach(c => c.classList.toggle('selected', c.dataset.emoji === v && v));
+});
+// 사진 업로드 기능 폐기 (2026-04-19) — wizard에서 입력 path 모두 제거
+function clearWizardPhoto() { /* legacy noop */ }
 function prevStep() {
   CURRENT = Math.max(CURRENT - 1, 0);
   renderStep();
@@ -937,6 +951,7 @@ async function submitJoin() {
           region: data.region, industry: data.industry,
           mbti: data.mbti, interest: data.interest,
           instagram: data.instagram,
+          emoji: data.emoji,
           hide_birth_year: data.hide_birth_year,
           hide_region: data.hide_region,
           hide_industry: data.hide_industry,
@@ -958,6 +973,7 @@ async function submitJoin() {
         gender: data.gender, birth_year: data.birth_year, region: data.region,
         industry: data.industry, mbti: data.mbti, interest: data.interest,
         instagram: data.instagram,
+        emoji: data.emoji,
       }));
     } catch (_) {}
     // OAuth 로그인 상태이면 server users 테이블에도 profile 저장 (다음 모임 prefill)
@@ -971,6 +987,7 @@ async function submitJoin() {
             gender: data.gender, birth_year: data.birth_year, region: data.region,
             industry: data.industry, mbti: data.mbti, interest: data.interest,
             instagram: data.instagram,
+            emoji: data.emoji,
           }),
         });
       }

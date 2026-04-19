@@ -799,7 +799,7 @@
               </div>
             `).join('')}</div>`
           : '';
-        // 매칭 상대 사진 — 모임 중 ws photo_update 로 캐시한 localStorage에서 조회
+        // 매칭 상대 아바타 — 사진(레거시 캐시) > 상대 emoji > 💛
         let partnerPhoto = '';
         try {
           const raw = localStorage.getItem(`ntable_photo_cache_${room_code}`);
@@ -808,9 +808,12 @@
             if (map[matchedUuid]) partnerPhoto = map[matchedUuid];
           }
         } catch (_) {}
+        const partnerEmoji = data.match_emoji || '';
         const photoHtml = partnerPhoto
           ? `<div class="match-photo-wrap"><img src="${partnerPhoto}" alt="" class="match-photo-img"></div>`
-          : `<div class="match-heart">💛</div>`;
+          : (partnerEmoji
+              ? `<div class="match-photo-wrap" style="display:flex;align-items:center;justify-content:center;font-size:64px;background:rgba(212,168,67,0.08);">${escMatch(partnerEmoji)}</div>`
+              : `<div class="match-heart">💛</div>`);
         // 또 잘 맞았던 사람들 — top_matches 2~3위 (1위는 이미 베스트 매칭)
         const topRest = Array.isArray(data.top_matches) ? data.top_matches.slice(1, 3) : [];
         let partnerPhotoMap = {};
@@ -825,7 +828,9 @@
               const ph = partnerPhotoMap[t.uuid];
               const avatar = ph
                 ? `<img src="${ph}" alt="" class="match-runner-avatar">`
-                : `<span class="match-runner-avatar dot">👤</span>`;
+                : (t.emoji
+                    ? `<span class="match-runner-avatar dot">${escMatch(t.emoji)}</span>`
+                    : `<span class="match-runner-avatar dot">👤</span>`);
               return `<div class="match-runner">
                 ${avatar}
                 <span class="match-runner-name">${escMatch(t.nickname)}</span>

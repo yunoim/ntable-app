@@ -2297,9 +2297,11 @@ function renderProfiles() {
     const emoji = (u.gender === 'M' || u.gender === 'male') ? '👨'
                 : (u.gender === 'F' || u.gender === 'female') ? '👩' : '👤';
     const photo = state.photos[u.uuid];
+    const userEmoji = u.emoji || '';
+    const displayChar = userEmoji || emoji;
     const avatarHtml = photo
       ? `<div class="profile-avatar has-photo"><img src="${escHtml(photo)}" alt=""></div>`
-      : `<div class="profile-avatar">${emoji}</div>`;
+      : `<div class="profile-avatar">${escHtml(displayChar)}</div>`;
     const intro = state.intros[u.uuid];
     const introHtml = intro ? `<div class="profile-intro">"${escHtml(intro)}"</div>` : '';
     const birthDisplay = showBirth ? formatBirthYear(u.birth_year, fmt) : '';
