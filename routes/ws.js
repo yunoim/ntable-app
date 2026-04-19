@@ -253,7 +253,7 @@ function init(server) {
               photo,
             }, uuid);
           } else if (msg.type === 'request_photos') {
-            // 신규 입장자에게 캐시된 사진/소개 직접 전송 (수신자 onmessage 준비 후 트리거)
+            // 신규/재접속 입장자에게 캐시된 사진/소개 + 현재 room_state 직접 전송
             const room = rooms[room_code];
             if (room && room.photoCache) {
               for (const [pUuid, pPhoto] of room.photoCache.entries()) {
@@ -266,6 +266,22 @@ function init(server) {
                 if (iUuid === uuid) continue;
                 try { ws.send(JSON.stringify({ type: 'intro_update', uuid: iUuid, intro: iIntro })); } catch (_) {}
               }
+            }
+            // 현재 room_state catch-up — 재접속자가 호스트의 진행 상황(현재 phase·question_index)에 동기화되도록
+            try {
+              const stateRes = await pool.query(
+                `SELECT rs.state_json
+                   FROM room_state rs
+                   JOIN rooms r ON r.id = rs.room_id
+                  WHERE r.room_code = $1`,
+                [room_code]
+              );
+              const currentState = stateRes.rows[0]?.state_json;
+              if (currentState) {
+                ws.send(JSON.stringify({ type: 'state_update', state: currentState }));
+              }
+            } catch (e) {
+              console.error('[ws] state catch-up error', e.message);
             }
             // 캐시에 없는 경우 대비 — 기존 사용자에게 재공유 요청도 broadcast
             broadcastToRoom(room_code, {
