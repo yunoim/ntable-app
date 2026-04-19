@@ -13,6 +13,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js" defer></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -605,6 +606,10 @@
         <button type="button" id="save-image-btn" class="share-btn" aria-label="이미지 저장">📷 이미지 저장</button>
         <button type="button" id="insta-share-btn" class="share-btn outline" aria-label="인스타 스토리로 공유">📸 인스타 스토리 공유</button>
       </div>
+      <div class="share-actions" style="margin-top:10px;">
+        <button type="button" id="kakao-share-btn" class="share-btn outline" aria-label="카카오톡 공유" hidden style="background:rgba(254,229,0,0.12);border-color:rgba(254,229,0,0.45);color:#FEE500;">💛 카카오톡 공유</button>
+        <button type="button" id="copy-link-btn" class="share-btn outline" aria-label="ntable 링크 복사">🔗 ntable 링크 복사</button>
+      </div>
     </div>
   </div>
 
@@ -802,9 +807,53 @@
     }
   }
 
+  // 카카오 공유 — SDK init + 카드 공유 (host.html 패턴 재사용)
+  async function setupKakaoShare() {
+    try {
+      const r = await fetch('/api/share-config');
+      if (!r.ok) return;
+      const cfg = await r.json();
+      if (!cfg.kakaoJsKey || !window.Kakao) return;
+      if (!Kakao.isInitialized()) Kakao.init(cfg.kakaoJsKey);
+      const btn = document.getElementById('kakao-share-btn');
+      if (btn) btn.hidden = false;
+    } catch (_) {}
+  }
+  function kakaoShareResult() {
+    if (!window.Kakao || !Kakao.isInitialized || !Kakao.isInitialized()) { alert('카카오 공유 준비 중입니다'); return; }
+    const url = 'https://ntable.kr';
+    const personality = document.getElementById('share-type')?.textContent || '';
+    const emoji = document.getElementById('share-emoji')?.textContent || '🍽️';
+    try {
+      Kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+          title: `오늘 ntable 모임 다녀왔어요 ${emoji}`,
+          description: `내 성향: ${personality}\n누가 열어도 재밌는 모임 — ntable`,
+          imageUrl: `${location.origin}/og-image.png`,
+          link: { mobileWebUrl: url, webUrl: url },
+        },
+        buttons: [{ title: 'ntable에서 열어보기', link: { mobileWebUrl: url, webUrl: url } }],
+      });
+    } catch (e) { alert('카카오 공유 실패'); }
+  }
+  async function copyNtableLink() {
+    const btn = document.getElementById('copy-link-btn');
+    const originalText = btn ? btn.textContent : '';
+    try {
+      await navigator.clipboard.writeText('https://ntable.kr');
+      if (btn) { btn.textContent = '✓ 복사됨'; setTimeout(() => { btn.textContent = originalText; }, 1800); }
+    } catch (_) {
+      if (btn) { btn.textContent = '❌ 실패'; setTimeout(() => { btn.textContent = originalText; }, 1800); }
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('save-image-btn')?.addEventListener('click', saveShareImage);
     document.getElementById('insta-share-btn')?.addEventListener('click', shareToInstagram);
+    document.getElementById('kakao-share-btn')?.addEventListener('click', kakaoShareResult);
+    document.getElementById('copy-link-btn')?.addEventListener('click', copyNtableLink);
+    setupKakaoShare();
   });
 
   async function loadResult() {
