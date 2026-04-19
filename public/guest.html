@@ -1860,7 +1860,13 @@ function applyGuestFreeChatOptions() {
   }
 }
 function setGuestFreeTimerEndsAt(endsAt) {
+  const prev = _guestFreeTimerEndsAt || 0;
   _guestFreeTimerEndsAt = endsAt || 0;
+  // 호스트가 시간을 늘렸으면(>30초 차이) toast로 안내
+  if (prev > 0 && _guestFreeTimerEndsAt > prev + 30000) {
+    const addedMin = Math.round((_guestFreeTimerEndsAt - prev) / 60000);
+    if (typeof showMiniToast === 'function') showMiniToast(`⏱ 호스트가 +${addedMin}분 연장`);
+  }
   if (_guestFreeTimerInterval) { clearInterval(_guestFreeTimerInterval); _guestFreeTimerInterval = null; }
   const el = document.getElementById('guestFreeTimer');
   if (el) el.hidden = !(_guestFreeTimerEndsAt > 0);
@@ -2344,9 +2350,12 @@ function alertHost() {
 }
 
 function showJoinToast(nickname) {
+  showMiniToast(`${nickname}님 입장 👋`);
+}
+function showMiniToast(text) {
   const t = document.createElement('div');
   t.className = 'mini-toast';
-  t.textContent = `${nickname}님 입장 👋`;
+  t.textContent = text;
   document.body.appendChild(t);
   requestAnimationFrame(() => t.classList.add('show'));
   setTimeout(() => {
