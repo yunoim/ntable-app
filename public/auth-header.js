@@ -37,8 +37,9 @@
     .nt-auth-pill {
       position: fixed;
       top: calc(15px + env(safe-area-inset-top));
-      /* ntable.kr 랜딩 .nav-inner(max-width:1100px) 우측 32px padding 과 동일 선상 정렬 */
-      right: max(20px, calc((100vw - 1100px) / 2 + 32px));
+      /* ntable.kr 랜딩 .nav-inner(max-width:1100px, padding:0 32px) 우측 끝과 동일 선상 정렬 */
+      /* 뷰포트가 1100px 이하이면 32px(nav-inner padding)로 고정, 이상이면 중앙 정렬된 컨테이너의 우측 끝으로 계산 */
+      right: max(32px, calc((100vw - 1100px) / 2 + 32px));
       z-index: 9999;
       display: flex; flex-direction: column; align-items: flex-end;
       gap: 1px;
