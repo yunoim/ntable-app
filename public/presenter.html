@@ -567,6 +567,10 @@ async function handleMessage(msg) {
       STATE.matchJson = msg.match_json;
       if (STATE.currentPhase === 'closing-match-result') renderForPhase();
       break;
+    case 'free_timer':
+      STATE.freeTimerEndsAt = parseInt(msg.ends_at, 10) || 0;
+      if (STATE.currentPhase === 'free') renderFree();
+      break;
     case 'room_updated':
       // 호스트가 ⚙ 운영에서 display_mode='mobile'로 전환 → host 화면으로 자동 redirect
       if (msg.changes && msg.changes.display_mode === 'mobile') {
@@ -705,8 +709,21 @@ function renderExplore() {
 }
 
 function renderFree() {
-  document.getElementById('main').innerHTML = `<div class="big-msg"><div class="icon">💬</div><h1>자유롭게 대화하세요</h1><p>마음에 든 사람과 더 깊은 이야기를 나눠보세요.<br>호스트가 다음 단계로 안내해드립니다.</p></div>`;
+  const endsAt = STATE.freeTimerEndsAt || 0;
+  const remainingMs = endsAt ? (endsAt - Date.now()) : 0;
+  let timerHtml = '';
+  if (endsAt && remainingMs > 0) {
+    const minLeft = Math.ceil(remainingMs / 60000);
+    timerHtml = `<div style="font-size:80px;font-weight:700;color:#e8b84b;margin:24px 0 12px;letter-spacing:0.04em;font-variant-numeric:tabular-nums;">⏱ ${minLeft}분</div>`;
+  } else if (endsAt && remainingMs <= 0) {
+    timerHtml = `<div style="font-size:48px;font-weight:700;color:#ff8a8a;margin:24px 0 12px;">⏰ 시간 종료</div>`;
+  }
+  document.getElementById('main').innerHTML = `<div class="big-msg"><div class="icon">💬</div><h1>자유롭게 대화하세요</h1>${timerHtml}<p>마음에 든 사람과 더 깊은 이야기를 나눠보세요.<br>호스트가 다음 단계로 안내해드립니다.</p></div>`;
+  // 5초마다 timer 갱신 (분 단위라 충분)
+  if (_freeTimerTick) clearInterval(_freeTimerTick);
+  if (endsAt) _freeTimerTick = setInterval(() => { if (STATE.currentPhase === 'free') renderFree(); }, 5000);
 }
+let _freeTimerTick = null;
 
 function renderClosingVote(type) {
   const labels = type === 'mvp'
