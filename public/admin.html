@@ -330,7 +330,7 @@
 <!-- App -->
 <div class="app" id="app">
   <header>
-    <h1 class="h-logo">ntable · admin</h1>
+    <h1 style="margin:0;"><a href="/" class="h-logo" style="text-decoration:none;">ntable · admin</a></h1>
     <div class="h-right">
       <a class="h-link" href="/" target="_blank">데모 열기 ↗</a>
       <span class="h-link" onclick="logout()">로그아웃</span>
@@ -1066,7 +1066,7 @@ function renderSurveysTable(surveys) {
     <table>
       <thead><tr>
         <th>모임</th><th>닉네임</th><th>★</th><th>재방문</th><th>NPS</th>
-        <th>베스트 순간</th><th>아쉬운 점</th><th>한 줄</th><th>작성</th>
+        <th>베스트 순간</th><th>아쉬운 점</th><th>한 줄</th><th>작성</th><th></th>
       </tr></thead>
       <tbody>
       ${surveys.map(s => `
@@ -1080,9 +1080,20 @@ function renderSurveysTable(surveys) {
           <td data-label="아쉬운" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.regret || '-')}</td>
           <td data-label="한 줄" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.review || '-')}</td>
           <td data-label="작성" style="color:var(--text-muted);font-size:12px">${fmtDate(s.created_at)}</td>
+          <td data-label=""><button type="button" class="btn-sm red" onclick="deleteSurvey(${s.id}, '${esc(s.nickname || '')}', '${esc(s.room_code || '')}')">삭제</button></td>
         </tr>`).join('')}
       </tbody>
     </table>`;
+}
+
+async function deleteSurvey(id, nickname, room_code) {
+  const nick = nickname || '익명';
+  const rc = room_code || '-';
+  if (!confirm(`⚠️ "${nick}" 의 ${rc} 모임 후기를 삭제해요.\n되돌릴 수 없음. 계속?`)) return;
+  try {
+    await api(`/api/panel/surveys/${id}`, { method: 'DELETE' });
+    loadSurveys();
+  } catch (e) { errToast(e.message); }
 }
 
 // Modal

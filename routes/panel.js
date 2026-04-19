@@ -309,6 +309,23 @@ router.get('/panel/surveys', requireAdmin, async (req, res) => {
   }
 });
 
+// DELETE /api/panel/surveys/:id — 단건 후기 삭제
+router.delete('/panel/surveys/:id', requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid id' });
+  try {
+    const { rows } = await pool.query(
+      'DELETE FROM survey_responses WHERE id = $1 RETURNING id',
+      [id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'survey not found' });
+    res.json({ deleted: true });
+  } catch (err) {
+    console.error('[panel] delete survey error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/panel/live-snapshot — 실시간 방·참가자 (WS 메모리)
 router.get('/panel/live-snapshot', requireAdmin, async (req, res) => {
   try {
