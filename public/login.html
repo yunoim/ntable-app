@@ -43,47 +43,16 @@
     font-size: 18px; font-weight: 600;
     color: #d4a843; letter-spacing: 0.14em;
   }
-  /* 빠른 입장 섹션 — CTA 아래 */
-  .quick-login {
-    margin-top: 20px;
-    padding: 18px 16px;
-    background: rgba(212,168,67,0.04);
-    border: 1px solid rgba(212,168,67,0.22);
-    border-radius: 14px;
-    text-align: left;
-  }
-  .ql-label {
-    font-size: 11px;
-    letter-spacing: 0.18em;
-    color: #d4a843;
-    text-transform: uppercase;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .ql-label-opt {
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    color: #9aa0ac;
-    opacity: 0.8;
-    font-weight: 400;
-    text-transform: none;
-  }
-  .ql-toggle-row {
-    display: flex; flex-direction: column; gap: 6px;
-    margin-bottom: 12px;
-  }
+  /* 헤더 우상단 토글 — 기억하기/로그아웃 통합 제어 */
   .login-toggle {
-    display: inline-flex; align-items: center; gap: 10px;
-    font-size: 13px; color: #e8e8e8;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 11.5px; color: #c0c0c0;
     cursor: pointer; background: none; border: none;
-    padding: 4px 0;
+    padding: 6px 10px; border-radius: 8px;
     font-family: inherit;
-    transition: color 0.2s;
-    align-self: flex-start;
+    transition: color 0.2s, background 0.2s;
   }
-  .login-toggle:hover { color: #e8b84b; }
+  .login-toggle:hover { color: #e8b84b; background: rgba(212,168,67,0.06); }
   .login-toggle .switch {
     width: 30px; height: 16px;
     background: rgba(255,255,255,0.15);
@@ -100,9 +69,38 @@
   .login-toggle[data-on="true"] { color: #7ee8a2; }
   .login-toggle[data-on="true"] .switch { background: rgba(126,232,162,0.45); }
   .login-toggle[data-on="true"] .switch::after { left: 16px; background: #7ee8a2; }
+
+  /* 빠른 입장 섹션 — CTA 아래 */
+  .quick-login {
+    margin-top: 20px;
+    padding: 18px 16px;
+    background: rgba(212,168,67,0.04);
+    border: 1px solid rgba(212,168,67,0.22);
+    border-radius: 14px;
+    text-align: left;
+  }
+  .ql-label {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: #d4a843;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ql-label-opt {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: #9aa0ac;
+    opacity: 0.8;
+    font-weight: 400;
+    text-transform: none;
+  }
   .ql-desc {
     font-size: 11.5px; color: #9aa0ac;
     letter-spacing: 0.02em; line-height: 1.5;
+    margin-bottom: 10px;
   }
   .ql-btn {
     display: block; width: 100%;
@@ -123,7 +121,6 @@
     border: 1px dashed rgba(126,232,162,0.25);
     border-radius: 10px;
     letter-spacing: 0.02em;
-    margin-top: 8px;
   }
   .acc-logout-hint {
     margin-top: 6px;
@@ -184,6 +181,10 @@
 
 <header class="app-header">
   <span class="h-brand">ntable</span>
+  <button type="button" class="login-toggle" id="loginToggle" data-on="true" aria-pressed="true" title="내 정보 기억하기" hidden>
+    <span class="toggle-label">내 정보 기억하기</span>
+    <span class="switch" aria-hidden="true"></span>
+  </button>
 </header>
 
 <div class="root">
@@ -196,14 +197,7 @@
 
   <section class="quick-login" id="quickLogin" hidden>
     <div class="ql-label">빠른 입장 <span class="ql-label-opt">선택</span></div>
-    <!-- 토글은 두 상태(비로그인·로그인) 모두에서 항상 노출 — 로그인 상태에서는 OFF로 로그아웃 -->
-    <div class="ql-toggle-row">
-      <button type="button" class="login-toggle" id="loginToggle" data-on="true" aria-pressed="true">
-        <span class="toggle-label">내 정보 기억하기</span>
-        <span class="switch" aria-hidden="true"></span>
-      </button>
-      <span class="ql-desc" id="qlDesc">켜면 다음 방문 시 Google/카카오로 빠르게 입장</span>
-    </div>
+    <div class="ql-desc" id="qlDesc">Google/카카오로 연결하면 다음 방문 시 자동 입장</div>
     <!-- 비로그인: OAuth 버튼 -->
     <div id="accLoginGroup">
       <button type="button" class="ql-btn btn-google" id="googleBtn" hidden>Google로 계속</button>
@@ -212,7 +206,7 @@
     <!-- 로그인: provider 라벨 + 로그아웃 안내 -->
     <div class="acc-connected" id="accConnected" hidden>
       ✓ <span id="accProviderLabel">계정 연결됨</span>
-      <div class="acc-logout-hint">로그아웃하려면 위 토글을 OFF</div>
+      <div class="acc-logout-hint">로그아웃은 우측 상단 토글 OFF</div>
     </div>
   </section>
 
@@ -279,11 +273,11 @@ function applyConnectedView() {
   if (isAuthed) {
     accLoginGroup.hidden = true;
     accConnected.hidden = false;
-    if (desc) desc.textContent = '끄면 즉시 로그아웃';
+    if (desc) desc.textContent = '연결된 계정으로 다음 방문 시 자동 입장. 우측 상단 토글 OFF로 해제.';
   } else {
     accLoginGroup.hidden = false;
     accConnected.hidden = true;
-    if (desc) desc.textContent = '켜면 다음 방문 시 Google/카카오로 빠르게 입장';
+    if (desc) desc.textContent = 'Google/카카오로 연결하면 다음 방문 시 자동 입장';
   }
 }
 
@@ -309,10 +303,11 @@ function setProviderLabel(me) {
     cfgKakao = !!cfg.kakao;
   } catch (_) {}
   if (!cfgGoogle && !cfgKakao) {
-    // provider 없으면 섹션 자체 숨김
+    // provider 없으면 섹션·토글 자체 숨김
     return;
   }
   quickLogin.hidden = false;
+  loginToggle.hidden = false;
   if (cfgGoogle) document.getElementById('googleBtn').hidden = false;
   if (cfgKakao) document.getElementById('kakaoBtn').hidden = false;
 
