@@ -3045,7 +3045,13 @@ async function closeRoom() {
       toast('종료 실패: ' + (err.error || res.status));
       return;
     }
-    location.href = '/create';
+    // 호스트가 참여자였으면 본인도 게스트와 동일하게 후기 → 결과 흐름으로
+    const isParticipantHost = (state.room && state.room.host_role === 'participant') || state.hostRole === 'participant';
+    if (isParticipantHost) {
+      location.href = `/survey?room=${state.roomCode}`;
+    } else {
+      location.href = '/create';
+    }
   } catch { toast('종료 실패'); }
 }
 
