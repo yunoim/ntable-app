@@ -37,7 +37,8 @@
     .nt-auth-pill {
       position: fixed;
       top: calc(15px + env(safe-area-inset-top));
-      right: 16px;
+      /* ntable.kr 랜딩 .nav-inner(max-width:1100px) 우측 32px padding 과 동일 선상 정렬 */
+      right: max(20px, calc((100vw - 1100px) / 2 + 32px));
       z-index: 9999;
       display: flex; flex-direction: column; align-items: flex-end;
       gap: 1px;
@@ -81,6 +82,9 @@
       padding-right: 2px;
       line-height: 1.1;
       font-weight: 500;
+    }
+    @media (max-width: 768px) {
+      .nt-auth-pill { right: 20px; }
     }
     @media (max-width: 420px) {
       .nt-auth-pill { padding: 3px 9px 3px; border-radius: 12px; }

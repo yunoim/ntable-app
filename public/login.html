@@ -27,16 +27,21 @@
     justify-content: center;
   }
 
-  /* HEADER — ntable.kr 랜딩 nav-inner 기준 62px 높이로 통일 */
+  /* HEADER — ntable.kr 랜딩 nav 구조 (.nav-inner max-width:1100px) 동일 적용 */
   .app-header {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    height: calc(62px + env(safe-area-inset-top));
-    padding: env(safe-area-inset-top) 24px 0;
-    display: flex; align-items: center; justify-content: space-between;
+    padding-top: env(safe-area-inset-top);
     background: rgba(14,22,40,0.88);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     border-bottom: 1px solid rgba(212,168,67,0.45);
+  }
+  .nav-inner {
+    max-width: 1100px; margin: 0 auto; padding: 0 32px;
+    height: 62px; display: flex; align-items: center; justify-content: space-between;
+  }
+  @media (max-width: 768px) {
+    .nav-inner { padding: 0 20px; }
   }
   .h-brand {
     font-family: 'Cormorant Garamond', serif;
@@ -192,13 +197,15 @@
 <body>
 
 <header class="app-header">
-  <span class="h-brand">ntable</span>
-  <div class="login-col">
-    <button type="button" class="login-toggle" id="loginToggle" data-on="true" aria-pressed="true" title="내 정보 기억하기" hidden>
-      <span class="toggle-label">내 정보 기억하기</span>
-      <span class="switch" aria-hidden="true"></span>
-    </button>
-    <div class="login-connected-mini" id="loginConnectedMini" hidden>✓ <span id="miniProviderLabel">Google 계정 연결됨</span></div>
+  <div class="nav-inner">
+    <span class="h-brand">ntable</span>
+    <div class="login-col">
+      <button type="button" class="login-toggle" id="loginToggle" data-on="true" aria-pressed="true" title="내 정보 기억하기" hidden>
+        <span class="toggle-label">내 정보 기억하기</span>
+        <span class="switch" aria-hidden="true"></span>
+      </button>
+      <div class="login-connected-mini" id="loginConnectedMini" hidden>✓ <span id="miniProviderLabel">Google 계정 연결됨</span></div>
+    </div>
   </div>
 </header>
 
