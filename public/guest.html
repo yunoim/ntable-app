@@ -1723,7 +1723,30 @@ const STATE = {
     STATE.myProfile = { uuid: STATE.uuid, nickname: me.nickname, ...me };
     renderMyProfile();
     loadOAuthBadge();
-    switchScreen('waiting');
+
+    // 호스트 현재 화면으로 catch-up — 재접속·중간 입장 모두 즉시 동기화
+    const cur = room.current_state;
+    if (cur && cur.current_tab) {
+      const tab = cur.current_tab;
+      if (tab === 'intro') {
+        switchScreen('intro');
+        try { await loadIntroData(); } catch (_) {}
+      } else if (tab === 'explore') {
+        if (cur.question_index !== undefined) STATE.currentQIndex = cur.question_index;
+        switchScreen('explore');
+        try { await loadExploreData(); renderQuestion(); } catch (_) {}
+      } else if (tab === 'free') {
+        switchScreen('free');
+      } else if (tab === 'closing') {
+        switchScreen('closing');
+        try { await loadClosingData(); } catch (_) {}
+        if (typeof applyClosingPhase === 'function') applyClosingPhase(cur.phase || 'closing');
+      } else {
+        switchScreen('waiting');
+      }
+    } else {
+      switchScreen('waiting');
+    }
     connectWS();
   } catch (e) {
     showError('서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.');

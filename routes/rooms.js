@@ -151,15 +151,24 @@ router.get('/packs', async (req, res) => {
   }
 });
 
-// GET /api/rooms/:code
+// GET /api/rooms/:code — room 메타 + 현재 진행 state (게스트 catch-up용)
 router.get('/rooms/:code', async (req, res) => {
   const { code } = req.params;
   const result = await pool.query(
-    'SELECT room_code, title, host_uuid, host_role, status, question_count, pack_id, display_fields, birth_year_format, display_mode, photo_enabled, region_detail, closing_steps, free_chat_timer_minutes, free_chat_chat_enabled, free_chat_topic_card_enabled, instagram_collect, meeting_at FROM rooms WHERE room_code = $1',
+    'SELECT id, room_code, title, host_uuid, host_role, status, question_count, pack_id, display_fields, birth_year_format, display_mode, photo_enabled, region_detail, closing_steps, free_chat_timer_minutes, free_chat_chat_enabled, free_chat_topic_card_enabled, instagram_collect, meeting_at FROM rooms WHERE room_code = $1',
     [code]
   );
   if (result.rows.length === 0) return res.status(404).json({ error: 'room not found' });
-  res.json(result.rows[0]);
+  const room = result.rows[0];
+  // 현재 room_state 포함 — 게스트가 페이지 로드 시 바로 호스트 화면으로 진입할 수 있도록
+  let current_state = null;
+  try {
+    const sr = await pool.query('SELECT state_json FROM room_state WHERE room_id = $1', [room.id]);
+    current_state = sr.rows[0]?.state_json || null;
+  } catch (_) {}
+  // id는 응답에서 제외 (외부 노출 불필요)
+  delete room.id;
+  res.json({ ...room, current_state });
 });
 
 // GET /api/rooms/:code/preview
