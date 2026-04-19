@@ -550,27 +550,29 @@ router.get('/host-stats/:host_uuid', async (req, res) => {
   if (!host_uuid) return res.status(400).json({ error: 'host_uuid required' });
   res.set('Cache-Control', 'public, max-age=15');
   try {
-    // 누적 모임 (의미 있는 것: 2명+ 참여)
+    // 누적 모임 (의미 있는 것: 2명+ 참여) — 1명짜리는 모임 카운트에서 제외
     const roomsRow = await pool.query(
       `SELECT COUNT(*)::int AS cnt FROM rooms r
         WHERE r.host_uuid = $1
           AND (SELECT COUNT(*) FROM room_members rm WHERE rm.room_id = r.id) >= 2`,
       [host_uuid]
     );
-    // 누적 참여자 — 이 호스트의 모든 모임 unique uuid
+    // 누적 참여자 — 2명 이상 모임의 unique uuid (1명짜리 모임은 통계 제외)
     const participantsRow = await pool.query(
       `SELECT COUNT(DISTINCT rm.uuid)::int AS cnt
          FROM room_members rm
          JOIN rooms r ON r.id = rm.room_id
-        WHERE r.host_uuid = $1`,
+        WHERE r.host_uuid = $1
+          AND (SELECT COUNT(*) FROM room_members rm2 WHERE rm2.room_id = r.id) >= 2`,
       [host_uuid]
     );
-    // 매칭 + 인스타 교환 — match_json mutual pair 분석
+    // 매칭 + 인스타 교환 — 2명 이상 모임의 match_json mutual pair만
     const matchRows = await pool.query(
       `SELECT mr.uuid, mr.match_json, r.id AS room_id
          FROM member_results mr
          JOIN rooms r ON r.id = mr.room_id
-        WHERE r.host_uuid = $1 AND mr.match_json IS NOT NULL`,
+        WHERE r.host_uuid = $1 AND mr.match_json IS NOT NULL
+          AND (SELECT COUNT(*) FROM room_members rm WHERE rm.room_id = r.id) >= 2`,
       [host_uuid]
     );
     // room별 unique mutual pair set
@@ -641,11 +643,13 @@ router.get('/stats', async (req, res) => {
       participants += wsModule.getRoomClients(code).length;
     }
     // 누적 통계: 의미 있는 모임만 카운트 — 최소 2명 이상 참여한 방 (호스트 단독 테스트 제외)
-    // unique_people: 실제 사람 수 (DISTINCT uuid)
+    // 모든 통계가 동일 기준(2명+) 이어야 정합 — total_attendances · unique_people 도 1명짜리 방 제외
     const [totalRoomsRow, totalAttendRow, uniquePeopleRow] = await Promise.all([
       pool.query('SELECT COUNT(*)::int AS cnt FROM rooms r WHERE (SELECT COUNT(*) FROM room_members rm WHERE rm.room_id = r.id) >= 2'),
-      pool.query('SELECT COUNT(*)::int AS cnt FROM room_members'),
-      pool.query('SELECT COUNT(DISTINCT uuid)::int AS cnt FROM room_members'),
+      pool.query(`SELECT COUNT(*)::int AS cnt FROM room_members rm
+                   WHERE (SELECT COUNT(*) FROM room_members rm2 WHERE rm2.room_id = rm.room_id) >= 2`),
+      pool.query(`SELECT COUNT(DISTINCT rm.uuid)::int AS cnt FROM room_members rm
+                   WHERE (SELECT COUNT(*) FROM room_members rm2 WHERE rm2.room_id = rm.room_id) >= 2`),
     ]);
     res.json({
       active_rooms: activeRooms.length,
