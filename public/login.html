@@ -196,8 +196,8 @@
   <button type="button" class="cta-primary" id="openRoomBtn">모임 열기</button>
 
   <section class="quick-login" id="quickLogin" hidden>
-    <div class="ql-label">빠른 입장 <span class="ql-label-opt">선택</span></div>
-    <div class="ql-desc" id="qlDesc">Google/카카오로 연결하면 다음 방문 시 자동 입장</div>
+    <div class="ql-label">빠른 입장 <span class="ql-label-opt">Google · 카카오</span></div>
+    <div class="ql-desc" id="qlDesc">연결해두면 다음 방문 시 자동 입장</div>
     <!-- 비로그인: OAuth 버튼 -->
     <div id="accLoginGroup">
       <button type="button" class="ql-btn btn-google" id="googleBtn" hidden>Google로 계속</button>
@@ -273,17 +273,19 @@ function applyConnectedView() {
   if (isAuthed) {
     accLoginGroup.hidden = true;
     accConnected.hidden = false;
-    if (desc) desc.textContent = '연결된 계정으로 다음 방문 시 자동 입장. 우측 상단 토글 OFF로 해제.';
+    if (desc) desc.textContent = '연결된 계정으로 다음 방문 시 자동 입장';
   } else {
     accLoginGroup.hidden = false;
     accConnected.hidden = true;
-    if (desc) desc.textContent = 'Google/카카오로 연결하면 다음 방문 시 자동 입장';
+    if (desc) desc.textContent = '연결해두면 다음 방문 시 자동 입장';
   }
 }
 
+// 토글 ON = 빠른 입장 섹션 노출, OFF = 섹션 숨김 (+ 인증 상태면 로그아웃)
 function setToggle(on) {
   loginToggle.dataset.on = on ? 'true' : 'false';
   loginToggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+  quickLogin.hidden = !on;
 }
 
 function setProviderLabel(me) {
@@ -303,19 +305,15 @@ function setProviderLabel(me) {
     cfgKakao = !!cfg.kakao;
   } catch (_) {}
   if (!cfgGoogle && !cfgKakao) {
-    // provider 없으면 섹션·토글 자체 숨김
+    // provider 없으면 토글 자체 숨김 (섹션도 항상 숨김 유지)
     return;
   }
-  quickLogin.hidden = false;
   loginToggle.hidden = false;
   if (cfgGoogle) document.getElementById('googleBtn').hidden = false;
   if (cfgKakao) document.getElementById('kakaoBtn').hidden = false;
 
-  // 토글 초기 상태 — 저장된 기억 유지 선호, 기본 ON
+  // 로그인 상태 확인 먼저 (토글 초기 상태가 인증 여부에 따라 갈림)
   const remembered = (() => { try { return localStorage.getItem('login_remember'); } catch (_) { return null; } })();
-  setToggle(remembered !== 'false');
-
-  // 로그인 상태 확인 — 실명·이메일은 절대 노출하지 않음 (authed 여부만)
   try {
     const tok = localStorage.getItem('user_token');
     if (tok) {
@@ -324,11 +322,6 @@ function setProviderLabel(me) {
       if (me.authed) {
         isAuthed = true;
         setProviderLabel(me);
-        // 로그인 상태 + remember 미설정 시 ON 으로 저장
-        if (remembered !== 'false') {
-          try { localStorage.setItem('login_remember', 'true'); } catch (_) {}
-          setToggle(true);
-        }
       } else {
         try { localStorage.removeItem('user_token'); } catch (_) {}
       }
@@ -336,6 +329,17 @@ function setProviderLabel(me) {
   } catch (_) {}
 
   applyConnectedView();
+
+  // 토글 초기 상태 — 인증돼 있으면 자동 ON, 아니면 저장된 선호(기본 OFF)
+  // 사용자가 명시적으로 OFF한 적 있으면 그 선택 존중
+  if (isAuthed && remembered !== 'false') {
+    try { localStorage.setItem('login_remember', 'true'); } catch (_) {}
+    setToggle(true);
+  } else if (remembered === 'true') {
+    setToggle(true);
+  } else {
+    setToggle(false);
+  }
 
   // ?role=guest 자동 스크롤
   try {
