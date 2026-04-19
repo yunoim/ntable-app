@@ -64,11 +64,14 @@ router.get('/panel/rooms', requireAdmin, async (req, res) => {
   const { status } = req.query;
   const limit = Math.min(parseInt(req.query.limit || '100', 10) || 100, 500);
   try {
+    // host_nickname — 방별 닉네임(room_members) 우선, users 는 legacy fallback
     let sql = `
       SELECT r.id, r.room_code, r.title, r.host_role, r.status, r.created_at,
-             u.nickname AS host_nickname, u.uuid AS host_uuid,
+             COALESCE(rm.nickname, u.nickname) AS host_nickname,
+             r.host_uuid AS host_uuid,
              (SELECT COUNT(*)::int FROM member_results mr WHERE mr.room_id = r.id) AS participants
         FROM rooms r
+        LEFT JOIN room_members rm ON rm.room_id = r.id AND rm.uuid = r.host_uuid
         LEFT JOIN users u ON u.uuid = r.host_uuid`;
     const args = [];
     if (status) { sql += ` WHERE r.status = $1`; args.push(status); }
@@ -85,18 +88,29 @@ router.get('/panel/rooms', requireAdmin, async (req, res) => {
 router.get('/panel/rooms/:code', requireAdmin, async (req, res) => {
   const { code } = req.params;
   try {
+    // host_nickname — 방별 닉네임(room_members) 우선
     const room = await pool.query(
-      `SELECT r.*, u.nickname AS host_nickname
-         FROM rooms r LEFT JOIN users u ON u.uuid = r.host_uuid
+      `SELECT r.*,
+              COALESCE(rm.nickname, u.nickname) AS host_nickname
+         FROM rooms r
+         LEFT JOIN room_members rm ON rm.room_id = r.id AND rm.uuid = r.host_uuid
+         LEFT JOIN users u ON u.uuid = r.host_uuid
         WHERE r.room_code = $1`,
       [code]
     );
     if (!room.rows.length) return res.status(404).json({ error: 'room not found' });
 
     const state = await pool.query('SELECT state_json, updated_at FROM room_state WHERE room_id = $1', [room.rows[0].id]);
+    // 멤버 정보 — room_members 우선, users 는 legacy fallback
     const members = await pool.query(
-      `SELECT mr.uuid, mr.votes_json, mr.match_json, mr.fi_count, u.nickname, u.gender, u.birth_year, u.mbti
-         FROM member_results mr LEFT JOIN users u ON u.uuid = mr.uuid
+      `SELECT mr.uuid, mr.votes_json, mr.match_json, mr.fi_count,
+              COALESCE(rm.nickname, u.nickname) AS nickname,
+              COALESCE(rm.gender,   u.gender)   AS gender,
+              COALESCE(rm.birth_year, u.birth_year) AS birth_year,
+              COALESCE(rm.mbti,     u.mbti)     AS mbti
+         FROM member_results mr
+         LEFT JOIN room_members rm ON rm.room_id = mr.room_id AND rm.uuid = mr.uuid
+         LEFT JOIN users u ON u.uuid = mr.uuid
         WHERE mr.room_id = $1`,
       [room.rows[0].id]
     );
@@ -223,9 +237,13 @@ router.delete('/panel/users/:uuid', requireAdmin, async (req, res) => {
 router.get('/panel/surveys', requireAdmin, async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit || '50', 10) || 50, 500);
   try {
+    // nickname — 응답자의 방별 닉네임 우선 (호스트가 참여자로 참여한 경우 포함)
     const { rows } = await pool.query(
-      `SELECT s.*, u.nickname, r.room_code, r.title AS room_title
+      `SELECT s.*,
+              COALESCE(rm.nickname, u.nickname) AS nickname,
+              r.room_code, r.title AS room_title
          FROM survey_responses s
+         LEFT JOIN room_members rm ON rm.room_id = s.room_id AND rm.uuid = s.uuid
          LEFT JOIN users u ON u.uuid = s.uuid
          LEFT JOIN rooms r ON r.id = s.room_id
         ORDER BY s.created_at DESC

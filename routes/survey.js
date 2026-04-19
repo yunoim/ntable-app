@@ -112,12 +112,18 @@ router.get('/survey/participants', async (req, res) => {
     if (roomRes.rows.length === 0) return res.status(404).json({ error: 'room not found' });
     const room_id = roomRes.rows[0].id;
 
+    // room_members 우선 (방별 닉네임·프로필), users 는 legacy fallback
     const rows = await pool.query(
-      `SELECT u.uuid, u.nickname, u.gender, u.birth_year, u.mbti
+      `SELECT mr.uuid,
+              COALESCE(rm.nickname, u.nickname) AS nickname,
+              COALESCE(rm.gender,   u.gender)   AS gender,
+              COALESCE(rm.birth_year, u.birth_year) AS birth_year,
+              COALESCE(rm.mbti,     u.mbti)     AS mbti
          FROM member_results mr
-         JOIN users u ON u.uuid = mr.uuid
+         LEFT JOIN room_members rm ON rm.room_id = mr.room_id AND rm.uuid = mr.uuid
+         LEFT JOIN users u ON u.uuid = mr.uuid
         WHERE mr.room_id = $1 AND mr.uuid != $2
-        ORDER BY u.nickname`,
+        ORDER BY COALESCE(rm.nickname, u.nickname)`,
       [room_id, uuid]
     );
     res.json(rows.rows);
@@ -159,11 +165,13 @@ router.post('/connections', async (req, res) => {
       );
     }
 
-    // 쌍방 매칭 탐색 (내가 고른 사람들 중 나를 고른 사람)
+    // 쌍방 매칭 탐색 — room_members 우선, users 는 legacy fallback
     const mutuals = await pool.query(
-      `SELECT u.uuid, u.nickname
+      `SELECT c.from_uuid AS uuid,
+              COALESCE(rm.nickname, u.nickname) AS nickname
          FROM room_connections c
-         JOIN users u ON u.uuid = c.from_uuid
+         LEFT JOIN room_members rm ON rm.room_id = c.room_id AND rm.uuid = c.from_uuid
+         LEFT JOIN users u ON u.uuid = c.from_uuid
         WHERE c.room_id = $1
           AND c.to_uuid = $2
           AND c.from_uuid = ANY($3::varchar[])`,

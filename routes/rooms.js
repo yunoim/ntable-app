@@ -175,10 +175,12 @@ router.get('/rooms/:code', async (req, res) => {
 // 인증 전(게스트 대기 화면)에서 노출할 최소 공개 정보
 router.get('/rooms/:code/preview', async (req, res) => {
   const { code } = req.params;
+  // host_nickname — room_members 우선 (호스트가 참여자로 참여한 경우 방별 닉네임), users 는 legacy fallback
   const r = await pool.query(
     `SELECT r.room_code, r.title, r.status,
-            u.nickname AS host_nickname
+            COALESCE(rm.nickname, u.nickname) AS host_nickname
      FROM rooms r
+     LEFT JOIN room_members rm ON rm.room_id = r.id AND rm.uuid = r.host_uuid
      LEFT JOIN users u ON u.uuid = r.host_uuid
      WHERE r.room_code = $1`,
     [code]

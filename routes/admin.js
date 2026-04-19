@@ -354,13 +354,15 @@ router.post('/rooms/:code/vote/mvp', async (req, res) => {
       [target_uuid, room_id]
     );
 
-    // 실시간 MVP 순위 브로드캐스트
+    // 실시간 MVP 순위 브로드캐스트 — room_members 우선, users 는 legacy fallback
     const mvpRows = await pool.query(
-      `SELECT mr.uuid, mr.fi_count, u.nickname
+      `SELECT mr.uuid, mr.fi_count,
+              COALESCE(rm.nickname, u.nickname) AS nickname
          FROM member_results mr
+         LEFT JOIN room_members rm ON rm.room_id = mr.room_id AND rm.uuid = mr.uuid
          LEFT JOIN users u ON u.uuid = mr.uuid
         WHERE mr.room_id = $1
-        ORDER BY mr.fi_count DESC, u.nickname ASC`,
+        ORDER BY mr.fi_count DESC, COALESCE(rm.nickname, u.nickname) ASC`,
       [room_id]
     );
     broadcastToRoom(code, {
@@ -391,11 +393,13 @@ router.post('/rooms/:code/mvp-finalize', async (req, res) => {
     const room_id = room.rows[0].id;
 
     const top = await pool.query(
-      `SELECT mr.uuid, mr.fi_count, u.nickname
+      `SELECT mr.uuid, mr.fi_count,
+              COALESCE(rm.nickname, u.nickname) AS nickname
          FROM member_results mr
+         LEFT JOIN room_members rm ON rm.room_id = mr.room_id AND rm.uuid = mr.uuid
          LEFT JOIN users u ON u.uuid = mr.uuid
         WHERE mr.room_id = $1 AND mr.fi_count > 0
-        ORDER BY mr.fi_count DESC, u.nickname ASC
+        ORDER BY mr.fi_count DESC, COALESCE(rm.nickname, u.nickname) ASC
         LIMIT 1`,
       [room_id]
     );
@@ -577,12 +581,21 @@ router.post('/rooms/:code/match', async (req, res) => {
     }
 
     const uuids = members.map(m => m.uuid);
-    const usersRes = await pool.query(
-      'SELECT uuid, nickname, gender FROM users WHERE uuid = ANY($1)',
-      [uuids]
+    // room_members 우선 (방별 익명 닉네임) — users 는 legacy fallback
+    const memberRows = await pool.query(
+      'SELECT uuid, nickname, gender FROM room_members WHERE room_id = $1 AND uuid = ANY($2)',
+      [room.id, uuids]
     );
     const userMap = {};
-    for (const u of usersRes.rows) userMap[u.uuid] = u;
+    for (const m of memberRows.rows) userMap[m.uuid] = m;
+    const missing = uuids.filter(u => !userMap[u]);
+    if (missing.length) {
+      const usersRes = await pool.query(
+        'SELECT uuid, nickname, gender FROM users WHERE uuid = ANY($1)',
+        [missing]
+      );
+      for (const u of usersRes.rows) userMap[u.uuid] = u;
+    }
 
     // 매칭 알고리즘
     // 1) 상호 픽 (match_json.pick 기준)
