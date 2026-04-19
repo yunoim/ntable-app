@@ -592,15 +592,19 @@ function renderStep() {
       `;
       break;
     case 'interest': {
-      const interestSet = new Set((data.interest || '').split(',').map(s => s.trim()).filter(Boolean));
+      // 분리된 모델: chip selected + 직접 입력 텍스트 (chip 단어 제외)
+      const allTokens = (data.interest || '').split(',').map(s => s.trim()).filter(Boolean);
+      const presetTokens = allTokens.filter(t => INTERESTS.includes(t));
+      const extraTokens = allTokens.filter(t => !INTERESTS.includes(t));
+      const interestSet = new Set(presetTokens);
       body = `
         <div class="step-num">${stepNum} · 관심사 <span style="opacity:0.6;font-weight:400;">(선택)</span></div>
         <h2 class="step-title">뭘 좋아하세요?</h2>
-        <p class="step-sub">여러 개 가능. 직접 입력도 OK.</p>
+        <p class="step-sub">아래에서 골라도 되고, 다른 게 있으면 직접 입력도 OK. (중복은 자동 합쳐져요)</p>
         <div class="step-tip"><span class="step-tip-icon">🎯</span><span>겹치는 관심사 <strong>1개만 있어도</strong> 자유대화에서 침묵이 사라져요. 여러 개 고르는 걸 추천.</span></div>
         <div class="field">
           <div class="chip-row">${INTERESTS.map(v => `<button type="button" class="chip${interestSet.has(v)?' selected':''}" data-group="interest" data-value="${escHtml(v)}">${escHtml(v)}</button>`).join('')}</div>
-          <input type="text" id="interestInput" maxlength="60" placeholder="또는 직접 입력 (콤마로 여러 개)" value="${escHtml(data.interest || '')}" style="margin-top:14px;">
+          <input type="text" id="interestInput" maxlength="100" placeholder="다른 관심사 직접 입력 (콤마로 여러 개)" value="${escHtml(extraTokens.join(', '))}" style="margin-top:14px;">
         </div>
         <div class="field">
           <label class="chip df-check${data.hide_interest?' selected':''}" style="cursor:pointer;"><input type="checkbox" id="hide_interest"${data.hide_interest?' checked':''} style="display:none;"> 🔒 관심사 카드에 표시 안 함 (매칭에만 사용)</label>
@@ -668,6 +672,7 @@ function renderStep() {
         <h2 class="step-title">이렇게 입장해요</h2>
         <p class="step-sub">${subText}</p>
         <div class="summary">
+          <div class="summary-row"><span class="key">아바타</span><span class="val">${data.emoji ? `<span style="font-size:22px;">${escHtml(data.emoji)}</span>` : '<span class="empty">생략</span>'}</span></div>
           <div class="summary-row"><span class="key">닉네임</span><span class="val">${escHtml(data.nickname)}</span></div>
           ${rowH('성별', genderLabel, false)}
           ${rowH('출생연도', data.birth_year ? data.birth_year + '년' : '', data.hide_birth_year)}
@@ -794,13 +799,9 @@ document.addEventListener('click', (e) => {
   }
 
   if (group === 'interest') {
-    // 관심사는 multi-select (0개~여러 개 OK)
+    // chip 선택 — input value는 건드리지 않음 (직접 입력 영역과 분리)
     chip.classList.toggle('selected', !wasSelected);
-    const selected = Array.from(document.querySelectorAll(`.chip[data-group="interest"].selected`))
-      .map(c => c.dataset.value);
-    data.interest = selected.length ? selected.join(', ') : null;
-    const inp = document.getElementById('interestInput');
-    if (inp) inp.value = data.interest || '';
+    recomputeInterest();
     return;
   }
 
@@ -858,11 +859,22 @@ function ensureBirthDefault() {
   }
 }
 
+// 관심사 — chip selected + input extras 합쳐서 dedupe
+function recomputeInterest() {
+  const chips = Array.from(document.querySelectorAll('.chip[data-group="interest"].selected')).map(c => c.dataset.value);
+  const inp = document.getElementById('interestInput');
+  const extras = (inp ? inp.value : '').split(',').map(s => s.trim()).filter(Boolean);
+  const merged = [];
+  const seen = new Set();
+  for (const t of [...chips, ...extras]) {
+    if (!seen.has(t)) { seen.add(t); merged.push(t); }
+  }
+  data.interest = merged.length ? merged.join(', ') : null;
+}
+
 document.addEventListener('input', (e) => {
   if (e.target.id === 'interestInput') {
-    const v = e.target.value.trim();
-    data.interest = v || null;
-    document.querySelectorAll('.chip[data-group="interest"]').forEach(c => c.classList.remove('selected'));
+    recomputeInterest();
   }
   if (e.target.id === 'instaInput') {
     // 인스타그램 — 영문/숫자/점/언더바만 허용, 소문자 변환, @ 자동 제거

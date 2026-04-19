@@ -439,9 +439,14 @@
       font-size: 13px;
     }
     .meeting-time-input::-webkit-calendar-picker-indicator {
-      filter: invert(1) brightness(0.85);
+      /* 어두운 배경 위에 잘 보이도록 골드 톤으로 강조 + opacity 1 */
+      filter: invert(78%) sepia(31%) saturate(545%) hue-rotate(2deg) brightness(95%) contrast(91%);
+      opacity: 1;
       cursor: pointer;
+      width: 22px; height: 22px;
+      padding: 0 4px;
     }
+    .meeting-time-input { color-scheme: dark; }
     .meeting-time-hint {
       font-size: 11px;
       color: var(--text-muted);
