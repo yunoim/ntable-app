@@ -1670,6 +1670,7 @@ const STATE = {
   pingInterval: null,
   questions: [],
   votedQuestions: new Set(),
+  myExploreVotes: {},
   currentQIndex: 0,
   members: [],
   myProfile: null,
@@ -2460,14 +2461,15 @@ function renderQuestion() {
 
   const wrap = document.getElementById('choicesWrap');
   wrap.innerHTML = '';
-  const voted = STATE.votedQuestions.has(q.id);
+  const myAnswer = STATE.myExploreVotes && STATE.myExploreVotes[q.id];
 
   (q.options || []).forEach((opt, idx) => {
     const label = idx === 0 ? 'A' : 'B';
     const btn = document.createElement('button');
-    btn.className = 'choice-btn' + (voted ? ' disabled' : '');
+    const isSelected = myAnswer === label;
+    btn.className = 'choice-btn' + (isSelected ? ' selected' : '');
     btn.innerHTML = `<span class="choice-label">${label}</span>${escHtml(opt.replace(/^[AB]\.\s*/, ''))}`;
-    if (!voted) btn.onclick = () => submitExploreVote(q.id, label, q);
+    btn.onclick = () => submitExploreVote(q.id, label, q);
     wrap.appendChild(btn);
   });
 
@@ -2477,14 +2479,18 @@ function renderQuestion() {
 }
 
 async function submitExploreVote(questionId, answer, q) {
-  if (STATE.votedQuestions.has(questionId)) return;
+  // 같은 답이면 무시 (re-render 절약)
+  const prev = STATE.myExploreVotes && STATE.myExploreVotes[questionId];
+  if (prev === answer) return;
+  if (!STATE.myExploreVotes) STATE.myExploreVotes = {};
+  STATE.myExploreVotes[questionId] = answer;
   STATE.votedQuestions.add(questionId);
 
+  // 즉시 시각 반영 (서버 응답 기다리지 않음)
   const btns = document.querySelectorAll('#choicesWrap .choice-btn');
   const idx = answer === 'A' ? 0 : 1;
   btns.forEach((b, i) => {
-    b.classList.add('disabled');
-    if (i === idx) b.classList.add('selected');
+    b.classList.toggle('selected', i === idx);
   });
 
   try {
@@ -2493,7 +2499,11 @@ async function submitExploreVote(questionId, answer, q) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ uuid: STATE.uuid, question_id: questionId, answer }),
     });
-  } catch(_) {}
+  } catch(_) {
+    // 실패 시 로컬 상태 롤백
+    if (prev) STATE.myExploreVotes[questionId] = prev;
+    else delete STATE.myExploreVotes[questionId];
+  }
 }
 
 function renderVoteResult(questionId, counts) {

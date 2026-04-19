@@ -2885,14 +2885,20 @@ async function updateState(stateData) {
 }
 
 async function submitHostVote(question_id, answer) {
-  if (state.myVotes[question_id]) return;
+  const prev = state.myVotes[question_id];
+  if (prev === answer) return; // 동일 답이면 무시
   state.myVotes[question_id] = answer;
+  renderQuestion(); // 즉시 시각 반영
   try {
     await api(`/api/rooms/${state.roomCode}/vote`, 'POST', {
       uuid: state.uuid, question_id, answer
     });
+  } catch {
+    // 실패 시 롤백
+    if (prev) state.myVotes[question_id] = prev;
+    else delete state.myVotes[question_id];
     renderQuestion();
-  } catch { delete state.myVotes[question_id]; }
+  }
 }
 
 async function sendNudge() {
