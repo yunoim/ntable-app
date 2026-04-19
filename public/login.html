@@ -30,13 +30,25 @@
   /* HEADER */
   .app-header {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 18px;
-    padding-top: calc(12px + env(safe-area-inset-top));
+    display: flex; align-items: flex-start; justify-content: space-between;
+    padding: 10px 18px;
+    padding-top: calc(10px + env(safe-area-inset-top));
     background: rgba(14,22,40,0.88);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     border-bottom: 1px solid rgba(212,168,67,0.2);
+  }
+  .h-brand { padding-top: 6px; }
+  .login-col {
+    display: flex; flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+  .login-connected-mini {
+    font-size: 10.5px;
+    color: #7ee8a2;
+    letter-spacing: 0.02em;
+    padding-right: 10px;
   }
   .h-brand {
     font-family: 'Cormorant Garamond', serif;
@@ -181,10 +193,13 @@
 
 <header class="app-header">
   <span class="h-brand">ntable</span>
-  <button type="button" class="login-toggle" id="loginToggle" data-on="true" aria-pressed="true" title="내 정보 기억하기" hidden>
-    <span class="toggle-label">내 정보 기억하기</span>
-    <span class="switch" aria-hidden="true"></span>
-  </button>
+  <div class="login-col">
+    <button type="button" class="login-toggle" id="loginToggle" data-on="true" aria-pressed="true" title="내 정보 기억하기" hidden>
+      <span class="toggle-label">내 정보 기억하기</span>
+      <span class="switch" aria-hidden="true"></span>
+    </button>
+    <div class="login-connected-mini" id="loginConnectedMini" hidden>✓ <span id="miniProviderLabel">Google 계정 연결됨</span></div>
+  </div>
 </header>
 
 <div class="root">
@@ -195,19 +210,12 @@
 
   <button type="button" class="cta-primary" id="openRoomBtn">모임 열기</button>
 
+  <!-- 토글 ON + 미인증일 때만 노출: OAuth 버튼. 인증되면 헤더 우상단 라벨만 사용. -->
   <section class="quick-login" id="quickLogin" hidden>
     <div class="ql-label">빠른 입장 <span class="ql-label-opt">Google · 카카오</span></div>
-    <div class="ql-desc" id="qlDesc">연결해두면 다음 방문 시 자동 입장</div>
-    <!-- 비로그인: OAuth 버튼 -->
-    <div id="accLoginGroup">
-      <button type="button" class="ql-btn btn-google" id="googleBtn" hidden>Google로 계속</button>
-      <button type="button" class="ql-btn btn-kakao" id="kakaoBtn" hidden>카카오로 계속</button>
-    </div>
-    <!-- 로그인: provider 라벨 + 로그아웃 안내 -->
-    <div class="acc-connected" id="accConnected" hidden>
-      ✓ <span id="accProviderLabel">계정 연결됨</span>
-      <div class="acc-logout-hint">로그아웃은 우측 상단 토글 OFF</div>
-    </div>
+    <div class="ql-desc">연결해두면 다음 방문 시 자동 입장</div>
+    <button type="button" class="ql-btn btn-google" id="googleBtn" hidden>Google로 계속</button>
+    <button type="button" class="ql-btn btn-kakao" id="kakaoBtn" hidden>카카오로 계속</button>
   </section>
 
   <div class="guest-info" id="guestSection">
@@ -260,39 +268,40 @@ ensureUuid();
   }
 })();
 
-// 빠른 입장 섹션 제어 — OAuth provider 활성 시 노출, 항상 flat 레이아웃
+// 빠른 입장 섹션 제어 — OAuth provider 활성 시 노출
 const quickLogin = document.getElementById('quickLogin');
 const loginToggle = document.getElementById('loginToggle');
-const accLoginGroup = document.getElementById('accLoginGroup');
-const accConnected = document.getElementById('accConnected');
-const accProviderLabel = document.getElementById('accProviderLabel');
+const loginConnectedMini = document.getElementById('loginConnectedMini');
+const miniProviderLabel = document.getElementById('miniProviderLabel');
 let isAuthed = false;
 
-function applyConnectedView() {
-  const desc = document.getElementById('qlDesc');
+// 섹션 노출 규칙:
+// - 인증됨  → 헤더 우상단에 '✓ Google 계정 연결됨' 라벨만 (빠른 입장 섹션은 숨김)
+// - 미인증 + 토글 ON → 빠른 입장 섹션에 OAuth 버튼 노출
+// - 미인증 + 토글 OFF → 둘 다 숨김
+function applyView() {
+  const on = loginToggle.dataset.on === 'true';
   if (isAuthed) {
-    accLoginGroup.hidden = true;
-    accConnected.hidden = false;
-    if (desc) desc.textContent = '연결된 계정으로 다음 방문 시 자동 입장';
+    loginConnectedMini.hidden = false;
+    quickLogin.hidden = true;
   } else {
-    accLoginGroup.hidden = false;
-    accConnected.hidden = true;
-    if (desc) desc.textContent = '연결해두면 다음 방문 시 자동 입장';
+    loginConnectedMini.hidden = true;
+    quickLogin.hidden = !on;
   }
 }
 
-// 토글 ON = 빠른 입장 섹션 노출, OFF = 섹션 숨김 (+ 인증 상태면 로그아웃)
+// 토글 상태 설정 + 뷰 갱신
 function setToggle(on) {
   loginToggle.dataset.on = on ? 'true' : 'false';
   loginToggle.setAttribute('aria-pressed', on ? 'true' : 'false');
-  quickLogin.hidden = !on;
+  applyView();
 }
 
 function setProviderLabel(me) {
   let label = '계정 연결됨';
   if (me && me.google) label = 'Google 계정 연결됨';
   else if (me && me.kakao) label = '카카오 계정 연결됨';
-  if (accProviderLabel) accProviderLabel.textContent = label;
+  if (miniProviderLabel) miniProviderLabel.textContent = label;
 }
 
 (async () => {
@@ -327,8 +336,6 @@ function setProviderLabel(me) {
       }
     }
   } catch (_) {}
-
-  applyConnectedView();
 
   // 토글 초기 상태 — 인증돼 있으면 자동 ON, 아니면 저장된 선호(기본 OFF)
   // 사용자가 명시적으로 OFF한 적 있으면 그 선택 존중
@@ -368,7 +375,6 @@ loginToggle.addEventListener('click', async () => {
       }
       try { localStorage.removeItem('user_token'); } catch (_) {}
       isAuthed = false;
-      applyConnectedView();
     }
     setToggle(false);
   } else {
