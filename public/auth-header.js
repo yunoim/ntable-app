@@ -31,66 +31,62 @@
   if (!me) return;
 
   // CSS 주입 (scoped prefix `nt-auth-` 로 충돌 방지)
-  // 상단바(보통 48~56px)에 쏙 들어가도록 높이를 빡빡하게 조율
+  // 크기는 app.ntable.kr login.html 의 .login-toggle + .login-connected-mini 와 일치시켜 통일감 유지
   const style = document.createElement('style');
   style.textContent = `
     .nt-auth-pill {
       position: fixed;
-      top: calc(15px + env(safe-area-inset-top));
+      top: calc(10px + env(safe-area-inset-top));
       /* ntable.kr 랜딩 .nav-inner(max-width:1100px, padding:0 32px) 우측 끝과 동일 선상 정렬 */
-      /* 뷰포트가 1100px 이하이면 32px(nav-inner padding)로 고정, 이상이면 중앙 정렬된 컨테이너의 우측 끝으로 계산 */
       right: max(32px, calc((100vw - 1100px) / 2 + 32px));
       z-index: 9999;
       display: flex; flex-direction: column; align-items: flex-end;
-      gap: 1px;
-      padding: 4px 10px 3px;
+      gap: 2px;
+      padding: 8px 14px 7px;
       background: rgba(14,22,40,0.92);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       border: 1px solid rgba(212,168,67,0.35);
-      border-radius: 14px;
+      border-radius: 16px;
       font-family: 'DM Sans','Noto Sans KR',sans-serif;
       box-shadow: 0 2px 8px rgba(0,0,0,0.18);
       pointer-events: auto;
     }
+    /* login.html .login-toggle 와 동일한 치수 */
     .nt-auth-toggle {
-      display: inline-flex; align-items: center; gap: 6px;
-      font-size: 10px; color: #7ee8a2;
+      display: inline-flex; align-items: center; gap: 10px;
+      font-size: 11.5px; color: #7ee8a2;
       cursor: pointer; background: none; border: none;
       padding: 0;
       font-family: inherit;
-      line-height: 1.1;
+      line-height: 1.2;
       transition: color 0.2s;
     }
     .nt-auth-toggle:hover { color: #a8f5c1; }
     .nt-auth-toggle .sw {
-      width: 22px; height: 12px;
+      width: 30px; height: 16px;
       background: rgba(126,232,162,0.45);
       border-radius: 999px; position: relative;
       transition: background 0.2s;
       flex-shrink: 0;
     }
     .nt-auth-toggle .sw::after {
-      content: ''; position: absolute; top: 2px; left: 12px;
-      width: 8px; height: 8px;
+      content: ''; position: absolute; top: 2px; left: 16px;
+      width: 12px; height: 12px;
       background: #7ee8a2; border-radius: 50%;
       transition: left 0.2s, background 0.2s;
     }
+    /* login.html .login-connected-mini 와 동일한 치수 */
     .nt-auth-mini {
-      font-size: 8.5px;
+      font-size: 10.5px;
       color: #7ee8a2;
       letter-spacing: 0.02em;
-      padding-right: 2px;
-      line-height: 1.1;
+      padding-right: 4px;
+      line-height: 1.2;
       font-weight: 500;
     }
     @media (max-width: 768px) {
       .nt-auth-pill { right: 20px; }
-    }
-    @media (max-width: 420px) {
-      .nt-auth-pill { padding: 3px 9px 3px; border-radius: 12px; }
-      .nt-auth-toggle { font-size: 9.5px; }
-      .nt-auth-mini { font-size: 8px; }
     }
   `;
   document.head.appendChild(style);
