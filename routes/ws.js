@@ -175,7 +175,29 @@ function init(server) {
         if (!rooms[room_code].introCache) rooms[room_code].introCache = new Map();
       }
       rooms[room_code].clients.set(uuid, ws);
-      // 사진/소개 sync는 클라이언트의 'request_photos' 메시지에 응답하는 방식으로 처리 (onmessage 준비 후 트리거)
+
+      // ── 입장 즉시 sync ── 캐시된 사진/소개 + 현재 room_state 직접 push
+      // (브라우저는 onmessage 이전 도착 메시지를 버퍼링하므로 안전. request_photos backup도 유지)
+      try {
+        const room0 = rooms[room_code];
+        for (const [pUuid, pPhoto] of room0.photoCache.entries()) {
+          if (pUuid === uuid) continue;
+          ws.send(JSON.stringify({ type: 'photo_update', uuid: pUuid, photo: pPhoto }));
+        }
+        for (const [iUuid, iIntro] of room0.introCache.entries()) {
+          if (iUuid === uuid) continue;
+          ws.send(JSON.stringify({ type: 'intro_update', uuid: iUuid, intro: iIntro }));
+        }
+        const stateRes0 = await pool.query(
+          `SELECT rs.state_json
+             FROM room_state rs
+             JOIN rooms r ON r.id = rs.room_id
+            WHERE r.room_code = $1`,
+          [room_code]
+        );
+        const cur0 = stateRes0.rows[0]?.state_json;
+        if (cur0) ws.send(JSON.stringify({ type: 'state_update', state: cur0 }));
+      } catch (e) { console.error('[ws] initial sync error', e.message); }
 
       // 호스트 재접속 → grace timer 취소
       if (uuid === hostUuid && rooms[room_code].hostGraceTimer) {
