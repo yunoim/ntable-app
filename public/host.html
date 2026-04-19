@@ -1610,8 +1610,12 @@
       </div>
 
       <div class="free-card" id="free-chat-card">
-        <div class="card-head">💬 익명 채팅 모니터</div>
+        <div class="card-head">💬 익명 채팅</div>
         <div id="chat-log"><div class="empty-msg">대화가 시작되면 여기 표시됩니다</div></div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <input type="text" id="host-chat-input" maxlength="500" placeholder="익명으로 보내기 (Enter)" style="flex:1;padding:10px 14px;background:rgba(212,168,67,0.06);border:1px solid var(--gold-border);border-radius:10px;color:#fff;font-family:inherit;font-size:14px;">
+          <button type="button" id="host-chat-send" style="padding:0 16px;background:linear-gradient(135deg,var(--gold),#a07828);color:var(--navy);border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">보내기</button>
+        </div>
       </div>
     </div>
 
@@ -1632,6 +1636,11 @@
         <div class="free-card">
           <div class="card-head" id="closing-card-head">🏆 MVP 투표 — 가장 인상적인 사람</div>
           <div id="mvp-list"></div>
+          <!-- participant 호스트 본인 투표 UI -->
+          <div id="host-self-vote-wrap" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(212,168,67,0.06);border:1px solid var(--gold-border);border-radius:10px;">
+            <div style="font-size:12px;color:var(--gold-light);margin-bottom:8px;">내 선택 (호스트 본인)</div>
+            <div id="host-self-vote-options"></div>
+          </div>
           <div class="card-help" id="closing-card-help" style="font-size:12px;color:var(--text-muted);margin-top:8px;line-height:1.5;">참가자가 직접 투표합니다. 호스트 화면은 실시간 집계만 표시.</div>
           <button type="button" class="csub-next-btn" id="closingNextBtn" onclick="advanceClosingPhase()">다음 단계 →</button>
         </div>
@@ -2654,6 +2663,20 @@ function bindEvents() {
 
   document.getElementById('approve-all-btn').addEventListener('click', approveAll);
 
+  // 호스트 익명 채팅 입력
+  const chatInp = document.getElementById('host-chat-input');
+  const chatSend = document.getElementById('host-chat-send');
+  const sendChat = () => {
+    const text = (chatInp && chatInp.value || '').trim();
+    if (!text) return;
+    if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+      state.ws.send(JSON.stringify({ type: 'chat', message: text }));
+    }
+    chatInp.value = '';
+  };
+  if (chatSend) chatSend.addEventListener('click', sendChat);
+  if (chatInp) chatInp.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat(); });
+
   document.getElementById('primary-btn').addEventListener('click', onPrimary);
   document.getElementById('back-btn').addEventListener('click', onBack);
   document.getElementById('force-match-btn').addEventListener('click', async () => {
@@ -2851,6 +2874,74 @@ async function saveExploreResultImage(targetSelector) {
   }
 }
 
+// participant 호스트 본인 MVP/사랑의 작대기 투표 UI
+function renderHostSelfVote(phase) {
+  const optsEl = document.getElementById('host-self-vote-options');
+  if (!optsEl) return;
+  const others = (state.approvedUsers || []).filter(u => u.uuid !== state.uuid);
+  if (others.length === 0) {
+    optsEl.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">다른 참가자가 없어요</div>';
+    return;
+  }
+  if (phase === 'closing-mvp') {
+    // MVP — 단일 선택 (서버 POST /vote/mvp)
+    const pick = state.hostMvpPick || null;
+    optsEl.innerHTML = `
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${others.map(u => `<button type="button" class="chip${pick===u.uuid?' selected':''}" data-host-mvp="${escHtml(u.uuid)}" style="font-size:12px;">${escHtml(u.nickname)}</button>`).join('')}
+      </div>
+      <button type="button" onclick="submitHostMvp()" style="margin-top:10px;padding:8px 14px;background:linear-gradient(135deg,var(--gold),#a07828);color:var(--navy);border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">내 MVP 제출</button>
+    `;
+    optsEl.querySelectorAll('[data-host-mvp]').forEach(b => {
+      b.addEventListener('click', () => {
+        state.hostMvpPick = b.dataset.hostMvp;
+        optsEl.querySelectorAll('[data-host-mvp]').forEach(x => x.classList.toggle('selected', x === b));
+      });
+    });
+  } else if (phase === 'closing-match') {
+    // 사랑의 작대기 — 복수 선택 (서버 POST /connections)
+    const picks = new Set(state.hostMatchPicks || []);
+    optsEl.innerHTML = `
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${others.map(u => `<button type="button" class="chip${picks.has(u.uuid)?' selected':''}" data-host-match="${escHtml(u.uuid)}" style="font-size:12px;">${escHtml(u.nickname)}</button>`).join('')}
+      </div>
+      <button type="button" onclick="submitHostMatch()" style="margin-top:10px;padding:8px 14px;background:linear-gradient(135deg,var(--gold),#a07828);color:var(--navy);border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">내 작대기 제출</button>
+    `;
+    optsEl.querySelectorAll('[data-host-match]').forEach(b => {
+      b.addEventListener('click', () => {
+        const id = b.dataset.hostMatch;
+        const set = new Set(state.hostMatchPicks || []);
+        if (set.has(id)) set.delete(id); else set.add(id);
+        state.hostMatchPicks = [...set];
+        b.classList.toggle('selected');
+      });
+    });
+  }
+}
+
+async function submitHostMvp() {
+  if (!state.hostMvpPick) { toast('MVP 대상을 선택해주세요'); return; }
+  try {
+    const r = await api(`/api/rooms/${state.roomCode}/vote/mvp`, 'POST', { uuid: state.uuid, target_uuid: state.hostMvpPick });
+    if (r.ok) toast('✓ 내 MVP 제출');
+    else toast('제출 실패');
+  } catch { toast('제출 실패'); }
+}
+
+async function submitHostMatch() {
+  const picks = state.hostMatchPicks || [];
+  if (picks.length === 0) { toast('또 만나고 싶은 사람을 선택해주세요'); return; }
+  try {
+    const r = await fetch('/api/connections', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uuid: state.uuid, room_code: state.roomCode, picks }),
+    });
+    if (r.ok) toast(`✓ ${picks.length}명 제출`);
+    else toast('제출 실패');
+  } catch { toast('제출 실패'); }
+}
+
 // closing 단계 시각 표시 + 카드 head/help 업데이트
 function renderClosingSubsteps(current) {
   document.querySelectorAll('.csub').forEach(el => {
@@ -2878,6 +2969,18 @@ function renderClosingSubsteps(current) {
   if (head) head.textContent = conf[0];
   if (help) help.textContent = conf[1];
   if (nextBtn) nextBtn.textContent = isLast ? '모임 종료' : conf[2];
+
+  // participant 호스트 본인 투표 UI — MVP/match 단계만 노출
+  const selfWrap = document.getElementById('host-self-vote-wrap');
+  if (selfWrap) {
+    const isParticipantHost = state.hostRole === 'participant';
+    if (isParticipantHost && (current === 'closing-mvp' || current === 'closing-match')) {
+      renderHostSelfVote(current);
+      selfWrap.style.display = '';
+    } else {
+      selfWrap.style.display = 'none';
+    }
+  }
 
   // closing-explore-result phase 진입 시 mvp-card 통째 결과 카드로 교체
   if (current === 'closing-explore-result') {
