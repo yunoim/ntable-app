@@ -1405,7 +1405,7 @@
       <button type="button" class="profile-edit-link" onclick="openProfileEdit()" aria-label="프로필 수정">수정 ✎</button>
     </div>
     <div class="profile-row">
-      <button type="button" class="profile-avatar" id="myAvatar" onclick="openPhotoUpload()" aria-label="사진 업로드 (서버에 저장되지 않음)" title="사진 업로드">👤</button>
+      <button type="button" class="profile-avatar" id="myAvatar" onclick="openEmojiPicker()" aria-label="아바타 이모지 변경" title="아바타 이모지 변경">👤</button>
       <input type="file" id="photoFileInput" accept="image/*" hidden>
       <div>
         <div class="profile-name" id="myName">—</div>
@@ -2429,7 +2429,9 @@ async function loadOAuthBadge() {
 function renderMyProfile() {
   const p = STATE.myProfile;
   if (!p) return;
-  document.getElementById('myAvatar').textContent = genderAvatar(p.gender);
+  const av = document.getElementById('myAvatar');
+  // 본인이 선택한 emoji 우선, 없으면 성별 default
+  av.textContent = p.emoji || genderAvatar(p.gender);
   document.getElementById('myName').textContent = p.nickname || '—';
   const age = ageOf(p.birth_year);
   document.getElementById('myMeta').textContent = [age, p.mbti].filter(Boolean).join(' · ');
@@ -2684,12 +2686,74 @@ function guestLogout() {
 // ─── PHOTO (서버 저장 X — WS broadcast 휘발성) ──────
 const PHOTO_MAX_BYTES = 250000; // ~180KB raw base64
 
-function openPhotoUpload() {
-  if (STATE.photoBanned) {
-    if (typeof toast === 'function') toast('호스트가 사진 업로드를 제한했어요');
-    return;
-  }
-  document.getElementById('photoFileInput')?.click();
+// 사진 업로드 기능 폐기 (2026-04-20) — 이모지 picker로 대체
+function openPhotoUpload() { openEmojiPicker(); }
+
+// 아바타 이모지 picker (inline modal)
+function openEmojiPicker() {
+  const EMOJI_CHOICES = ['🐰','🐯','🦁','🦊','🐻','🐼','🐶','🐱','🦄','🐸','🦉','🦋','🌸','🌷','🌙','⭐','🔥','✨','🍀','💎'];
+  const curEmoji = (STATE.myProfile && STATE.myProfile.emoji) || '';
+  // 이미 떠 있으면 닫기만
+  let existing = document.getElementById('emoji-picker-modal');
+  if (existing) { existing.remove(); return; }
+  const modal = document.createElement('div');
+  modal.id = 'emoji-picker-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML = `
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.7);" onclick="document.getElementById('emoji-picker-modal').remove()"></div>
+    <div style="position:relative;background:#141d35;border:1px solid var(--gold-border);border-radius:18px;padding:22px;max-width:420px;width:100%;">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:#fff;margin-bottom:6px;text-align:center;">아바타 이모지</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;text-align:center;">나를 표현하는 이모지 하나</div>
+      <input type="text" id="emoji-picker-input" maxlength="4" value="${curEmoji}" placeholder="🙂 직접 입력" style="width:100%;text-align:center;font-size:28px;padding:12px;background:rgba(212,168,67,0.06);border:1px solid var(--gold-border);border-radius:10px;color:#fff;font-family:inherit;margin-bottom:14px;">
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px;">
+        ${EMOJI_CHOICES.map(e => `<button type="button" data-ep="${e}" style="font-size:24px;padding:8px 10px;background:${curEmoji===e?'rgba(212,168,67,0.22)':'rgba(212,168,67,0.06)'};border:1px solid ${curEmoji===e?'var(--gold)':'var(--gold-border)'};border-radius:10px;cursor:pointer;font-family:inherit;">${e}</button>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button type="button" onclick="document.getElementById('emoji-picker-modal').remove()" style="flex:1;padding:11px;background:transparent;border:1px solid var(--gold-border);color:var(--white-dim);border-radius:10px;font-family:inherit;cursor:pointer;">취소</button>
+        <button type="button" id="emoji-picker-save" style="flex:2;padding:11px;background:linear-gradient(135deg,var(--gold),#a07828);color:var(--navy);border:none;border-radius:10px;font-weight:700;font-family:inherit;cursor:pointer;">저장</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  const inp = document.getElementById('emoji-picker-input');
+  const saveBtn = document.getElementById('emoji-picker-save');
+  modal.querySelectorAll('[data-ep]').forEach(b => {
+    b.addEventListener('click', () => {
+      inp.value = b.dataset.ep;
+      modal.querySelectorAll('[data-ep]').forEach(x => {
+        const isSel = x.dataset.ep === inp.value;
+        x.style.background = isSel ? 'rgba(212,168,67,0.22)' : 'rgba(212,168,67,0.06)';
+        x.style.borderColor = isSel ? 'var(--gold)' : 'var(--gold-border)';
+      });
+    });
+  });
+  saveBtn.addEventListener('click', async () => {
+    const v = (inp.value || '').slice(0, 4) || null;
+    saveBtn.disabled = true;
+    saveBtn.textContent = '저장 중…';
+    try {
+      const r = await fetch(`/api/rooms/${STATE.roomCode}/me/profile`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uuid: STATE.uuid, emoji: v }),
+      });
+      if (!r.ok) throw new Error('fail');
+      if (STATE.myProfile) STATE.myProfile.emoji = v;
+      const av = document.getElementById('myAvatar');
+      if (av) { av.textContent = v || '👤'; av.classList.remove('has-photo'); }
+      if (STATE.members && STATE.members.length) {
+        const me = STATE.members.find(m => m.uuid === STATE.uuid);
+        if (me) me.emoji = v;
+        renderCarousel();
+      }
+      modal.remove();
+      if (typeof showMiniToast === 'function') showMiniToast('✓ 아바타 저장');
+    } catch (e) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = '저장 실패 · 재시도';
+    }
+  });
+  setTimeout(() => inp.focus(), 80);
 }
 
 function clearMyPhoto() {

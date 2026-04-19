@@ -733,7 +733,10 @@
       <!-- 모임 시각 (선택) -->
       <div class="meeting-time-row">
         <label for="meetingAtInput" class="meeting-time-label">📅 모임 시각 <span class="opt-hint">선택</span></label>
-        <input type="datetime-local" id="meetingAtInput" class="meeting-time-input" />
+        <div style="position:relative;">
+          <input type="datetime-local" id="meetingAtInput" class="meeting-time-input" style="padding-right:44px;" />
+          <span aria-hidden="true" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:18px;color:#e8b84b;pointer-events:none;">📅</span>
+        </div>
         <div class="meeting-time-hint">QR·카카오 공유 메시지에 표시돼요. 비워두면 노출 안 됨.</div>
       </div>
 

@@ -857,6 +857,15 @@
   .mi-view-row .mi-k { color: var(--text-muted); font-size: 12.5px; }
   .mi-view-row .mi-v { font-size: 13px; }
 
+  /* datetime-local picker 아이콘 시인성 — 골드 톤 강조 */
+  .meeting-dt-input::-webkit-calendar-picker-indicator {
+    filter: invert(78%) sepia(31%) saturate(545%) hue-rotate(2deg) brightness(95%) contrast(91%);
+    opacity: 1;
+    cursor: pointer;
+    width: 22px; height: 22px;
+    padding: 0 4px;
+  }
+
   /* 운영 옵션 모달 자유대화 칩 — 체크 상태는 칩 강조만으로 표현 (체크박스는 시각적으로 숨김) */
   .rs-fc-chip {
     display: inline-flex; align-items: center; gap: 6px;
@@ -1737,7 +1746,7 @@
 
     <div style="margin-bottom:20px;">
       <label style="display:block;font-size:11px;color:var(--gold);letter-spacing:0.1em;margin-bottom:8px;">📅 모임 시각 <span style="opacity:0.6;font-weight:400;text-transform:none;letter-spacing:normal;margin-left:6px;">선택 — QR·카카오 공유에 노출</span></label>
-      <input type="datetime-local" id="rs_meeting_at" style="width:100%;padding:9px 12px;background:rgba(0,0,0,0.25);border:1px solid var(--gold-border);border-radius:8px;color:#fff;font-family:inherit;font-size:13px;">
+      <input type="datetime-local" id="rs_meeting_at" class="meeting-dt-input" style="width:100%;padding:10px 12px;background:rgba(0,0,0,0.25);border:1px solid var(--gold-border);border-radius:8px;color:#fff;font-family:inherit;font-size:13.5px;color-scheme:dark;">
     </div>
 
     <div style="margin-bottom:20px;">
