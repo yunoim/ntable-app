@@ -1592,16 +1592,16 @@
       <div class="free-card" id="free-timer-card" hidden>
         <div class="card-head">⏱ 자유대화 타이머</div>
         <div id="free-timer-display" style="font-size:34px;text-align:center;color:var(--gold-light);font-weight:700;letter-spacing:0.04em;padding:12px 0;font-variant-numeric:tabular-nums;">--:--</div>
+        <div style="display:flex;gap:8px;justify-content:center;margin:8px 0 6px;">
+          <button type="button" class="btn btn-outline" id="timer-add-10" style="padding:8px 14px;font-size:13px;">+10분</button>
+          <button type="button" class="btn btn-outline" id="timer-add-20" style="padding:8px 14px;font-size:13px;">+20분</button>
+          <button type="button" class="btn btn-outline" id="timer-add-30" style="padding:8px 14px;font-size:13px;">+30분</button>
+        </div>
         <p style="font-size:12px;color:var(--text-muted);text-align:center;line-height:1.5;">자동 종료는 안 됩니다. 시간 보고 마무리로 →</p>
       </div>
 
       <div class="free-grid">
-        <div class="free-card" id="free-shuffle-card">
-          <div class="card-head">🔀 자리 셔플</div>
-          <p style="font-size:13px;color:var(--text-muted);line-height:1.55;margin-bottom:14px;">대화가 정체되면 한 번 눌러 자리를 섞을 시간을 알려주세요.</p>
-          <button type="button" class="btn btn-outline" id="nudge-now-btn" style="width:100%;">지금 셔플 발동 🔀</button>
-        </div>
-
+        <!-- 자리 셔플 카드 폐기 (2026-04-19) — 호스트가 자연스럽게 분위기 조정하도록 -->
         <div class="free-card" id="free-topic-card">
           <div class="card-head">🃏 질문 카드</div>
           <div class="question-selector" id="free-q-list"></div>
@@ -2573,6 +2573,22 @@ function startFreeTimer(minutes) {
   _freeTimerInterval = setInterval(tick, 1000);
 }
 
+// 호스트가 자유대화 타이머 연장 — N분 추가
+function extendFreeTimer(minutes) {
+  const display = document.getElementById('free-timer-display');
+  if (!display) return;
+  if (_freeTimerInterval) {
+    // 진행 중 — 남은 시간에 더하기
+    _freeTimerTotalSec += minutes * 60;
+    display.style.color = 'var(--gold-light)';
+  } else {
+    // 종료 상태 — 다시 시작
+    startFreeTimer(minutes);
+    return;
+  }
+  if (typeof toast === 'function') toast(`⏱ 타이머 +${minutes}분 추가`);
+}
+
 // ── EVENTS ────────────────────────────────────────
 function bindEvents() {
   document.querySelectorAll('.phase-step').forEach(btn => {
@@ -2627,7 +2643,16 @@ function bindEvents() {
     updateState({ phase: 'closing-match-result', current_tab: 'closing' });
   });
 
-  document.getElementById('nudge-now-btn').addEventListener('click', sendNudge);
+  // 자리 셔플 폐기 — nudge 버튼 제거됨
+  // 자유대화 타이머 +N분 추가 핸들러
+  ['timer-add-10', 'timer-add-20', 'timer-add-30'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const minutes = parseInt(id.replace('timer-add-', ''), 10);
+      extendFreeTimer(minutes);
+    });
+  });
   document.getElementById('throw-card-btn').addEventListener('click', throwCard);
   document.getElementById('close-room-btn').addEventListener('click', closeRoom);
 }
