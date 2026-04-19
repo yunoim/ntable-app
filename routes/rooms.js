@@ -611,6 +611,53 @@ router.post('/rooms/:code/me/instagram', async (req, res) => {
   res.json({ ok: true, instagram: insta || null });
 });
 
+// PATCH /api/rooms/:code/me/profile — 본인 프로필 부분 수정 (내 정보 모달 인라인 편집용)
+// body: { uuid, gender?, birth_year?, region?, industry?, mbti?, interest?, instagram?,
+//         hide_birth_year?, hide_region?, hide_industry?, hide_interest?, hide_instagram? }
+router.patch('/rooms/:code/me/profile', async (req, res) => {
+  const { code } = req.params;
+  const { uuid } = req.body || {};
+  if (!uuid) return res.status(400).json({ error: 'uuid required' });
+  const room = await pool.query('SELECT id FROM rooms WHERE room_code = $1', [code]);
+  if (room.rows.length === 0) return res.status(404).json({ error: 'room not found' });
+  const room_id = room.rows[0].id;
+
+  const allowed = [
+    'gender', 'birth_year', 'region', 'industry', 'mbti', 'interest', 'instagram',
+    'hide_birth_year', 'hide_region', 'hide_industry', 'hide_interest', 'hide_instagram',
+  ];
+  const updates = [];
+  const params = [];
+  let i = 1;
+  for (const k of allowed) {
+    if (!(k in req.body)) continue;
+    let v = req.body[k];
+    if (k === 'instagram' && v != null) {
+      v = String(v).trim().replace(/^@/, '').toLowerCase().replace(/[^a-z0-9._]/g, '').slice(0, 50);
+      if (!v) v = null;
+    } else if (k === 'birth_year' && v != null) {
+      v = parseInt(v, 10);
+      if (!Number.isFinite(v) || v < 1900 || v > 2100) v = null;
+    } else if (k === 'gender' && v != null) {
+      v = String(v).slice(0, 20);
+    } else if (k.startsWith('hide_')) {
+      v = v === true || v === 'true';
+    } else if (typeof v === 'string') {
+      v = v.trim().slice(0, 200);
+      if (!v) v = null;
+    }
+    updates.push(`${k} = $${i++}`);
+    params.push(v);
+  }
+  if (updates.length === 0) return res.status(400).json({ error: 'nothing to update' });
+  params.push(room_id, uuid);
+  await pool.query(
+    `UPDATE room_members SET ${updates.join(', ')} WHERE room_id = $${i++} AND uuid = $${i++}`,
+    params
+  );
+  res.json({ ok: true });
+});
+
 // PATCH /api/rooms/:code/display — 호스트가 join wizard 'display' step에서 결정
 // body: { uuid, display_fields, birth_year_format, region_detail, photo_enabled }
 router.patch('/rooms/:code/display', async (req, res) => {

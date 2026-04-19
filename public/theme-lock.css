@@ -1,0 +1,36 @@
+/* ntable theme-lock — OS 다크/라이트 모드와 무관하게 항상 dark navy 테마 유지 */
+/* 모든 페이지 <head>에서 <link rel="stylesheet" href="/theme-lock.css"> 로 로드 */
+
+html {
+  /* "only" 키워드로 UA 가 자동 전환을 못하도록 고정 */
+  color-scheme: only dark;
+  /* iOS Safari 자동 다크 텍스트 톤 매핑 차단 */
+  -webkit-text-size-adjust: 100%;
+  forced-color-adjust: none;
+}
+
+/* 입력 요소 — OS 다크모드에서 자동 invert 차단 */
+input, textarea, select, button {
+  color-scheme: only dark;
+  forced-color-adjust: none;
+}
+
+/* Chrome 자동완성 노란/파란 배경 차단 */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill {
+  -webkit-text-fill-color: #f5f2ec;
+  -webkit-box-shadow: 0 0 0 1000px #141d35 inset;
+  caret-color: #f5f2ec;
+  transition: background-color 600000s 0s, color 600000s 0s;
+}
+
+/* 시스템 다크모드 미디어 쿼리 무력화 (외부 라이브러리 영향 차단) */
+@media (prefers-color-scheme: light) {
+  html { color-scheme: only dark !important; }
+}
+@media (prefers-color-scheme: dark) {
+  html { color-scheme: only dark !important; }
+}

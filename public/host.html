@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="dark">
+<link rel="stylesheet" href="/theme-lock.css">
 <title>ntable — 호스트 프레젠테이션</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -681,6 +682,14 @@
     margin-left: 4px;
   }
   .approved-kick-btn:hover { background: rgba(220,53,69,0.15); }
+  .approved-host-tag {
+    font-size: 11px;
+    color: var(--gold-light);
+    opacity: 0.85;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    margin-left: auto;
+  }
   .empty-msg { color: var(--text-muted); font-size: 13px; padding: 6px 2px; }
 
   .closing-substeps {
@@ -786,10 +795,37 @@
     color: var(--white);
   }
 
-  /* 운영 옵션 모달 자유대화 칩 — 체크 상태 시각 구분 */
+  /* 내 정보 모달 — 인라인 수정 행 */
+  .mi-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(212,168,67,0.06);
+  }
+  .mi-row label {
+    min-width: 76px;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+  .mi-row .mi-hide {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px;
+    color: var(--text-muted);
+    cursor: pointer;
+    min-width: auto;
+  }
+  .mi-row .mi-hide input { width: 14px; height: 14px; cursor: pointer; }
+  .mi-view-row {
+    display: flex; justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(212,168,67,0.06);
+  }
+  .mi-view-row .mi-k { color: var(--text-muted); font-size: 12.5px; }
+  .mi-view-row .mi-v { font-size: 13px; }
+
+  /* 운영 옵션 모달 자유대화 칩 — 체크 상태는 칩 강조만으로 표현 (체크박스는 시각적으로 숨김) */
   .rs-fc-chip {
     display: inline-flex; align-items: center; gap: 6px;
-    padding: 7px 13px;
+    padding: 8px 14px;
     background: rgba(212,168,67,0.06);
     border: 1px solid var(--gold-border);
     border-radius: 18px;
@@ -798,7 +834,12 @@
     color: var(--white-dim);
     transition: background 0.15s, border-color 0.15s, color 0.15s;
   }
-  .rs-fc-chip input { width: 14px; height: 14px; accent-color: var(--gold); cursor: pointer; }
+  .rs-fc-chip input {
+    position: absolute;
+    opacity: 0;
+    width: 0; height: 0;
+    pointer-events: none;
+  }
   .rs-fc-chip:has(input:checked) {
     background: rgba(212,168,67,0.22);
     border-color: var(--gold);
@@ -898,11 +939,14 @@
     padding: 12px 4px 24px;
     scroll-snap-type: x mandatory;
     scroll-behavior: smooth;
+    justify-content: center;
+    flex-wrap: wrap;
   }
   #profile-carousel::-webkit-scrollbar { height: 6px; }
   #profile-carousel::-webkit-scrollbar-track { background: transparent; }
   #profile-carousel::-webkit-scrollbar-thumb { background: rgba(212,168,67,0.2); border-radius: 3px; }
   .profile-card {
+    position: relative;
     min-width: 260px;
     background: var(--surface);
     border: 1px solid var(--gold-border);
@@ -913,6 +957,19 @@
     transition: transform 0.25s, border-color 0.25s;
   }
   .profile-card:hover { transform: translateY(-3px); border-color: rgba(212,168,67,0.45); }
+  .profile-host-badge {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    padding: 3px 9px;
+    background: rgba(212,168,67,0.18);
+    border: 1px solid var(--gold-border);
+    border-radius: 999px;
+    font-size: 10.5px;
+    color: var(--gold-light);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
   .profile-avatar {
     width: 64px; height: 64px;
     border-radius: 50%;
@@ -1404,7 +1461,6 @@
   <div class="sidebar-head">
     <div>
       <div class="brand">ntable</div>
-      <div class="brand-sub">Host Panel</div>
     </div>
     <button type="button" id="mobile-sidebar-toggle" onclick="toggleSidebar()" aria-label="호스트 도구 펼치기/접기">
       <span>호스트 도구</span>
@@ -1468,13 +1524,18 @@
           <button type="button" onclick="document.getElementById('copy-url-btn').click();closeHostTools()" style="display:block;width:100%;text-align:left;padding:10px 12px;background:none;border:none;color:var(--white-dim);font-family:inherit;font-size:13px;cursor:pointer;border-radius:6px;">🔗 입장 링크 복사</button>
           <button type="button" id="host-tools-kakao" hidden onclick="kakaoShare();closeHostTools()" style="display:block;width:100%;text-align:left;padding:10px 12px;background:none;border:none;color:var(--white-dim);font-family:inherit;font-size:13px;cursor:pointer;border-radius:6px;">💛 카카오톡으로 초대</button>
           <button type="button" onclick="openTVModal();closeHostTools()" style="display:block;width:100%;text-align:left;padding:10px 12px;background:none;border:none;color:var(--white-dim);font-family:inherit;font-size:13px;cursor:pointer;border-radius:6px;">📺 TV 연결</button>
-          <div style="height:1px;background:var(--border);margin:6px 0;"></div>
-          <button type="button" onclick="closeRoom();closeHostTools()" style="display:block;width:100%;text-align:left;padding:10px 12px;background:none;border:none;color:#ff8a8a;font-family:inherit;font-size:13px;cursor:pointer;border-radius:6px;">🛑 모임 끝내기</button>
+          <div style="height:1px;background:linear-gradient(to right, transparent, rgba(220,53,69,0.4), transparent);margin:8px 0;"></div>
+          <button type="button" onclick="closeRoom();closeHostTools()" style="display:block;width:100%;text-align:left;padding:10px 12px;background:rgba(220,53,69,0.06);border:none;color:#ff8a8a;font-family:inherit;font-size:13px;cursor:pointer;border-radius:6px;font-weight:600;">🛑 모임 끝내기</button>
         </div>
       </div>
-      <button type="button" id="open-settings-btn" title="질문/주제/문항수 편집 (모임 시작 전)">설정 ⚙</button>
-      <button type="button" id="open-room-settings-btn" title="모임 운영 옵션 (자유대화·역할·화면)">⚙ 운영</button>
-      <button type="button" id="open-my-info-btn">👤 내 정보</button>
+      <div style="position:relative;display:inline-block;">
+        <button type="button" id="open-more-btn" title="설정·운영·내 정보" style="background:rgba(212,168,67,0.12);border:1px solid var(--gold-border);color:var(--gold-light);padding:6px 12px;border-radius:8px;font-family:inherit;font-size:13px;cursor:pointer;">⋮ 더보기</button>
+        <div id="more-menu" hidden style="position:absolute;top:calc(100% + 6px);right:0;background:#141d35;border:1px solid var(--gold-border);border-radius:10px;padding:6px;min-width:180px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+          <button type="button" id="open-settings-btn" style="display:block;width:100%;text-align:left;padding:10px 12px;background:none;border:none;color:var(--white-dim);font-family:inherit;font-size:13px;cursor:pointer;border-radius:6px;">⚙ 설정 (콘텐츠)</button>
+          <button type="button" id="open-room-settings-btn" style="display:block;width:100%;text-align:left;padding:10px 12px;background:none;border:none;color:var(--white-dim);font-family:inherit;font-size:13px;cursor:pointer;border-radius:6px;">🎛 운영</button>
+          <button type="button" id="open-my-info-btn" style="display:block;width:100%;text-align:left;padding:10px 12px;background:none;border:none;color:var(--white-dim);font-family:inherit;font-size:13px;cursor:pointer;border-radius:6px;">👤 내 정보</button>
+        </div>
+      </div>
       <button type="button" onclick="logout()" hidden>정보 초기화</button>
     </div>
   </nav>
@@ -1484,12 +1545,9 @@
 
     <!-- INTRO -->
     <div class="panel active" id="panel-intro">
-      <div class="stage-tag" hidden>Step 01 · 소개</div>
-      <h1 class="stage-title">오늘의 <em>참가자</em></h1>
-      <p class="stage-sub">승인된 참가자의 프로필이 카드로 표시됩니다. 좌우로 넘기며 확인하세요.</p>
       <div id="profile-carousel"></div>
       <div id="no-approved" class="empty-msg" style="text-align:center; padding: 40px 0; font-size: 16px;">
-        아직 승인된 참가자가 없습니다. QR 스캔을 기다려주세요.
+        아직 참가자가 없어요. QR을 공유해 모임을 시작해보세요.
       </div>
     </div>
 
@@ -1593,7 +1651,7 @@
 </div>
 
 <!-- 설정 모달 (waiting 전용) -->
-<!-- 내 정보 모달 (프로필 prefill + 정보 초기화) -->
+<!-- 내 정보 모달 (계정 연동 + 프로필 인라인 수정 + 정보 초기화) -->
 <div id="my-info-modal" role="dialog" aria-modal="true" style="position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;">
   <div onclick="closeMyInfo()" style="position:absolute;inset:0;background:rgba(0,0,0,0.6);"></div>
   <div style="position:relative;background:#141d35;border:1px solid var(--gold-border);border-radius:18px;padding:24px;max-width:440px;width:calc(100% - 32px);max-height:90vh;overflow-y:auto;">
@@ -1601,14 +1659,34 @@
     <h3 style="margin:0 0 4px;font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--white);">👤 내 정보</h3>
     <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:18px;">현재 모임에 저장된 내 카드 정보입니다.</div>
 
-    <div id="mi-content" style="font-size:13px;color:var(--text);line-height:1.7;"><div style="text-align:center;color:var(--text-muted);padding:20px 0;">불러오는 중…</div></div>
+    <!-- 1. 계정 연동 -->
+    <div class="mi-section" style="margin-bottom:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="font-size:11.5px;color:var(--gold);letter-spacing:0.1em;font-weight:700;">🔗 계정 연동</div>
+        <label class="mi-switch" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--white-dim);">
+          <input type="checkbox" id="mi_login_remember" style="position:absolute;opacity:0;pointer-events:none;">
+          <span class="mi-switch-track" style="width:34px;height:18px;background:rgba(255,255,255,0.12);border-radius:999px;position:relative;display:inline-block;transition:background 0.18s;"><span class="mi-switch-knob" style="position:absolute;top:2px;left:2px;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform 0.18s;"></span></span>
+          <span>내 정보 기억하기</span>
+        </label>
+      </div>
+      <div id="mi_account_body" style="margin-top:8px;"></div>
+    </div>
 
-    <button type="button" onclick="goToWizardEdit()" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--gold),#a07828);color:var(--navy);border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:18px;">wizard에서 수정하기</button>
+    <!-- 2. 프로필 -->
+    <div class="mi-section" style="margin-bottom:20px;padding-top:14px;border-top:1px dashed rgba(212,168,67,0.18);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="font-size:11.5px;color:var(--gold);letter-spacing:0.1em;font-weight:700;">프로필</div>
+        <button type="button" id="mi_edit_btn" onclick="toggleMiEdit()" style="background:rgba(212,168,67,0.12);border:1px solid var(--gold-border);color:var(--gold-light);padding:5px 11px;border-radius:8px;font-family:inherit;font-size:12px;cursor:pointer;">✎ 수정하기</button>
+      </div>
+      <div id="mi-content" style="font-size:13px;color:var(--text);line-height:1.7;"><div style="text-align:center;color:var(--text-muted);padding:20px 0;">불러오는 중…</div></div>
+      <div id="mi_edit_status" style="font-size:11px;color:var(--success);margin-top:8px;text-align:center;min-height:14px;"></div>
+    </div>
 
-    <div style="margin-top:24px;padding-top:18px;border-top:1px dashed rgba(212,168,67,0.2);">
-      <div style="font-size:11px;color:var(--text-muted);letter-spacing:0.06em;margin-bottom:10px;text-transform:uppercase;">기기 관리</div>
-      <button type="button" onclick="clearDeviceCacheFromModal()" style="width:100%;padding:11px;background:transparent;border:1px solid rgba(255,138,138,0.3);color:#ff8a8a;border-radius:10px;font-size:12.5px;cursor:pointer;font-family:inherit;">이 기기에 저장된 정보 초기화</button>
-      <div style="font-size:11px;color:var(--text-dim);margin-top:8px;line-height:1.5;">닉네임·프로필 캐시를 모두 지웁니다. 진행 중인 모임은 유지됩니다.</div>
+    <!-- 3. 기기 관리 -->
+    <div style="margin-top:18px;padding-top:14px;border-top:1px dashed rgba(212,168,67,0.18);">
+      <div style="font-size:11.5px;color:var(--gold);letter-spacing:0.1em;font-weight:700;margin-bottom:10px;">기기 관리</div>
+      <button type="button" onclick="clearDeviceCacheFromModal()" style="width:100%;padding:12px;background:rgba(220,53,69,0.10);border:1.5px solid rgba(220,53,69,0.55);color:#ff7575;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">⚠️ 이 기기에 저장된 정보 초기화</button>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:8px;line-height:1.5;">닉네임·프로필·로그인 캐시를 모두 지웁니다. 진행 중인 모임은 유지됩니다. <strong style="color:#ff9696;">되돌릴 수 없습니다.</strong></div>
     </div>
   </div>
 </div>
@@ -1675,14 +1753,7 @@
     <h3 id="settings-title">모임 설정</h3>
     <div class="settings-sub">모임 시작 전에만 편집할 수 있어요.</div>
 
-    <div class="settings-field" style="margin-bottom:18px;">
-      <label>내 참여 여부</label>
-      <div class="yn-row" style="display:flex; gap:10px; margin-top:6px;">
-        <button type="button" class="yn-btn" id="hr-participant" data-role="participant">🙋 저도 참여할게요</button>
-        <button type="button" class="yn-btn" id="hr-host-only" data-role="host_only">🎤 진행만 할게요</button>
-      </div>
-      <div class="settings-hint" style="margin-top:8px;">참여 선택 시 투표·매칭에도 들어가요. 진행만 선택 시 집계에서 제외됩니다.</div>
-    </div>
+    <!-- 내 참여 여부는 ⚙ 운영 모달의 '호스트 역할' 으로 일원화 (2026-04-19) -->
 
     <div class="settings-tabs">
       <button type="button" class="settings-tab active" data-stab="questions">탐구 질문</button>
@@ -1840,7 +1911,7 @@ async function loadRoomInfo() {
         const me = await meRes.json();
         state.nickname = me.nickname || '';
         const nickEl = document.getElementById('user-nick');
-        if (nickEl) nickEl.textContent = `@${state.nickname}`;
+        if (nickEl) nickEl.textContent = state.nickname;
       }
     } catch {}
   } catch {}
@@ -2083,18 +2154,22 @@ function renderApprovedList() {
     const photoHtml = photo
       ? `<img class="approved-photo" src="${escHtml(photo)}" alt="">`
       : (isBanned ? `<span class="approved-banned-dot" title="사진 차단됨">🚫</span>` : `<span class="approved-dot"></span>`);
-    let photoBtn = '';
-    if (photo) {
-      photoBtn = `<button type="button" class="approved-kick" title="사진 강제 제거" onclick="photoKick('${escHtml(u.uuid)}','${escHtml(u.nickname)}')">✕</button>`;
-    } else if (isBanned) {
-      photoBtn = `<button type="button" class="approved-unban" title="사진 차단 해제" onclick="photoUnban('${escHtml(u.uuid)}','${escHtml(u.nickname)}')">↺</button>`;
-    }
     const isSelf = u.uuid === state.uuid;
-    // 호스트 본인은 강퇴 불가 — 라벨로 명시 (모임장 표시)
-    const kickBtn = isSelf
-      ? `<span class="approved-name" style="font-size:11px;color:var(--gold-light);opacity:0.85;letter-spacing:0.04em;">🎤 나 · 모임장</span>`
-      : `<button type="button" class="approved-kick-btn" title="이 참가자 강퇴" onclick="kickUser('${escHtml(u.uuid)}','${escHtml(u.nickname)}')">강퇴</button>`;
-    el.innerHTML = `${photoHtml}<span class="approved-name">${escHtml(u.nickname)}</span>${photoBtn}${kickBtn}`;
+    // 호스트 본인은 강퇴/사진강퇴 모두 불가 — 라벨로 명시
+    let actionHtml = '';
+    if (isSelf) {
+      actionHtml = `<span class="approved-host-tag">🎤 나 · 모임장</span>`;
+    } else {
+      let photoBtn = '';
+      if (photo) {
+        photoBtn = `<button type="button" class="approved-kick" title="사진 강제 제거" onclick="photoKick('${escHtml(u.uuid)}','${escHtml(u.nickname)}')">✕</button>`;
+      } else if (isBanned) {
+        photoBtn = `<button type="button" class="approved-unban" title="사진 차단 해제" onclick="photoUnban('${escHtml(u.uuid)}','${escHtml(u.nickname)}')">↺</button>`;
+      }
+      const kickBtn = `<button type="button" class="approved-kick-btn" title="이 참가자 강퇴" onclick="kickUser('${escHtml(u.uuid)}','${escHtml(u.nickname)}')">강퇴</button>`;
+      actionHtml = `${photoBtn}${kickBtn}`;
+    }
+    el.innerHTML = `${photoHtml}<span class="approved-name">${escHtml(u.nickname)}</span>${actionHtml}`;
     list.appendChild(el);
   }
 }
@@ -2150,7 +2225,10 @@ function renderProfiles() {
     const meta = [genderLabel, birthDisplay, (showRegion && u.region) ? escHtml(u.region) : ''].filter(Boolean).join(' · ');
     const card = document.createElement('div');
     card.className = 'profile-card';
+    const isHostCard = u.uuid === state.host_uuid || u.uuid === state.uuid;
+    const hostBadge = isHostCard ? `<div class="profile-host-badge" title="모임 호스트">🎤 호스트</div>` : '';
     card.innerHTML = `
+      ${hostBadge}
       ${avatarHtml}
       <div class="name">${escHtml(u.nickname)}</div>
       <div class="meta">${meta}</div>
@@ -2455,8 +2533,7 @@ function bindEvents() {
         if (!Kakao.isInitialized()) Kakao.init(cfg.kakaoJsKey);
         const mb = document.getElementById('mobile-share-kakao');
         if (mb) mb.hidden = false;
-        const sb = document.getElementById('sidebar-kakao-btn');
-        if (sb) sb.hidden = false;
+        // sidebar-kakao-btn 노출 폐지 — 호스트 도구 드롭다운에만 유지
         const qm = document.getElementById('qr-modal-kakao');
         if (qm) qm.hidden = false;
         console.log('[host] kakao buttons revealed');
@@ -3220,25 +3297,121 @@ async function saveSettings() {
 
 document.getElementById('open-settings-btn')?.addEventListener('click', openSettings);
 
-// 내 정보 모달 — wizard 입력값(room_members) prefill + 정보 초기화 통합
+// 내 정보 모달 — 계정 연동 + 프로필 인라인 수정 + 정보 초기화 통합
+let _miEditMode = false;
+let _miCurrent = null;
+
 async function openMyInfo() {
   const modal = document.getElementById('my-info-modal');
-  const content = document.getElementById('mi-content');
   modal.style.display = 'flex';
+  _miEditMode = false;
+  document.getElementById('mi_edit_btn').textContent = '✎ 수정하기';
+  document.getElementById('mi_edit_status').textContent = '';
+  // 계정 연동 영역 동기화
+  await renderMiAccount();
+  await loadMiProfile();
+}
+function closeMyInfo() { document.getElementById('my-info-modal').style.display = 'none'; }
+
+async function renderMiAccount() {
+  const remember = (() => { try { return localStorage.getItem('login_remember') === 'true'; } catch (_) { return false; } })();
+  const toggle = document.getElementById('mi_login_remember');
+  toggle.checked = remember;
+  paintMiSwitch(remember);
+  // 현재 OAuth 세션 조회 (실패 무시)
+  let session = null;
+  try {
+    const r = await fetch('/api/auth/me', { credentials: 'include' });
+    if (r.ok) {
+      const me = await r.json();
+      if (me && me.email) session = me;
+    }
+  } catch (_) {}
+  const body = document.getElementById('mi_account_body');
+  if (!remember) {
+    body.innerHTML = `<div style="font-size:11.5px;color:var(--text-muted);line-height:1.55;">토글 ON 시 다음 모임부터 자동 완성. 본 기기에만 저장돼요.</div>`;
+    return;
+  }
+  if (session && session.email) {
+    const provider = session.provider === 'kakao' ? '카카오' : (session.provider === 'google' ? 'Google' : '계정');
+    body.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:rgba(126,232,162,0.08);border:1px solid rgba(126,232,162,0.3);border-radius:10px;font-size:12.5px;color:#aef0c1;">
+        <span>✓ ${escHtml(provider)} 연결됨 · ${escHtml(session.email)}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.55;">이 모임 입력 정보가 자동 저장됩니다. 토글 OFF 시 연동 해제.</div>
+    `;
+  } else {
+    body.innerHTML = `
+      <div style="display:flex;gap:8px;">
+        <a href="/api/auth/google" style="flex:1;text-align:center;padding:10px;background:#fff;color:#222;border-radius:10px;text-decoration:none;font-size:13px;font-weight:600;">Google로 로그인</a>
+        <a href="/api/auth/kakao" style="flex:1;text-align:center;padding:10px;background:#FEE500;color:#191919;border-radius:10px;text-decoration:none;font-size:13px;font-weight:600;">카카오로 로그인</a>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.55;">로그인하면 다음 모임부터 자동 완성</div>
+    `;
+  }
+}
+function paintMiSwitch(on) {
+  const track = document.querySelector('#my-info-modal .mi-switch-track');
+  const knob = document.querySelector('#my-info-modal .mi-switch-knob');
+  if (!track || !knob) return;
+  track.style.background = on ? 'rgba(212,168,67,0.55)' : 'rgba(255,255,255,0.12)';
+  knob.style.transform = on ? 'translateX(16px)' : 'translateX(0)';
+}
+document.addEventListener('change', (e) => {
+  if (e.target && e.target.id === 'mi_login_remember') {
+    const on = e.target.checked;
+    try { localStorage.setItem('login_remember', on ? 'true' : 'false'); } catch (_) {}
+    paintMiSwitch(on);
+    // OFF 클릭 시 즉시 연동 해제 (서버 세션 종료)
+    if (!on) {
+      fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+    }
+    renderMiAccount();
+  }
+});
+
+async function loadMiProfile() {
+  const content = document.getElementById('mi-content');
   content.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px 0;">불러오는 중…</div>';
   try {
     const res = await fetch(`/api/rooms/${state.roomCode}/members/${encodeURIComponent(state.uuid)}?viewer=${encodeURIComponent(state.uuid)}`);
     if (!res.ok) throw new Error('fetch failed');
-    const me = await res.json();
-    const photo = state.photos[state.uuid] || (() => { try { return localStorage.getItem(`ntable_photo_${state.roomCode}`) || ''; } catch (_) { return ''; } })();
+    _miCurrent = await res.json();
+    renderMiProfile();
+  } catch (e) {
+    content.innerHTML = '<div style="text-align:center;color:var(--danger);padding:20px 0;">정보를 불러오지 못했어요.</div>';
+  }
+}
+
+function renderMiProfile() {
+  const me = _miCurrent || {};
+  const content = document.getElementById('mi-content');
+  const photo = state.photos[state.uuid] || (() => { try { return localStorage.getItem(`ntable_photo_${state.roomCode}`) || ''; } catch (_) { return ''; } })();
+  if (_miEditMode) {
+    content.innerHTML = `
+      ${photo ? `<div style="text-align:center;margin-bottom:14px;"><img src="${escHtml(photo)}" style="width:88px;height:88px;border-radius:50%;object-fit:cover;border:2px solid var(--gold-border);"></div>` : ''}
+      <div class="mi-row"><label>닉네임</label><span style="color:var(--text-dim);font-size:11.5px;">변경 불가 (모임별 고정)</span></div>
+      ${miEditField('성별', 'gender', me.gender, [['male','남성'],['female','여성'],['unspecified','선택 안 함']])}
+      ${miEditNum('출생연도', 'birth_year', me.birth_year, 1900, 2100, 'hide_birth_year', me.hide_birth_year)}
+      ${miEditText('지역', 'region', me.region, 'hide_region', me.hide_region)}
+      ${miEditText('업종', 'industry', me.industry, 'hide_industry', me.hide_industry)}
+      ${miEditText('MBTI', 'mbti', me.mbti, null, false)}
+      ${miEditText('관심사', 'interest', me.interest, 'hide_interest', me.hide_interest)}
+      ${miEditText('인스타그램', 'instagram', me.instagram, 'hide_instagram', me.hide_instagram)}
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button type="button" onclick="cancelMiEdit()" style="flex:1;padding:11px;background:transparent;border:1px solid var(--border);color:var(--white-dim);border-radius:10px;font-size:13px;cursor:pointer;font-family:inherit;">취소</button>
+        <button type="button" onclick="saveMiEdit()" style="flex:2;padding:11px;background:linear-gradient(135deg,var(--gold),#a07828);color:var(--navy);border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">저장</button>
+      </div>
+    `;
+  } else {
     const row = (k, v, hidden) => {
-      if (!v) return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(212,168,67,0.06);"><span style="color:var(--text-muted);">${k}</span><span style="color:var(--text-dim);font-style:italic;">생략</span></div>`;
-      if (hidden) return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(212,168,67,0.06);"><span style="color:var(--text-muted);">${k}</span><span style="opacity:0.55;">${escHtml(v)} <span style="font-size:10px;color:#9aa0ac;">🔒</span></span></div>`;
-      return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(212,168,67,0.06);"><span style="color:var(--text-muted);">${k}</span><span style="color:var(--white);font-weight:500;">${escHtml(v)}</span></div>`;
+      if (!v) return `<div class="mi-view-row"><span class="mi-k">${k}</span><span class="mi-v" style="color:var(--text-dim);font-style:italic;">생략</span></div>`;
+      if (hidden) return `<div class="mi-view-row"><span class="mi-k">${k}</span><span class="mi-v" style="opacity:0.55;">${escHtml(v)} <span style="font-size:10px;">🔒</span></span></div>`;
+      return `<div class="mi-view-row"><span class="mi-k">${k}</span><span class="mi-v" style="color:var(--white);font-weight:500;">${escHtml(v)}</span></div>`;
     };
     const genderLabel = me.gender === 'male' ? '남성' : me.gender === 'female' ? '여성' : me.gender === 'unspecified' ? '선택 안 함' : '';
     content.innerHTML = `
-      ${photo ? `<div style="text-align:center;margin-bottom:16px;"><img src="${escHtml(photo)}" style="width:96px;height:96px;border-radius:50%;object-fit:cover;border:2px solid var(--gold-border);"></div>` : ''}
+      ${photo ? `<div style="text-align:center;margin-bottom:14px;"><img src="${escHtml(photo)}" style="width:88px;height:88px;border-radius:50%;object-fit:cover;border:2px solid var(--gold-border);"></div>` : ''}
       ${row('닉네임', me.nickname, false)}
       ${row('성별', genderLabel, false)}
       ${row('출생연도', me.birth_year ? me.birth_year + '년' : '', me.hide_birth_year)}
@@ -3248,17 +3421,80 @@ async function openMyInfo() {
       ${row('관심사', me.interest, me.hide_interest)}
       ${row('인스타그램', me.instagram ? '@' + me.instagram : '', me.hide_instagram)}
     `;
-  } catch (e) {
-    content.innerHTML = '<div style="text-align:center;color:var(--danger);padding:20px 0;">정보를 불러오지 못했어요.</div>';
   }
 }
-function closeMyInfo() { document.getElementById('my-info-modal').style.display = 'none'; }
-function goToWizardEdit() {
-  // wizard에 edit=1 쿼리로 보내서 already joined여도 wizard 다시 진행 (room_members UPDATE)
-  location.href = `/room/${state.roomCode}/join?edit=1`;
+
+function miEditText(label, key, val, hideKey, hideVal) {
+  return `
+    <div class="mi-row">
+      <label>${label}</label>
+      <input type="text" data-mi-field="${key}" value="${escHtml(val == null ? '' : val)}" style="flex:1;padding:8px 10px;background:rgba(212,168,67,0.06);border:1px solid var(--gold-border);border-radius:8px;color:#fff;font-family:inherit;font-size:13px;">
+      ${hideKey ? `<label class="mi-hide"><input type="checkbox" data-mi-field="${hideKey}"${hideVal?' checked':''}> 🔒</label>` : ''}
+    </div>`;
 }
+function miEditNum(label, key, val, min, max, hideKey, hideVal) {
+  return `
+    <div class="mi-row">
+      <label>${label}</label>
+      <input type="number" min="${min}" max="${max}" data-mi-field="${key}" value="${val == null ? '' : val}" style="flex:1;padding:8px 10px;background:rgba(212,168,67,0.06);border:1px solid var(--gold-border);border-radius:8px;color:#fff;font-family:inherit;font-size:13px;">
+      ${hideKey ? `<label class="mi-hide"><input type="checkbox" data-mi-field="${hideKey}"${hideVal?' checked':''}> 🔒</label>` : ''}
+    </div>`;
+}
+function miEditField(label, key, val, opts) {
+  return `
+    <div class="mi-row">
+      <label>${label}</label>
+      <select data-mi-field="${key}" style="flex:1;padding:8px 10px;background:rgba(212,168,67,0.06);border:1px solid var(--gold-border);border-radius:8px;color:#fff;font-family:inherit;font-size:13px;">
+        <option value="">선택</option>
+        ${opts.map(([v, t]) => `<option value="${escHtml(v)}"${val===v?' selected':''}>${escHtml(t)}</option>`).join('')}
+      </select>
+    </div>`;
+}
+
+function toggleMiEdit() {
+  _miEditMode = !_miEditMode;
+  document.getElementById('mi_edit_btn').textContent = _miEditMode ? '× 보기' : '✎ 수정하기';
+  document.getElementById('mi_edit_status').textContent = '';
+  renderMiProfile();
+}
+function cancelMiEdit() {
+  _miEditMode = false;
+  document.getElementById('mi_edit_btn').textContent = '✎ 수정하기';
+  renderMiProfile();
+}
+async function saveMiEdit() {
+  const inputs = document.querySelectorAll('#mi-content [data-mi-field]');
+  const body = { uuid: state.uuid };
+  for (const inp of inputs) {
+    const k = inp.dataset.miField;
+    if (inp.type === 'checkbox') body[k] = inp.checked;
+    else if (inp.type === 'number') body[k] = inp.value ? parseInt(inp.value, 10) : null;
+    else body[k] = inp.value || null;
+  }
+  const status = document.getElementById('mi_edit_status');
+  status.textContent = '저장 중…';
+  status.style.color = 'var(--text-muted)';
+  try {
+    const r = await fetch(`/api/rooms/${state.roomCode}/me/profile`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error('save failed');
+    status.textContent = '✓ 저장됨';
+    status.style.color = 'var(--success)';
+    _miEditMode = false;
+    document.getElementById('mi_edit_btn').textContent = '✎ 수정하기';
+    await loadMiProfile();
+    setTimeout(() => { status.textContent = ''; }, 2000);
+  } catch (e) {
+    status.textContent = '저장 실패. 다시 시도해주세요.';
+    status.style.color = 'var(--danger)';
+  }
+}
+
 async function clearDeviceCacheFromModal() {
-  if (!confirm('이 기기에 저장된 닉네임·프로필을 모두 지울까요? 진행 중인 모임은 유지됩니다.')) return;
+  if (!confirm('⚠️ 이 기기에 저장된 닉네임·프로필·로그인 캐시를 모두 지울까요?\n진행 중인 모임은 유지됩니다.\n되돌릴 수 없습니다.')) return;
   try {
     localStorage.removeItem('preferred_nickname');
     localStorage.removeItem('profile_snapshot');
@@ -3266,6 +3502,8 @@ async function clearDeviceCacheFromModal() {
     localStorage.removeItem(`ntable_intro_${state.roomCode}`);
     localStorage.removeItem('login_remember');
   } catch (_) {}
+  // 서버 세션도 종료 (best-effort)
+  try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch (_) {}
   alert('초기화 완료');
   closeMyInfo();
 }
@@ -3278,22 +3516,48 @@ function closeHostTools() { if (hostToolsMenu) hostToolsMenu.hidden = true; }
 hostToolsBtn?.addEventListener('click', (e) => {
   e.stopPropagation();
   hostToolsMenu.hidden = !hostToolsMenu.hidden;
+  // 다른 메뉴 닫기
+  const mm = document.getElementById('more-menu');
+  if (mm) mm.hidden = true;
 });
 document.addEventListener('click', (e) => {
   if (hostToolsMenu && !hostToolsMenu.hidden && !e.target.closest('#host-tools-menu') && !e.target.closest('#open-host-tools-btn')) {
     hostToolsMenu.hidden = true;
   }
 });
-// KAKAO_JS_KEY 활성 시 host-tools 드롭다운에도 카카오 노출
-const _kakaoCheck = setInterval(() => {
-  const sb = document.getElementById('sidebar-kakao-btn');
-  if (sb && !sb.hidden) {
-    const ht = document.getElementById('host-tools-kakao');
-    if (ht) ht.hidden = false;
-    clearInterval(_kakaoCheck);
+
+// ⋮ 더보기 드롭다운 toggle (설정·운영·내 정보 통합)
+const moreBtn = document.getElementById('open-more-btn');
+const moreMenu = document.getElementById('more-menu');
+function closeMore() { if (moreMenu) moreMenu.hidden = true; }
+moreBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  moreMenu.hidden = !moreMenu.hidden;
+  if (hostToolsMenu) hostToolsMenu.hidden = true;
+});
+document.addEventListener('click', (e) => {
+  if (moreMenu && !moreMenu.hidden && !e.target.closest('#more-menu') && !e.target.closest('#open-more-btn')) {
+    moreMenu.hidden = true;
   }
-}, 500);
-setTimeout(() => clearInterval(_kakaoCheck), 10000);
+});
+// 더보기 안 항목 클릭 시 메뉴 닫기 (각 모달은 자기 핸들러가 열어줌)
+moreMenu?.addEventListener('click', (e) => {
+  if (e.target.tagName === 'BUTTON') closeMore();
+});
+// KAKAO_JS_KEY 활성 시 host-tools 드롭다운 카카오 노출 (share-config 결과 직접 활용)
+const _kakaoHTCheck = setInterval(async () => {
+  try {
+    const r = await fetch('/api/share-config');
+    if (!r.ok) return;
+    const cfg = await r.json();
+    if (cfg.kakaoJsKey) {
+      const ht = document.getElementById('host-tools-kakao');
+      if (ht) ht.hidden = false;
+      clearInterval(_kakaoHTCheck);
+    }
+  } catch (_) {}
+}, 1000);
+setTimeout(() => clearInterval(_kakaoHTCheck), 10000);
 
 // 운영 옵션 모달 (탐구 문항·자유대화·역할·화면)
 function openRoomSettings() {
