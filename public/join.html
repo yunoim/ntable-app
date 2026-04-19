@@ -957,6 +957,7 @@ async function submitJoin() {
       localStorage.setItem('profile_snapshot', JSON.stringify({
         gender: data.gender, birth_year: data.birth_year, region: data.region,
         industry: data.industry, mbti: data.mbti, interest: data.interest,
+        instagram: data.instagram,
       }));
     } catch (_) {}
     // OAuth 로그인 상태이면 server users 테이블에도 profile 저장 (다음 모임 prefill)
@@ -969,6 +970,7 @@ async function submitJoin() {
           body: JSON.stringify({
             gender: data.gender, birth_year: data.birth_year, region: data.region,
             industry: data.industry, mbti: data.mbti, interest: data.interest,
+            instagram: data.instagram,
           }),
         });
       }
