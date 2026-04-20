@@ -570,6 +570,14 @@
 
   async function loadParticipants() {
     try {
+      // couples 팩은 2인 전용 — '또 만나고 싶은 사람' 선택 의미 없어 섹션 자체 노출 안 함
+      try {
+        const rr = await fetch(`/api/rooms/${encodeURIComponent(room_code)}`);
+        if (rr.ok) {
+          const rd = await rr.json();
+          if (rd.pack_id === 'couples') return;
+        }
+      } catch (_) {}
       const r = await fetch(`/api/survey/participants?room=${encodeURIComponent(room_code)}&uuid=${encodeURIComponent(uuid)}`);
       const list = await r.json();
       if (!Array.isArray(list) || list.length === 0) return;
