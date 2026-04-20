@@ -8,6 +8,7 @@
 <script src="/samsung-dark-warn.js" defer></script>
 <script src="/oauth-redirect.js"></script>
 <script src="/auth-header.js" defer></script>
+<script src="/remember-toggle.js" defer></script>
 <title>ntable — 모임 입장</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -276,7 +277,7 @@
   <main id="main"><!-- steps injected --></main>
 
   <div class="anon-note">
-    🔒 <strong>모임별 익명</strong> · 모임이 끝나면 모든 정보 자동 폐기
+    🔒 <strong>익명성 보장</strong> · 모임이 끝나면 개인 정보 자동 폐기
   </div>
 </div>
 
@@ -794,11 +795,11 @@ function renderStep() {
           ${showFld('interest') ? rowH('관심사', data.interest, data.hide_interest) : ''}
           ${showFld('instagram') ? rowH('인스타그램', data.instagram ? '@' + data.instagram : '', data.hide_instagram) : ''}
         </div>
+        <div class="err-msg" id="errMsg"></div>
         <div class="actions">
           ${prevBtn}
           <button type="button" class="btn btn-next" id="submitBtn" onclick="submitJoin()">${submitLabel}</button>
         </div>
-        <div class="err-msg" id="errMsg"></div>
       `;
       break;
   }
