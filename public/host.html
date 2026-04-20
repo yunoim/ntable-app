@@ -1555,9 +1555,17 @@
       flex-wrap: nowrap;
       justify-content: flex-start;
       gap: 14px;
+      padding: 12px 0 24px;
       padding-inline: 11vw;
       scroll-padding-inline: 11vw;
       scrollbar-width: none;
+      overflow-x: auto;
+      overflow-y: hidden;
+      max-width: 100%;
+      min-width: 0;
+      width: 100%;
+      touch-action: pan-x;
+      align-self: stretch;
     }
     #profile-carousel::-webkit-scrollbar { display: none; }
     .profile-card {
@@ -1566,6 +1574,7 @@
       max-width: 78vw;
       padding: 22px 18px;
       scroll-snap-align: center;
+      flex-shrink: 0;
     }
     .profile-card .name { font-size: 20px; }
 
@@ -1887,7 +1896,7 @@
 
 <!-- 설정 모달 (waiting 전용) -->
 <!-- 내 정보 모달 (계정 연동 + 프로필 인라인 수정 + 정보 초기화) -->
-<div id="my-info-modal" role="dialog" aria-modal="true" style="position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;">
+<div id="my-info-modal" role="dialog" aria-modal="true" style="position:fixed;inset:0;z-index:1500;display:none;align-items:center;justify-content:center;">
   <div onclick="closeMyInfo()" style="position:absolute;inset:0;background:rgba(0,0,0,0.6);"></div>
   <div style="position:relative;background:#141d35;border:1px solid var(--gold-border);border-radius:18px;padding:24px;max-width:440px;width:calc(100% - 32px);max-height:90vh;overflow-y:auto;">
     <button type="button" onclick="closeMyInfo()" style="position:absolute;top:12px;right:12px;background:none;border:none;color:#c0c0c0;font-size:24px;cursor:pointer;">×</button>
@@ -1927,7 +1936,7 @@
 </div>
 
 <!-- 운영 옵션 모달 (탐구 문항 / 자유대화 / 호스트 역할 / 화면 형태) -->
-<div id="room-settings-modal" role="dialog" aria-modal="true" style="position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;">
+<div id="room-settings-modal" role="dialog" aria-modal="true" style="position:fixed;inset:0;z-index:1500;display:none;align-items:center;justify-content:center;">
   <div onclick="closeRoomSettings()" style="position:absolute;inset:0;background:rgba(0,0,0,0.6);"></div>
   <div style="position:relative;background:#141d35;border:1px solid var(--gold-border);border-radius:18px;padding:24px;max-width:420px;width:calc(100% - 32px);max-height:85vh;overflow-y:auto;">
     <button type="button" onclick="closeRoomSettings()" style="position:absolute;top:12px;right:12px;background:none;border:none;color:#c0c0c0;font-size:24px;cursor:pointer;">×</button>
@@ -3914,6 +3923,8 @@ let _miEditMode = false;
 let _miCurrent = null;
 
 async function openMyInfo() {
+  // 상단 더보기 드롭다운이 모달 위에 떠 있지 않도록 먼저 닫기
+  if (typeof closeMore === 'function') closeMore();
   const modal = document.getElementById('my-info-modal');
   modal.style.display = 'flex';
   _miEditMode = false;
