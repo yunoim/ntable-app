@@ -2229,7 +2229,18 @@ async function loadRoomInfo() {
     }
     state.room = room;
     state.packDefaults = (room.pack_defaults && typeof room.pack_defaults === 'object') ? room.pack_defaults : {};
-    if (state.packDefaults.skip_free_chat === true) document.body.classList.add('skip-free-chat');
+    if (state.packDefaults.skip_free_chat === true) {
+      document.body.classList.add('skip-free-chat');
+      // free 단계가 숨겨지면 phase-bar 번호·라벨 재매핑 (01·02·(03 ending="결과"))
+      const endBtn = document.querySelector('.phase-step[data-tab="ending"]');
+      if (endBtn) {
+        const n = endBtn.querySelector('.phase-num');
+        const l = endBtn.querySelector('.phase-label');
+        if (n) n.textContent = '03';
+        if (l) l.textContent = '결과';
+        endBtn.setAttribute('aria-label', '3단계: 결과');
+      }
+    }
     state.displayFields = Array.isArray(room.display_fields) ? room.display_fields : ['birth_year','region','industry','interest'];
     state.birthYearFormat = room.birth_year_format || 'exact';
     state.hostRole = room.host_role || 'host_only';

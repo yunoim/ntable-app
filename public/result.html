@@ -118,6 +118,11 @@
     min-height: 480px;
     overscroll-behavior-x: contain;
   }
+  /* PC 에선 마우스 드래그로 넘길 수 있음을 커서로 암시 */
+  @media (hover: hover) and (pointer: fine) {
+    .pager { cursor: grab; }
+    .pager:active { cursor: grabbing; }
+  }
   .pager::-webkit-scrollbar { display: none; }
   .page {
     flex: 0 0 100%;
@@ -266,7 +271,7 @@
     font-size: 11px;
     color: var(--text-muted);
     letter-spacing: 0.14em;
-    text-transform: uppercase;
+    text-transform: none;
     font-weight: 600;
     position: relative;
   }
@@ -957,17 +962,11 @@
       // 내가 속한 mutual pair → couple share card 대상
       const myMutual = mutualPairs.find(p => (p?.a?.uuid === uuid) || (p?.b?.uuid === uuid));
       couplePartnerUuid = myMutual ? (myMutual.a?.uuid === uuid ? myMutual.b?.uuid : myMutual.a?.uuid) : null;
-      // couples 팩은 mutual_pairs 가 비어있을 수 있음 (매칭 단계 없음) — 나 외 첫 멤버를 파트너로 가정
+      // couples 팩은 매칭 단계가 없어 mutual_pairs 가 비어있음 — 서버 /result 응답의 couple_partner_uuid 로 결정.
+      // (기존 /members 폴백은 WS 연결된 클라이언트만 반환해서 결과 페이지 시점엔 빈 배열)
       const isCouplesPack = data.pack_id === 'couples';
-      if (!couplePartnerUuid && isCouplesPack) {
-        try {
-          const mRes = await fetch(`/api/rooms/${room_code}/members?viewer=${encodeURIComponent(uuid)}`);
-          if (mRes.ok) {
-            const members = await mRes.json();
-            const other = Array.isArray(members) ? members.find(m => m.uuid && m.uuid !== uuid) : null;
-            if (other) couplePartnerUuid = other.uuid;
-          }
-        } catch (_) {}
+      if (!couplePartnerUuid && isCouplesPack && data.couple_partner_uuid) {
+        couplePartnerUuid = data.couple_partner_uuid;
       }
       const coupleBtnHtml = couplePartnerUuid ? `
         <button type="button" class="share-btn outline" style="margin-top:16px;width:100%;" onclick="generateCoupleCard()">💘 둘이서 공유 카드 만들기</button>
@@ -1117,25 +1116,53 @@
           const myMember = (ed.members || []).find(m => m.uuid === uuid);
           const myVotes = (myMember && myMember.votes_json) || {};
           if ((ed.questions || []).length) {
-            hlHtml = ed.questions.map((q, i) => {
-                const opts = q.options || [];
-                const optA = String(opts[0] || '').replace(/^A\.\s*/, '');
-                const optB = String(opts[1] || '').replace(/^B\.\s*/, '');
-                const myAns = myVotes[String(q.id)];
-                const aSel = myAns === 'A';
-                const bSel = myAns === 'B';
+            const totalQs = ed.questions.length;
+            const answered = ed.questions.filter(q => myVotes[String(q.id)]).length;
+            const header = `
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:linear-gradient(135deg, rgba(212,168,67,0.22), rgba(212,168,67,0.06));border:1px solid var(--gold-border);border-radius:14px;margin-bottom:14px;">
+                <div>
+                  <div style="font-size:10.5px;letter-spacing:0.2em;color:var(--gold);font-weight:600;">MY PICKS</div>
+                  <div style="font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--white);font-weight:600;margin-top:2px;line-height:1;">${answered} <span style="opacity:0.55;font-size:17px;">/ ${totalQs}</span></div>
+                  <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;letter-spacing:0.04em;">오늘 답한 문항</div>
+                </div>
+                <div style="font-size:32px;line-height:1;">🎯</div>
+              </div>`;
+            const rows = ed.questions.map((q, i) => {
+              const opts = q.options || [];
+              const optA = String(opts[0] || '').replace(/^A\.\s*/, '');
+              const optB = String(opts[1] || '').replace(/^B\.\s*/, '');
+              const myAns = myVotes[String(q.id)];
+              const sel = myAns === 'A' ? 'A' : myAns === 'B' ? 'B' : null;
+              const renderOption = (letter, text) => {
+                const picked = sel === letter;
+                const bg = picked ? 'rgba(212,168,67,0.22)' : 'rgba(245,242,236,0.03)';
+                const br = picked ? 'var(--gold)' : 'var(--border, rgba(255,255,255,0.14))';
+                const circleBg = picked ? 'var(--gold)' : 'rgba(212,168,67,0.15)';
+                const circleFg = picked ? 'var(--navy)' : 'var(--gold-light)';
+                const textColor = picked ? '#fff' : 'var(--text-muted)';
+                const weight = picked ? 600 : 400;
+                const check = picked ? '<span style="color:var(--gold);font-size:16px;line-height:1;flex-shrink:0;">✓</span>' : '';
                 return `
-                  <div style="padding:12px 14px;background:rgba(212,168,67,0.05);border:1px solid rgba(212,168,67,0.25);border-radius:10px;margin-bottom:8px;">
-                    <div style="font-size:11px;color:var(--gold);margin-bottom:4px;letter-spacing:0.08em;">Q${i+1}</div>
-                    <div style="color:#fff;font-size:13.5px;font-weight:500;line-height:1.45;margin-bottom:8px;">${escResHtml(q.question || '')}</div>
-                    <div style="font-size:12.5px;line-height:1.6;">
-                      <div style="color:${aSel?'#e8b84b':'#c0c0c0'};${aSel?'font-weight:700;':''}">A. ${escResHtml(optA)}${aSel?' ✓':''}</div>
-                      <div style="color:${bSel?'#e8b84b':'#c0c0c0'};${bSel?'font-weight:700;':''}">B. ${escResHtml(optB)}${bSel?' ✓':''}</div>
-                    </div>
-                    ${!myAns ? '<div style="font-size:11px;color:#6f7889;margin-top:4px;font-style:italic;">선택 안 함</div>' : ''}
+                  <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:${bg};border:1.5px solid ${br};border-radius:10px;transition:all 0.2s;">
+                    <span style="width:24px;height:24px;border-radius:50%;background:${circleBg};color:${circleFg};display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;">${letter}</span>
+                    <span style="flex:1;color:${textColor};font-weight:${weight};font-size:13px;line-height:1.45;">${escResHtml(text)}</span>
+                    ${check}
+                  </div>`;
+              };
+              return `
+                <div style="padding:16px 16px 14px;background:rgba(20,29,53,0.55);border:1px solid var(--gold-border);border-radius:14px;margin-bottom:10px;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                    <div style="font-size:10.5px;letter-spacing:0.18em;color:var(--gold);font-weight:700;">Q${i+1}</div>
+                    ${!myAns ? '<div style="font-size:10.5px;color:var(--text-muted);letter-spacing:0.04em;">선택 안 함</div>' : ''}
                   </div>
-                `;
-              }).join('');
+                  <div style="color:#fff;font-size:14.5px;font-weight:600;line-height:1.5;margin-bottom:12px;">${escResHtml(q.question || '')}</div>
+                  <div style="display:flex;flex-direction:column;gap:8px;">
+                    ${renderOption('A', optA)}
+                    ${renderOption('B', optB)}
+                  </div>
+                </div>`;
+            }).join('');
+            hlHtml = header + rows;
           }
         }
       } catch (_) {}
@@ -1392,7 +1419,7 @@
     }
   }
 
-  // 페이지 pager dots 동기화
+  // 페이지 pager dots 동기화 + PC 마우스 드래그 스크롤
   (function setupPager() {
     const pager = document.getElementById('pager');
     const dots = Array.from(document.querySelectorAll('#pager-dots .pager-dot'));
@@ -1411,6 +1438,43 @@
       });
     });
     sync();
+
+    // PC 마우스 드래그로 좌우 넘기기 (터치 기기에선 기본 스와이프로 동작)
+    let isDown = false, startX = 0, startScroll = 0, moved = false;
+    pager.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      // 버튼/링크 위에서 시작한 드래그는 기본 동작 유지
+      const t = e.target;
+      if (t && t.closest('a, button, input, textarea, label')) return;
+      isDown = true;
+      moved = false;
+      startX = e.pageX;
+      startScroll = pager.scrollLeft;
+      pager.style.cursor = 'grabbing';
+      pager.style.userSelect = 'none';
+    });
+    pager.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      const dx = e.pageX - startX;
+      if (Math.abs(dx) > 4) moved = true;
+      pager.scrollLeft = startScroll - dx;
+      e.preventDefault();
+    });
+    const endDrag = () => {
+      if (!isDown) return;
+      isDown = false;
+      pager.style.cursor = '';
+      pager.style.userSelect = '';
+      // 가장 가까운 페이지로 스냅
+      const idx = Math.round(pager.scrollLeft / (pager.clientWidth || 1));
+      pager.scrollTo({ left: pager.clientWidth * idx, behavior: 'smooth' });
+    };
+    pager.addEventListener('mouseup', endDrag);
+    pager.addEventListener('mouseleave', endDrag);
+    // 드래그로 이동한 경우 자식 click 이벤트 억제
+    pager.addEventListener('click', (e) => {
+      if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; }
+    }, true);
   })();
 
   // 인스타 교환 페이지 링크 (결과 페이지 이후 별도 메뉴)
@@ -1424,9 +1488,8 @@
   // data.pack_defaults 는 loadResult 에서 받은 뒤 적용 — 여기서는 초기 상태만 설정.
   function applyPackGates(packDefaults, packId) {
     const exCard = document.getElementById('insta-exchange-card');
-    if (!exCard) return;
     const enabled = packDefaults && packDefaults.insta_exchange_enabled === true;
-    exCard.style.display = enabled ? '' : 'none';
+    if (exCard) exCard.style.display = enabled ? '' : 'none';
     // dating 팩은 인스타 교환이 모임의 핵심 기능 — 버튼 카피·스타일 강조
     if (enabled && packId === 'dating') {
       const btn = document.getElementById('insta-exchange-btn');
@@ -1437,10 +1500,18 @@
         btn.style.border = 'none';
         btn.style.fontWeight = '700';
       }
-      const hint = exCard.querySelector('.hint-text');
+      const hint = exCard ? exCard.querySelector('.hint-text') : null;
       if (hint) hint.textContent = '서로 좋다고 누른 사람끼리만 인스타가 공개돼요. 모임이 끝난 뒤에도 연결할 수 있어요.';
-      const title = exCard.querySelector('.card-title');
+      const title = exCard ? exCard.querySelector('.card-title') : null;
       if (title) title.textContent = '💘 오늘의 인연과 다시 만나기';
+    }
+    // result_sections 에 'summary' 가 없는 팩은 페이지 4(모임 요약) 자체 숨김 + 도트 제거
+    const sections = packDefaults && Array.isArray(packDefaults.result_sections) ? packDefaults.result_sections : null;
+    if (sections && !sections.includes('summary')) {
+      const page4 = document.querySelector('#pager section.page[data-page="3"]');
+      if (page4) page4.style.display = 'none';
+      const dot4 = document.querySelector('#pager-dots .pager-dot[data-dot="3"]');
+      if (dot4) dot4.style.display = 'none';
     }
   }
   // loadResult 내부에서 data.pack_defaults 수신 후 호출하기 위한 전역 노출

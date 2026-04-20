@@ -348,7 +348,17 @@ router.get('/result', async (req, res) => {
       b: { uuid: p.b?.uuid || null, nickname: p.b?.nickname || null },
     }));
 
-    res.json({ match_nickname, match_uuid, match_emoji, fi_count, match_common, match_total_answered, match_common_picks, top_matches, participants, question_highlights, host_summary, mutual_pairs, pack_id, pack_defaults });
+    // couples 팩은 매칭 로직이 없어 mutual_pairs 가 비어있음 — member_results 에서 나 외 첫 멤버를 자동 파트너로
+    let couple_partner_uuid = null;
+    if (pack_id === 'couples') {
+      const otherRes = await pool.query(
+        'SELECT uuid FROM member_results WHERE room_id = $1 AND uuid != $2 ORDER BY created_at ASC LIMIT 1',
+        [room_id, uuid]
+      );
+      couple_partner_uuid = otherRes.rows[0]?.uuid || null;
+    }
+
+    res.json({ match_nickname, match_uuid, match_emoji, fi_count, match_common, match_total_answered, match_common_picks, top_matches, participants, question_highlights, host_summary, mutual_pairs, pack_id, pack_defaults, couple_partner_uuid });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'db error' });

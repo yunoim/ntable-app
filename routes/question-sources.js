@@ -280,7 +280,7 @@ const PACK_DEFAULTS = {
   couples: {
     wizard_fields: ['nickname', 'emoji', 'gender', 'mbti', 'birth_year'],
     display_fields_default: ['birth_year', 'mbti'],
-    result_sections: ['ai_personality', 'couple_love', 'couple_card', 'explore_result', 'summary'],
+    result_sections: ['ai_personality', 'couple_love', 'couple_card', 'explore_result'],
     skip_free_chat: true,
     insta_exchange_enabled: false,
     best_match_enabled: false,
