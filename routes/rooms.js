@@ -40,12 +40,14 @@ router.post('/rooms', async (req, res) => {
     return res.status(500).json({ error: 'no pack available' });
   }
 
-  // 표시 필드 옵션 (호스트가 정함)
+  // 표시 필드 옵션 (호스트가 정함) — 팩 기본값을 폴백으로. couples 같이 최소 노출 팩 은 display_fields 가 빈 배열 가까울 수 있음 (mbti 는 별도 로직으로 항상 노출).
   const ALLOWED_FIELDS = ['birth_year', 'region', 'industry', 'interest'];
+  const packDisplayDefault = Array.isArray(getPackDefaults(pack.id).display_fields_default)
+    ? getPackDefaults(pack.id).display_fields_default.filter(f => ALLOWED_FIELDS.includes(f))
+    : ALLOWED_FIELDS;
   let display_fields = Array.isArray(req.body.display_fields)
     ? req.body.display_fields.filter(f => ALLOWED_FIELDS.includes(f))
-    : ALLOWED_FIELDS;
-  if (display_fields.length === 0) display_fields = ALLOWED_FIELDS;
+    : packDisplayDefault;
   const birth_year_format = ['exact', 'decade_half', 'decade'].includes(req.body.birth_year_format)
     ? req.body.birth_year_format : 'exact';
   const display_mode = ['mobile', 'presenter'].includes(req.body.display_mode)
