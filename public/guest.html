@@ -812,19 +812,33 @@
   }
   .carousel-track {
     display: flex;
-    height: 100%;
     min-height: 320px;
-    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    will-change: transform;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    will-change: scroll-position;
+  }
+  .carousel-track::-webkit-scrollbar { display: none; }
+  @media (hover: hover) and (pointer: fine) {
+    .carousel-track { cursor: grab; }
+    .carousel-track:active { cursor: grabbing; }
   }
   .member-card {
     flex-shrink: 0;
     width: 100%;
+    min-width: 100%;
     padding: 0 24px;
     display: flex;
     align-items: center;
     justify-content: center;
+    scroll-snap-align: center;
+    cursor: pointer;
   }
+  .member-card .member-card-inner { transition: transform 0.2s, border-color 0.2s; }
+  .member-card:active .member-card-inner { transform: scale(0.98); }
   .member-card-inner {
     background: #141d35;
     border: 1px solid var(--gold-border);
@@ -2463,6 +2477,7 @@ function renderCarousel() {
     const meta = [genderText, birthDisplay].filter(Boolean).join(' · ');
     const card = document.createElement('div');
     card.className = 'member-card';
+    card.dataset.uuid = m.uuid;
     card.innerHTML = `
       <div class="member-card-inner">
         ${avatarHtml}
@@ -2476,6 +2491,7 @@ function renderCarousel() {
         </div>
         ${introHtml}
       </div>`;
+    card.addEventListener('click', () => openGuestMemberModal(m.uuid));
     track.appendChild(card);
 
     const dot = document.createElement('div');
@@ -2489,23 +2505,95 @@ function renderCarousel() {
 
 function updateCarousel() {
   const track = document.getElementById('carouselTrack');
-  track.style.transform = `translateX(${-STATE.carouselIndex * 100}%)`;
+  if (!track) return;
+  // scroll-snap 기반 — scrollLeft 로 이동
+  track.scrollTo({ left: STATE.carouselIndex * (track.clientWidth || 0), behavior: 'smooth' });
   document.querySelectorAll('.indicator').forEach((d, i) => {
     d.classList.toggle('active', i === STATE.carouselIndex);
   });
 }
 
-let _tsX = 0, _teX = 0;
-function touchStart(e) { _tsX = e.touches[0].clientX; }
-function touchEnd(e) {
-  _teX = e.changedTouches[0].clientX;
-  const diff = _tsX - _teX;
-  if (Math.abs(diff) > 40) {
-    if (diff > 0 && STATE.carouselIndex < STATE.members.length - 1) STATE.carouselIndex++;
-    else if (diff < 0 && STATE.carouselIndex > 0) STATE.carouselIndex--;
-    updateCarousel();
+// scroll/drag 에 따른 index 동기화 + PC 마우스 드래그 스크롤 (한 번만 바인딩)
+(function setupGuestCarouselInteraction() {
+  const attach = () => {
+    const track = document.getElementById('carouselTrack');
+    if (!track || track._ntAttached) return;
+    track._ntAttached = true;
+    // scroll 시 index 자동 갱신
+    track.addEventListener('scroll', () => {
+      if (track._ntRaf) return;
+      track._ntRaf = requestAnimationFrame(() => {
+        const idx = Math.round(track.scrollLeft / (track.clientWidth || 1));
+        if (idx !== STATE.carouselIndex) {
+          STATE.carouselIndex = idx;
+          document.querySelectorAll('.indicator').forEach((d, i) => d.classList.toggle('active', i === idx));
+        }
+        track._ntRaf = null;
+      });
+    });
+    // PC 마우스 드래그
+    let isDown = false, startX = 0, startScroll = 0, moved = false;
+    track.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      isDown = true; moved = false;
+      startX = e.pageX; startScroll = track.scrollLeft;
+    });
+    track.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      const dx = e.pageX - startX;
+      if (Math.abs(dx) > 4) moved = true;
+      track.scrollLeft = startScroll - dx;
+      e.preventDefault();
+    });
+    const end = () => {
+      if (!isDown) return;
+      isDown = false;
+      const idx = Math.round(track.scrollLeft / (track.clientWidth || 1));
+      track.scrollTo({ left: idx * track.clientWidth, behavior: 'smooth' });
+    };
+    track.addEventListener('mouseup', end);
+    track.addEventListener('mouseleave', end);
+    track.addEventListener('click', (e) => {
+      if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; }
+    }, true);
+  };
+  // 카루셀 렌더링이 비동기이므로 MutationObserver 로 트랙 등장 감지
+  if (document.getElementById('carouselTrack')) attach();
+  else {
+    const obs = new MutationObserver(() => { if (document.getElementById('carouselTrack')) { attach(); obs.disconnect(); } });
+    obs.observe(document.body, { childList: true, subtree: true });
   }
+})();
+
+// 카드 탭 → 확대 모달
+function openGuestMemberModal(uuid) {
+  const m = (STATE.members || []).find(x => x.uuid === uuid);
+  const modal = document.getElementById('guest-card-modal');
+  const inner = document.getElementById('guest-card-modal-inner');
+  if (!m || !modal || !inner) return;
+  // 현재 carouselTrack 에서 해당 카드 복제
+  const src = document.querySelector(`.carousel-track .member-card[data-uuid="${CSS.escape(uuid)}"] .member-card-inner`);
+  inner.innerHTML = '';
+  if (src) {
+    const clone = src.cloneNode(true);
+    clone.style.maxWidth = '100%';
+    clone.style.margin = '0';
+    inner.appendChild(clone);
+  }
+  const hint = document.createElement('div');
+  hint.style.cssText = 'margin-top:12px;text-align:center;color:rgba(216,208,187,0.55);font-size:11.5px;letter-spacing:0.06em;';
+  hint.textContent = '카드 아무 곳이나 탭하면 닫혀요';
+  inner.appendChild(hint);
+  modal.hidden = false;
 }
+function closeGuestMemberModal() {
+  const m = document.getElementById('guest-card-modal');
+  if (m) m.hidden = true;
+}
+
+// 터치 스와이프 로직은 scroll-snap 가 자연 처리 — 레거시 touchStart/touchEnd 삭제 (no-op 유지)
+function touchStart() {}
+function touchEnd() {}
 function mouseStart(e) { _tsX = e.clientX; }
 function mouseEnd(e) {
   _teX = e.clientX;
@@ -3218,5 +3306,32 @@ async function revealInstagram() {
   }
 }
 </script>
+
+<!-- 참가자 카드 확대 모달 — member-card 탭 시 오픈, 모달 아무 곳 탭 시 닫힘 -->
+<div id="guest-card-modal" class="guest-card-modal" hidden onclick="closeGuestMemberModal()">
+  <div class="guest-card-modal-inner" id="guest-card-modal-inner"></div>
+</div>
+<style>
+  .guest-card-modal {
+    position: fixed; inset: 0; z-index: 1600;
+    background: rgba(10,15,30,0.85);
+    backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    animation: gcmFade 0.18s ease-out;
+  }
+  .guest-card-modal[hidden] { display: none; }
+  .guest-card-modal-inner {
+    position: relative;
+    max-width: 360px; width: 100%;
+    animation: gcmRise 0.22s cubic-bezier(0.4,0,0.2,1);
+  }
+  .guest-card-modal-inner .member-card-inner {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  @keyframes gcmFade { from { opacity: 0 } to { opacity: 1 } }
+  @keyframes gcmRise { from { transform: translateY(14px); opacity: 0.6 } to { transform: translateY(0); opacity: 1 } }
+</style>
 </body>
 </html>
