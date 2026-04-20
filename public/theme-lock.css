@@ -7,13 +7,19 @@ html {
   /* iOS Safari 자동 다크 텍스트 톤 매핑 차단 */
   -webkit-text-size-adjust: 100%;
   forced-color-adjust: none;
+  /* body 배경 미설정 페이지 방어 — OS 라이트/다크 전환 시 순간 플래시 방지 */
+  background-color: #0a0f1e;
 }
 
 /* 입력 요소 — OS 다크모드에서 자동 invert 차단 */
-input, textarea, select, button {
+input, textarea, select, button, option {
   color-scheme: only dark;
   forced-color-adjust: none;
 }
+
+/* select·option 드롭다운 — Chrome·Safari 시스템 다크/라이트 따라 배경 깜빡이는 것 방지 */
+select { background-color: #141d35; color: #f5f2ec; }
+option  { background-color: #141d35; color: #f5f2ec; }
 
 /* Chrome 자동완성 노란/파란 배경 차단 */
 input:-webkit-autofill,
