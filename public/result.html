@@ -945,7 +945,7 @@
       const data = await r.json();
 
       // 팩별 UI 게이트 적용 (인스타 교환 카드 노출 등)
-      if (typeof window._applyPackGates === 'function') window._applyPackGates(data.pack_defaults);
+      if (typeof window._applyPackGates === 'function') window._applyPackGates(data.pack_defaults, data.pack_id);
 
       // share-card에도 매칭 한 줄 추가 (이미지 저장·인스타 공유 시 노출)
       if (typeof updateShareMatchLine === 'function') updateShareMatchLine(data);
@@ -1069,9 +1069,10 @@
               </div>`;
             }).join('')}
           </div>` : '';
+        const bestLabel = data.pack_id === 'dating' ? '오늘의 인연' : '나와 가장 잘 맞았던 사람';
         matchEl.innerHTML = mutualHtml + coupleBtnHtml + `
           <div class="match-frame">
-            <div class="match-eyebrow">나와 가장 잘 맞았던 사람</div>
+            <div class="match-eyebrow">${bestLabel}</div>
             ${photoHtml}
             <div class="match-name">${escMatch(data.match_nickname)}</div>
             <div class="match-sub">탐구 선택이 가장 많이 닿았어요</div>
@@ -1421,11 +1422,26 @@
 
   // 팩 정책에 따라 인스타 교환 카드 자체를 숨김 (dating 외 팩은 비노출).
   // data.pack_defaults 는 loadResult 에서 받은 뒤 적용 — 여기서는 초기 상태만 설정.
-  function applyPackGates(packDefaults) {
+  function applyPackGates(packDefaults, packId) {
     const exCard = document.getElementById('insta-exchange-card');
     if (!exCard) return;
     const enabled = packDefaults && packDefaults.insta_exchange_enabled === true;
     exCard.style.display = enabled ? '' : 'none';
+    // dating 팩은 인스타 교환이 모임의 핵심 기능 — 버튼 카피·스타일 강조
+    if (enabled && packId === 'dating') {
+      const btn = document.getElementById('insta-exchange-btn');
+      if (btn) {
+        btn.textContent = '💘 매칭된 상대와 인스타 교환 →';
+        btn.style.background = 'linear-gradient(135deg, var(--gold), #a07828)';
+        btn.style.color = 'var(--navy)';
+        btn.style.border = 'none';
+        btn.style.fontWeight = '700';
+      }
+      const hint = exCard.querySelector('.hint-text');
+      if (hint) hint.textContent = '서로 좋다고 누른 사람끼리만 인스타가 공개돼요. 모임이 끝난 뒤에도 연결할 수 있어요.';
+      const title = exCard.querySelector('.card-title');
+      if (title) title.textContent = '💘 오늘의 인연과 다시 만나기';
+    }
   }
   // loadResult 내부에서 data.pack_defaults 수신 후 호출하기 위한 전역 노출
   window._applyPackGates = applyPackGates;

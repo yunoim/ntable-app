@@ -306,6 +306,14 @@ let UUID = '';
 let ROOM = null;
 let CURRENT = 0;
 let STEPS = [];           // step keys: 'nick','basic','region','industry','mbti','interest','confirm'
+// 팩별 라벨/아이콘 — wizard 뱃지·결과 페이지 톤에 사용
+const PACK_META = {
+  couples:          { icon: '💞', label: '둘이서' },
+  dating:           { icon: '💘', label: '소개팅·연애' },
+  icebreaker:       { icon: '🤝', label: '처음 만나는 사이' },
+  'friends-reunion':{ icon: '✨', label: '오랜만' },
+  teambuilding:     { icon: '🎯', label: '팀빌딩' },
+};
 const data = {
   nickname: '', gender: null, birth_year: null, region: null,
   industry: null, mbti: null, interest: null, instagram: null, emoji: null,
@@ -466,9 +474,12 @@ function renderStep() {
   let body = '', stepNum = `${CURRENT + 1} / ${STEPS.length}`;
 
   switch (key) {
-    case 'nick':
+    case 'nick': {
+      const meta = PACK_META[ROOM.pack_id] || null;
+      const packBadge = meta ? `<div style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(212,168,67,0.12);border:1px solid var(--gold-border, rgba(212,168,67,0.35));border-radius:999px;font-size:11.5px;color:var(--gold-light);letter-spacing:0.06em;margin-bottom:16px;"><span>${meta.icon}</span><span>${escHtml(meta.label)}</span></div>` : '';
       body = `
         <div class="step-num">${stepNum} · 시작</div>
+        ${packBadge}
         <h2 class="step-title">닉네임을 정해주세요</h2>
         <p class="step-sub">모임 안에서만 사용하는 닉네임이에요.</p>
         ${ROOM.isHost ? `<div style="background:rgba(212,168,67,0.08);border:1px dashed rgba(212,168,67,0.4);border-radius:10px;padding:12px 14px;font-size:12.5px;color:#e8b84b;margin-bottom:18px;line-height:1.55;">📢 여기 입력한 내용은 다른 참가자 카드에 표시됩니다.</div>` : ''}
@@ -481,6 +492,7 @@ function renderStep() {
         </div>
       `;
       break;
+    }
     case 'basic': {
       const isHost = !!ROOM.isHost;
       const isCouples = ROOM.pack_id === 'couples';
@@ -663,10 +675,18 @@ function renderStep() {
       break;
     }
     case 'instagram': {
+      const isDating = ROOM.pack_id === 'dating';
+      // dating 팩 에선 인스타 교환이 핵심 기능 → '(선택)' 대신 '(권장)', 서브카피 강화
+      const badge = isDating
+        ? `<span style="opacity:0.85;font-weight:500;color:var(--gold-light);">(권장)</span>`
+        : `<span style="opacity:0.6;font-weight:400;">(선택)</span>`;
+      const subLine = isDating
+        ? '💘 소개팅 모임의 핵심 기능 — 매칭된 상대와 모임 끝난 뒤에도 연결돼요.'
+        : '서로 입력했을 때만 양쪽에게 바로 보여요.';
       body = `
-        <div class="step-num">${stepNum} · 인스타그램 <span style="opacity:0.6;font-weight:400;">(선택)</span></div>
+        <div class="step-num">${stepNum} · 인스타그램 ${badge}</div>
         <h2 class="step-title">매칭된 사람에게만<br>공개돼요 💌</h2>
-        <p class="step-sub">서로 입력했을 때만 양쪽에게 바로 보여요.</p>
+        <p class="step-sub">${subLine}</p>
         <div class="field">
           <input type="text" id="instaInput" maxlength="50" placeholder="@your_instagram" value="${escHtml(data.instagram || '')}" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" style="text-align:center;font-size:18px;letter-spacing:0.04em;">
           <div class="hint">영문·숫자·점·언더바만 가능. @ 는 자동으로 처리</div>
