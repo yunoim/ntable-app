@@ -2989,13 +2989,33 @@ async function saveGuestExploreImage() {
   }
 }
 
+function normGender(g) {
+  if (!g) return null;
+  const s = String(g).toLowerCase();
+  if (s === 'm' || s === 'male') return 'M';
+  if (s === 'f' || s === 'female') return 'F';
+  return null;
+}
+function isOppositeGender(a, b) {
+  const na = normGender(a), nb = normGender(b);
+  return na && nb && na !== nb;
+}
+
 function renderVoteList(containerId, type) {
   const container = document.getElementById(containerId);
   container.innerHTML = '';
 
-  STATE.members
+  const myGender = STATE.myProfile && STATE.myProfile.gender;
+  const candidates = STATE.members
     .filter(m => m.uuid !== STATE.uuid)
-    .forEach(m => {
+    .filter(m => type !== 'match' || isOppositeGender(myGender, m.gender));
+
+  if (type === 'match' && candidates.length === 0) {
+    container.innerHTML = '<div style="padding:14px;color:#6f7889;font-size:13px;text-align:center;">작대기 투표 대상이 없어요</div>';
+    return;
+  }
+
+  candidates.forEach(m => {
       const age = ageOf(m.birth_year);
       const item = document.createElement('div');
       item.className = 'member-vote-item';

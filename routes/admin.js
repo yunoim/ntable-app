@@ -651,7 +651,20 @@ router.post('/rooms/:code/match', async (req, res) => {
       return match / keys.size;
     }
 
-    // 4) 매칭 페어 구성 (상호 픽 우선, 없으면 유사도 + fi_count)
+    // 이성 필터 (gender M/F/male/female 정규화)
+    function normGender(g) {
+      if (!g) return null;
+      const s = String(g).toLowerCase();
+      if (s === 'm' || s === 'male') return 'M';
+      if (s === 'f' || s === 'female') return 'F';
+      return null;
+    }
+    function isOppositeGender(a, b) {
+      const na = normGender(a), nb = normGender(b);
+      return na && nb && na !== nb;
+    }
+
+    // 4) 매칭 페어 구성 (상호 픽 우선, 없으면 유사도 + fi_count) — 이성만
     const matched = new Set();
     const pairs = [];
 
@@ -659,7 +672,8 @@ router.post('/rooms/:code/match', async (req, res) => {
     for (const m of members) {
       if (matched.has(m.uuid)) continue;
       const pick = pickMap[m.uuid];
-      if (pick && pickMap[pick] === m.uuid && !matched.has(pick)) {
+      if (pick && pickMap[pick] === m.uuid && !matched.has(pick)
+          && isOppositeGender(userMap[m.uuid]?.gender, userMap[pick]?.gender)) {
         pairs.push({
           type: 'mutual',
           a: { uuid: m.uuid, nickname: userMap[m.uuid]?.nickname },
@@ -670,14 +684,17 @@ router.post('/rooms/:code/match', async (req, res) => {
       }
     }
 
-    // 남은 사람들 유사도 매칭
+    // 남은 사람들 유사도 매칭 (이성만)
     const remaining = members.filter(m => !matched.has(m.uuid));
     for (let i = 0; i < remaining.length; i++) {
       if (matched.has(remaining[i].uuid)) continue;
+      const gi = userMap[remaining[i].uuid]?.gender;
       let bestScore = -1;
       let bestIdx = -1;
       for (let j = i + 1; j < remaining.length; j++) {
         if (matched.has(remaining[j].uuid)) continue;
+        const gj = userMap[remaining[j].uuid]?.gender;
+        if (!isOppositeGender(gi, gj)) continue;
         const score = similarity(remaining[i].votes_json || {}, remaining[j].votes_json || {})
           + (remaining[j].fi_count || 0) * 0.1;
         if (score > bestScore) { bestScore = score; bestIdx = j; }

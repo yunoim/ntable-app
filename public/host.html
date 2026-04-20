@@ -1254,7 +1254,7 @@
   #chat-log {
     background: var(--surface-2);
     border-radius: 10px;
-    padding: 14px;
+    padding: 12px 10px;
     min-height: 140px;
     max-height: 280px;
     overflow-y: auto;
@@ -1266,6 +1266,7 @@
     padding: 6px 0;
     border-bottom: 1px solid rgba(212,168,67,0.06);
     line-height: 1.5;
+    word-break: break-word;
   }
   .chat-msg:last-child { border-bottom: none; }
   .chat-msg strong { color: var(--gold-light); font-weight: 500; }
@@ -1523,11 +1524,29 @@
     .vote-count .pct { font-size: 13px; }
     .vote-option-btn { padding: 14px 16px; font-size: 15px; }
 
-    .profile-card { min-width: 220px; padding: 22px 18px; }
+    /* 모바일 — 참가자 카드 가로 스와이프 캐러셀 */
+    #profile-carousel {
+      flex-wrap: nowrap;
+      justify-content: flex-start;
+      gap: 14px;
+      padding-inline: 11vw;
+      scroll-padding-inline: 11vw;
+      scrollbar-width: none;
+    }
+    #profile-carousel::-webkit-scrollbar { display: none; }
+    .profile-card {
+      width: 78vw;
+      min-width: 78vw;
+      max-width: 78vw;
+      padding: 22px 18px;
+      scroll-snap-align: center;
+    }
     .profile-card .name { font-size: 20px; }
 
     .free-grid, .closing-grid { grid-template-columns: 1fr; gap: 14px; margin-bottom: 18px; }
     .free-card { padding: 20px 16px; }
+    /* 채팅 카드 — 한 줄당 글자 수 확보 위해 좌우 padding 더 축소 */
+    #free-chat-card { padding: 18px 10px; }
     .card-head { margin-bottom: 14px; }
 
     #action-bar {
@@ -1539,6 +1558,23 @@
     .btn-gold { min-width: 0; }
     .primary-btn-wrap { flex: 1; min-width: 0; }
     .primary-btn-wrap > .btn { width: 100%; flex: none; }
+
+    /* action-bar 내 가시 버튼이 2개(이전 + 주요) 일 때 한 줄 반반 (탐구·자유대화·마무리) */
+    #action-bar[data-tab="explore"],
+    #action-bar[data-tab="free"],
+    #action-bar[data-tab="ending"] {
+      flex-direction: row;
+    }
+    #action-bar[data-tab="explore"] .action-left,
+    #action-bar[data-tab="free"] .action-left,
+    #action-bar[data-tab="ending"] .action-left,
+    #action-bar[data-tab="explore"] .action-right,
+    #action-bar[data-tab="free"] .action-right,
+    #action-bar[data-tab="ending"] .action-right {
+      width: auto;
+      flex: 1 1 0;
+      min-width: 0;
+    }
   }
 
   /* mobile share row — sidebar-head 통째로 숨김 처리되어 사용 안 됨 (2026-04-19) */
@@ -1799,7 +1835,6 @@
       <button type="button" class="btn btn-outline" id="back-btn" style="display:none;">← 이전</button>
     </div>
     <div class="action-right">
-      <button type="button" class="btn btn-outline" id="force-match-btn" style="display:none;">강제 매칭</button>
       <div class="primary-btn-wrap" style="display:flex;flex-direction:column;align-items:stretch;gap:4px;">
         <button type="button" class="btn btn-gold" id="primary-btn">모임 시작</button>
         <span id="primary-btn-hint" style="font-size:11px;color:var(--text-muted);text-align:center;line-height:1.3;">모임 중간에도 입장이 가능해요</span>
@@ -2627,13 +2662,13 @@ function appendChatMsg(msg) {
 // ── PRIMARY BUTTON UPDATE ─────────────────────────
 function updatePrimaryButton() {
   const btn = document.getElementById('primary-btn');
-  const forceBtn = document.getElementById('force-match-btn');
+  const wrap = btn ? btn.parentElement : null; // primary-btn-wrap
   const closeBtn = document.getElementById('close-room-btn');
   const backBtn = document.getElementById('back-btn');
 
-  forceBtn.style.display = 'none';
   closeBtn.style.display = 'none';
   backBtn.style.display = state.activeTab !== 'intro' ? 'inline-flex' : 'none';
+  if (wrap) wrap.style.display = 'flex';
 
   const hint = document.getElementById('primary-btn-hint');
   switch (state.activeTab) {
@@ -2662,7 +2697,6 @@ function updatePrimaryButton() {
         btn.textContent = '자유대화로 →';
       }
       btn.style.display = 'inline-flex';
-      forceBtn.style.display = 'inline-flex';
       if (hint) hint.style.display = 'none';
       break;
     case 'free':
@@ -2671,15 +2705,10 @@ function updatePrimaryButton() {
       if (hint) hint.style.display = 'none';
       break;
     case 'ending':
-      // 1:1 모임은 매칭 발표 + action-bar 종료 버튼 모두 숨김 (mvp-card 안 종료 버튼만)
-      if (state.oneOnOne) {
-        btn.style.display = 'none';
-        closeBtn.style.display = 'none';
-      } else {
-        btn.textContent = '💘 매칭 발표';
-        btn.style.display = 'inline-flex';
-        closeBtn.style.display = 'inline-flex';
-      }
+      // 매칭 발표는 closing sub-step 버튼에서 트리거. action-bar primary 버튼은 미노출.
+      btn.style.display = 'none';
+      if (wrap) wrap.style.display = 'none';
+      closeBtn.style.display = state.oneOnOne ? 'none' : 'inline-flex';
       break;
   }
 }
@@ -2821,14 +2850,6 @@ function bindEvents() {
 
   document.getElementById('primary-btn').addEventListener('click', onPrimary);
   document.getElementById('back-btn').addEventListener('click', onBack);
-  document.getElementById('force-match-btn').addEventListener('click', async () => {
-    if (!confirm('지금까지의 투표로 매칭을 즉시 발표할까요?')) return;
-    await doMatch();
-    switchTab('ending');
-    state.closingPhase = 'closing-match-result';
-    renderClosingSubsteps('closing-match-result');
-    updateState({ phase: 'closing-match-result', current_tab: 'closing' });
-  });
 
   // 자리 셔플 폐기 — nudge 버튼 제거됨
   // 자유대화 타이머 +N분 추가 핸들러
@@ -2886,6 +2907,8 @@ function onBack() {
 
 function switchTab(tab) {
   state.activeTab = tab;
+  const actionBar = document.getElementById('action-bar');
+  if (actionBar) actionBar.dataset.tab = tab;
   document.querySelectorAll('.phase-step').forEach(btn => {
     const t = btn.dataset.tab;
     btn.classList.toggle('active', t === tab);
@@ -3067,13 +3090,31 @@ async function saveExploreResultImage(targetSelector) {
   }
 }
 
+function normGender(g) {
+  if (!g) return null;
+  const s = String(g).toLowerCase();
+  if (s === 'm' || s === 'male') return 'M';
+  if (s === 'f' || s === 'female') return 'F';
+  return null;
+}
+function isOppositeGender(a, b) {
+  const na = normGender(a), nb = normGender(b);
+  return na && nb && na !== nb;
+}
+
 // participant 호스트 본인 MVP/사랑의 작대기 투표 UI
 function renderHostSelfVote(phase) {
   const optsEl = document.getElementById('host-self-vote-options');
   if (!optsEl) return;
-  const others = (state.approvedUsers || []).filter(u => u.uuid !== state.uuid);
+  let others = (state.approvedUsers || []).filter(u => u.uuid !== state.uuid);
+  if (phase === 'closing-match') {
+    const me = state.approvedUsers.find(u => u.uuid === state.uuid);
+    const myGender = me ? me.gender : null;
+    others = others.filter(u => isOppositeGender(myGender, u.gender));
+  }
   if (others.length === 0) {
-    optsEl.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">다른 참가자가 없어요</div>';
+    const msg = phase === 'closing-match' ? '작대기 투표 대상이 없어요' : '다른 참가자가 없어요';
+    optsEl.innerHTML = `<div style="font-size:12px;color:var(--text-muted);">${msg}</div>`;
     return;
   }
   if (phase === 'closing-mvp') {
