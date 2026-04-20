@@ -11,7 +11,9 @@
   const read = () => { try { return localStorage.getItem(KEY) === 'true'; } catch (_) { return false; } };
   const write = (v) => { try { localStorage.setItem(KEY, v ? 'true' : 'false'); } catch (_) {} };
 
-  // host/presenter 같이 phase-bar 가 있는 페이지는 top 을 아래로 밀어 ⋮ 더보기와 안 겹치게
+  // 호스트 페이지처럼 전용 슬롯이 있으면 그 안에 인라인으로 배치 (더보기·방코드 사이).
+  // 슬롯이 없으면 우상단 플로팅 (phase-bar 있으면 아래로).
+  const hostSlot = document.getElementById('host-remember-slot');
   const hasPhaseBar = !!document.getElementById('phase-bar');
 
   const style = document.createElement('style');
@@ -35,6 +37,15 @@
       user-select: none;
       letter-spacing: 0.02em;
       transition: border-color 0.18s;
+    }
+    .nt-remember-toggle.nt-rt-inline {
+      position: static;
+      top: auto; right: auto;
+      padding: 5px 10px 5px 8px;
+      font-size: 10.5px;
+      box-shadow: none;
+      background: rgba(14,22,40,0.55);
+      border-color: rgba(212,168,67,0.3);
     }
     .nt-remember-toggle:hover { border-color: rgba(212,168,67,0.6); }
     .nt-rt-knob {
@@ -69,10 +80,13 @@
   const wrap = document.createElement('button');
   wrap.type = 'button';
   wrap.id = 'ntRememberToggle';
-  wrap.className = 'nt-remember-toggle';
+  wrap.className = hostSlot ? 'nt-remember-toggle nt-rt-inline' : 'nt-remember-toggle';
   wrap.setAttribute('role', 'switch');
   wrap.setAttribute('aria-label', '내 정보 기억하기');
-  wrap.innerHTML = `<span class="nt-rt-knob" aria-hidden="true"></span><span class="nt-rt-label">내 정보 기억</span>`;
+  // 인라인 모드(호스트 상단)는 공간 좁으니 라벨 생략
+  wrap.innerHTML = hostSlot
+    ? `<span class="nt-rt-knob" aria-hidden="true"></span><span class="nt-rt-label" style="font-size:10px;">기억</span>`
+    : `<span class="nt-rt-knob" aria-hidden="true"></span><span class="nt-rt-label">내 정보 기억</span>`;
   const apply = () => {
     const on = read();
     wrap.classList.toggle('on', on);
@@ -84,7 +98,11 @@
     apply();
   });
   apply();
-  // DOM 준비 후 주입
-  if (document.body) document.body.appendChild(wrap);
-  else document.addEventListener('DOMContentLoaded', () => document.body.appendChild(wrap));
+  // DOM 준비 후 주입 — hostSlot 있으면 그 안, 없으면 body 우상단 플로팅
+  const mount = () => {
+    const target = hostSlot || document.body;
+    if (target) target.appendChild(wrap);
+  };
+  if (document.body) mount();
+  else document.addEventListener('DOMContentLoaded', mount);
 })();

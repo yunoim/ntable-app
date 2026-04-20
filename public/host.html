@@ -868,6 +868,28 @@
   .mp-item-name { color: var(--white); font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .mp-item-meta { color: var(--text-muted); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: 0.02em; }
   .mp-item-chev { color: var(--gold); font-size: 20px; flex-shrink: 0; opacity: 0.7; }
+  .mp-item-kick {
+    padding: 5px 10px;
+    background: transparent;
+    border: 1px solid rgba(220,53,69,0.4);
+    color: #ff8a8a;
+    font-size: 11.5px;
+    border-radius: 999px;
+    font-family: inherit;
+    cursor: pointer;
+    flex-shrink: 0;
+    letter-spacing: 0.02em;
+    transition: background 0.15s;
+  }
+  .mp-item-kick:hover { background: rgba(220,53,69,0.15); }
+  .mp-item-self-tag {
+    padding: 4px 10px;
+    font-size: 11px;
+    color: var(--gold-light);
+    letter-spacing: 0.06em;
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
 
   /* 카드 모달 (모바일·PC 공용) */
   .mp-card-modal {
@@ -1807,6 +1829,8 @@
       <div class="qr-side-top">
         <div id="room-code">—</div>
         <div id="room-meeting-at" class="room-meeting-at" hidden></div>
+        <!-- remember-toggle.js 가 이 슬롯 발견 시 플로팅 대신 인라인(room-code 와 더보기 사이)으로 주입 -->
+        <div id="host-remember-slot"></div>
         <!-- 모바일에서만 #user-menu 가 JS 로 이 슬롯으로 재배치됨 (데스크탑은 #phase-bar) -->
         <div id="mobile-more-slot"></div>
       </div>
@@ -2686,10 +2710,11 @@ function renderMpList() {
   wrap.hidden = false;
   body.innerHTML = '';
   for (const u of users) {
-    const item = document.createElement('button');
-    item.type = 'button';
+    const item = document.createElement('div');
     item.className = 'mp-item';
     item.dataset.uuid = u.uuid;
+    item.setAttribute('role', 'button');
+    item.tabIndex = 0;
     const photo = state.photos && state.photos[u.uuid];
     const defaultEmoji = (u.gender === 'M' || u.gender === 'male') ? '👨'
                        : (u.gender === 'F' || u.gender === 'female') ? '👩' : '🙂';
@@ -2701,14 +2726,21 @@ function renderMpList() {
                       : (u.gender === 'F' || u.gender === 'female') ? '여' : '';
     const byStr = u.birth_year ? formatBirthYear(u.birth_year, state.birthYearFormat || 'exact') : '';
     const meta = [genderLabel, byStr, u.mbti].filter(Boolean).join(' · ');
+    // 본인은 강퇴 비활성 → '나' 라벨, 그 외는 강퇴 버튼 (renderApprovedList 의 kickUser 재사용)
+    const isSelf = u.uuid === state.uuid;
+    const actionHtml = isSelf
+      ? `<span class="mp-item-self-tag">나</span>`
+      : `<button type="button" class="mp-item-kick" onclick="event.stopPropagation();kickUser('${escHtml(u.uuid)}','${escHtml(u.nickname)}')" aria-label="${escHtml(u.nickname)} 강퇴">강퇴</button>`;
     item.innerHTML = `
       ${avatarHtml}
       <span class="mp-item-main">
         <span class="mp-item-name">${escHtml(u.nickname)}</span>
         <span class="mp-item-meta">${escHtml(meta)}</span>
       </span>
+      ${actionHtml}
       <span class="mp-item-chev" aria-hidden="true">›</span>`;
     item.addEventListener('click', () => openMpCard(u.uuid));
+    item.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openMpCard(u.uuid); } });
     body.appendChild(item);
   }
 }
