@@ -772,7 +772,7 @@
       </div>
     </section>
 
-    <!-- 페이지 4 — 오늘 모임 요약 + 인스타 교환 -->
+    <!-- 페이지 4 — 오늘 모임 요약 + 서로 또 만나고 싶어요(실시간 집계) + 인스타 교환 -->
     <section class="page" data-page="3">
       <div class="card">
         <div class="card-title">📊 오늘 모임 요약</div>
@@ -780,6 +780,8 @@
           <div class="loading"><div class="spinner"></div><span>불러오는 중...</span></div>
         </div>
       </div>
+      <!-- 연결 투표(또 만나고 싶은 사람) 상호 지명 — 실시간 집계 -->
+      <div id="connection-mutuals-slot" style="margin-bottom:12px;"></div>
       <div class="card" id="insta-exchange-card" style="text-align:center;">
         <div class="card-title">📸 인스타그램 교환</div>
         <p class="hint-text" style="margin-bottom:14px;">마음에 든 사람과 인스타를 교환할 수 있어요.<br>상대도 나를 선택해야 공개돼요.</p>
@@ -1201,7 +1203,6 @@
             ${data.fi_count ? `<div class="fi-badge">❤️ ${data.fi_count}명이 나에게 관심 표시</div>` : ''}
           </div>
           ${topHtml}
-          <div id="connection-mutuals-slot"></div>
         `;
         refreshConnectionMutuals();
       } else {
@@ -1222,7 +1223,7 @@
               <div class="match-fallback-text">매칭은 타이밍이에요. 오늘 나눈 대화가<br>다음 누군가와의 연결로 이어질 거예요.</div>
             </div>
           `;
-        matchEl.innerHTML = mutualHtml + coupleBtnHtml + fallback + '<div id="connection-mutuals-slot"></div>';
+        matchEl.innerHTML = mutualHtml + coupleBtnHtml + fallback;
         refreshConnectionMutuals();
       }
       } // end else (non-couples 분기)
