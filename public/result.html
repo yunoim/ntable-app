@@ -123,6 +123,99 @@
     .pager { cursor: grab; }
     .pager:active { cursor: grabbing; }
   }
+
+  /* 탐구 문항별 선택자 플로팅 모달 */
+  .pickers-modal {
+    position: fixed; inset: 0; z-index: 1700;
+    display: flex; align-items: flex-end; justify-content: center;
+    animation: pmFade 0.18s ease-out;
+  }
+  .pickers-modal[hidden] { display: none; }
+  .pickers-modal-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(10,15,30,0.78);
+    backdrop-filter: blur(8px);
+    cursor: pointer;
+  }
+  .pickers-modal-inner {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+    max-height: 78dvh;
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--gold-border);
+    border-bottom: none;
+    border-radius: 20px 20px 0 0;
+    padding: 20px 22px 24px;
+    box-shadow: 0 -8px 28px rgba(0,0,0,0.35);
+    animation: pmRise 0.24s cubic-bezier(0.4,0,0.2,1);
+  }
+  @keyframes pmFade { from { opacity: 0 } to { opacity: 1 } }
+  @keyframes pmRise { from { transform: translateY(40px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+  .pm-handle {
+    width: 40px; height: 4px; border-radius: 2px;
+    background: rgba(212,168,67,0.3);
+    margin: -6px auto 12px;
+  }
+  .pm-label { font-size: 10.5px; letter-spacing: 0.2em; color: var(--gold); font-weight: 700; margin-bottom: 6px; }
+  .pm-question { color: var(--white); font-size: 14px; font-weight: 600; line-height: 1.5; margin-bottom: 12px; }
+  .pm-option-box {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 13px;
+    background: rgba(212,168,67,0.12);
+    border: 1px solid var(--gold-border);
+    border-radius: 10px;
+    margin-bottom: 14px;
+  }
+  .pm-letter {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--gold); color: var(--navy);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 12px; flex-shrink: 0;
+  }
+  .pm-option-text { color: var(--white); font-size: 13px; font-weight: 600; line-height: 1.45; flex: 1; min-width: 0; }
+  .pm-count { font-size: 11px; color: var(--text-muted); letter-spacing: 0.04em; margin-bottom: 10px; }
+  .pm-list {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .pm-pick {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 10px;
+    background: rgba(245,242,236,0.04);
+    border: 1px solid var(--border, rgba(255,255,255,0.14));
+    border-radius: 10px;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .pm-pick.self {
+    border-color: var(--gold);
+    background: rgba(212,168,67,0.18);
+    color: var(--gold-light);
+    font-weight: 600;
+  }
+  .pm-emoji { font-size: 20px; line-height: 1; flex-shrink: 0; }
+  .pm-nick { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+  .pm-empty { grid-column: 1 / -1; text-align: center; color: var(--text-muted); font-size: 12.5px; padding: 16px 0; }
+  .pm-close {
+    width: 100%;
+    margin-top: 16px;
+    padding: 12px;
+    background: transparent;
+    color: var(--gold-light);
+    border: 1px solid var(--gold-border);
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 13.5px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .pm-close:hover { background: rgba(212,168,67,0.1); }
+  @media (min-width: 640px) {
+    .pickers-modal { align-items: center; }
+    .pickers-modal-inner { border-radius: 18px; border-bottom: 1px solid var(--gold-border); max-height: 80vh; }
+    .pm-handle { display: none; }
+  }
   .pager::-webkit-scrollbar { display: none; }
   .page {
     flex: 0 0 100%;
@@ -710,6 +803,12 @@
   </div>
 </div>
 
+<!-- 탐구 문항별 선택자 보기 모달 (페이지 3 '누가?' 버튼에서 호출) -->
+<div id="pickers-modal" class="pickers-modal" hidden>
+  <div class="pickers-modal-backdrop"></div>
+  <div class="pickers-modal-inner" id="pickers-modal-inner"></div>
+</div>
+
 <!-- 커플 공유 카드 (html2canvas 캡처 타깃 — 오프스크린) -->
 <div id="couple-card-capture" aria-hidden="true" style="position:absolute;left:-10000px;top:0;width:360px;height:640px;background:#141d35;color:#f5f2ec;padding:32px 26px;box-sizing:border-box;font-family:'DM Sans','Noto Sans KR','Apple SD Gothic Neo',sans-serif;overflow:hidden;">
   <div style="position:absolute;inset:0;background-image:radial-gradient(circle at 20% 15%, rgba(212,168,67,0.18), transparent 55%), radial-gradient(circle at 80% 90%, rgba(80,100,180,0.12), transparent 50%);pointer-events:none;"></div>
@@ -1118,6 +1217,31 @@
           if ((ed.questions || []).length) {
             const totalQs = ed.questions.length;
             const answered = ed.questions.filter(q => myVotes[String(q.id)]).length;
+            // 문항별 선택자 데이터 캐시 (플로팅 모달에서 사용)
+            window._pickersByQ = {};
+            for (const q of ed.questions) {
+              const qid = String(q.id);
+              const opts = q.options || [];
+              const pickers = { A: [], B: [] };
+              for (const m of (ed.members || [])) {
+                const v = m.votes_json && m.votes_json[qid];
+                if (v === 'A' || v === 'B') {
+                  pickers[v].push({
+                    uuid: m.uuid,
+                    nickname: m.uuid === uuid ? '나' : (m.nickname || '익명'),
+                    emoji: m.emoji || null,
+                    gender: m.gender || null,
+                  });
+                }
+              }
+              window._pickersByQ[qid] = {
+                questionText: q.question || '',
+                optA: String(opts[0] || '').replace(/^A\.\s*/, ''),
+                optB: String(opts[1] || '').replace(/^B\.\s*/, ''),
+                A: pickers.A,
+                B: pickers.B,
+              };
+            }
             const header = `
               <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:linear-gradient(135deg, rgba(212,168,67,0.22), rgba(212,168,67,0.06));border:1px solid var(--gold-border);border-radius:14px;margin-bottom:14px;">
                 <div>
@@ -1128,10 +1252,11 @@
                 <div style="font-size:32px;line-height:1;">🎯</div>
               </div>`;
             const rows = ed.questions.map((q, i) => {
+              const qid = String(q.id);
               const opts = q.options || [];
               const optA = String(opts[0] || '').replace(/^A\.\s*/, '');
               const optB = String(opts[1] || '').replace(/^B\.\s*/, '');
-              const myAns = myVotes[String(q.id)];
+              const myAns = myVotes[qid];
               const sel = myAns === 'A' ? 'A' : myAns === 'B' ? 'B' : null;
               const renderOption = (letter, text) => {
                 const picked = sel === letter;
@@ -1142,11 +1267,15 @@
                 const textColor = picked ? '#fff' : 'var(--text-muted)';
                 const weight = picked ? 600 : 400;
                 const check = picked ? '<span style="color:var(--gold);font-size:16px;line-height:1;flex-shrink:0;">✓</span>' : '';
+                const pickerCount = (window._pickersByQ[qid] && window._pickersByQ[qid][letter] || []).length;
+                const whoBtn = pickerCount > 0 ? `
+                    <button type="button" onclick="event.stopPropagation();showPickersModal('${qid}','${letter}')" style="margin-left:6px;padding:4px 10px;background:rgba(10,15,30,0.55);color:var(--gold-light);border:1px solid rgba(212,168,67,0.35);border-radius:999px;font-size:11px;font-family:inherit;cursor:pointer;white-space:nowrap;flex-shrink:0;" aria-label="${letter} 선택자 보기">👥 ${pickerCount}명</button>` : '';
                 return `
                   <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:${bg};border:1.5px solid ${br};border-radius:10px;transition:all 0.2s;">
                     <span style="width:24px;height:24px;border-radius:50%;background:${circleBg};color:${circleFg};display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;">${letter}</span>
-                    <span style="flex:1;color:${textColor};font-weight:${weight};font-size:13px;line-height:1.45;">${escResHtml(text)}</span>
+                    <span style="flex:1;color:${textColor};font-weight:${weight};font-size:13px;line-height:1.45;min-width:0;">${escResHtml(text)}</span>
                     ${check}
+                    ${whoBtn}
                   </div>`;
               };
               return `
@@ -1284,6 +1413,46 @@
       btn.disabled = false;
       btn.textContent = '인스타 공개하기 📲';
     }
+  }
+
+  // ── 탐구 문항별 선택자 플로팅 모달 ───────────────
+  function showPickersModal(qid, letter) {
+    const data = window._pickersByQ && window._pickersByQ[qid];
+    if (!data) return;
+    const pickers = data[letter] || [];
+    const optText = letter === 'A' ? data.optA : data.optB;
+    const esc = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const genderDefault = (g) => (g === 'M' || g === 'male') ? '👨' : (g === 'F' || g === 'female') ? '👩' : '🙂';
+    const inner = document.getElementById('pickers-modal-inner');
+    const modal = document.getElementById('pickers-modal');
+    if (!inner || !modal) return;
+    const itemsHtml = pickers.length === 0
+      ? '<div class="pm-empty">선택자 없음</div>'
+      : pickers.map(p => {
+          const av = p.emoji || genderDefault(p.gender);
+          const selfCls = p.nickname === '나' ? ' self' : '';
+          return `<div class="pm-pick${selfCls}"><span class="pm-emoji">${esc(av)}</span><span class="pm-nick">${esc(p.nickname)}</span></div>`;
+        }).join('');
+    inner.innerHTML = `
+      <div class="pm-handle" aria-hidden="true"></div>
+      <div class="pm-label">Q · ${letter} 선택자</div>
+      <div class="pm-question">${esc(data.questionText)}</div>
+      <div class="pm-option-box">
+        <span class="pm-letter">${letter}</span>
+        <span class="pm-option-text">${esc(optText)}</span>
+      </div>
+      <div class="pm-count">${pickers.length}명이 이 선택을 했어요</div>
+      <div class="pm-list">${itemsHtml}</div>
+      <button type="button" class="pm-close" onclick="closePickersModal()">닫기</button>
+    `;
+    modal.hidden = false;
+    // 배경 클릭 시 닫힘
+    const backdrop = modal.querySelector('.pickers-modal-backdrop');
+    if (backdrop) backdrop.onclick = closePickersModal;
+  }
+  function closePickersModal() {
+    const m = document.getElementById('pickers-modal');
+    if (m) m.hidden = true;
   }
 
   // ── 커플 연애 분석(couple_love) DOM ───────────────
