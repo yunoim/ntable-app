@@ -111,6 +111,9 @@
     text-align: center;
     border-bottom: 1px solid rgba(212,168,67,0.12);
   }
+  /* .qr-side 는 모바일에서만 가로 flex 레이아웃용 컨테이너 (데스크탑에선 자연 흐름) */
+  .qr-side { display: contents; }
+  .qr-expand-inline { display: none; } /* 데스크탑에서는 숨김 — QR 탭·우측 독립 버튼 존재 */
   #qr-img {
     width: 100%;
     max-width: 220px;
@@ -1431,10 +1434,60 @@
     .sidebar-head { display: none !important; }
     /* 모바일 sidebar는 항상 펼친 상태로 노출 (#sidebar.expanded 의존 폐기) */
 
-    #qr-wrap { padding: 14px 16px 16px; }
-    #qr-img { max-width: 200px; }
-    #room-code { font-size: 18px; margin-top: 12px; }
-    #waiting-section { padding: 4px 16px 16px; overflow: visible; }
+    /* ── 모바일 헤더 축소 (2026-04-20) — QR 가로 배치 + 통계 2×2
+       ↓ 이전: 고정 세로 ~380px → 개선: ~180px (viewport 여유 확보) */
+    #qr-wrap {
+      padding: 10px 14px;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .qr-side {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+    }
+    #qr-img {
+      max-width: 88px;
+      width: 88px;
+      padding: 6px;
+      margin: 0;
+      flex-shrink: 0;
+    }
+    #room-code {
+      font-size: 22px;
+      margin-top: 0;
+      letter-spacing: 0.08em;
+    }
+    .qr-expand-inline {
+      display: inline-block;
+      align-self: flex-start;
+      background: var(--gold-dim-2);
+      border: 1px solid var(--gold-border);
+      color: var(--gold-light);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer;
+      margin-top: 2px;
+    }
+    .qr-expand-inline:hover { background: var(--gold-dim); }
+    /* 호스트 누적 통계 2×2 그리드 (모바일) */
+    .host-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 12px;
+      margin: 6px 14px;
+      padding: 8px 12px;
+    }
+    .host-stats .stat-line { padding: 0; font-size: 11px; }
+    .host-stats .stat-icon { font-size: 12px; }
+    .stat-login-hint { grid-column: 1 / -1; font-size: 10px; }
+    #waiting-section { padding: 4px 14px 14px; overflow: visible; }
 
     #main { height: auto; min-height: 60vh; overflow: visible; }
     #stage { overflow: visible; padding: 22px 16px 28px; }
@@ -1570,8 +1623,11 @@
   </div>
   <div id="qr-wrap">
     <img id="qr-img" src="" alt="모임 입장 QR 코드 — 탭하면 크게 보기" onclick="openQRModal()" />
-    <div id="room-code">—</div>
-    <div id="room-meeting-at" class="room-meeting-at" hidden></div>
+    <div class="qr-side">
+      <div id="room-code">—</div>
+      <div id="room-meeting-at" class="room-meeting-at" hidden></div>
+      <button type="button" class="qr-expand-inline" onclick="openQRModal()" aria-label="QR 크게 보기">🔍 크게 보기</button>
+    </div>
     <!-- 사이드바 액션 버튼들은 상단 [📋 호스트 도구] 드롭다운으로 이전됨. 코드 보존(hidden) — 호환·접근성. -->
     <button type="button" id="qr-expand-btn" onclick="openQRModal()" aria-label="QR 크게 보기" hidden>🔍 QR 크게 보기</button>
     <button type="button" id="copy-url-btn" hidden>입장 링크 복사</button>
