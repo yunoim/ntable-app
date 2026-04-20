@@ -1012,11 +1012,15 @@
     display: flex;
     gap: 22px;
     overflow-x: auto;
+    overflow-y: hidden;
     padding: 12px 4px 24px;
-    scroll-snap-type: x mandatory;
+    scroll-snap-type: x proximity;
     scroll-behavior: smooth;
-    justify-content: center;
-    flex-wrap: wrap;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
   }
   #profile-carousel::-webkit-scrollbar { height: 6px; }
   #profile-carousel::-webkit-scrollbar-track { background: transparent; }
