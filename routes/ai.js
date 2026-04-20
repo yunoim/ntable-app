@@ -228,4 +228,145 @@ router.get('/personality', async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────
+// couple_love: MBTI 궁합 + 탐구 답변 기반 커플 연애 분석
+// GET /api/rooms/:code/couple-love?uuid=&partner_uuid=
+// 서버 검증: mutual pair 가 아니면 403.
+// ─────────────────────────────────────────
+function mbtiCompat(a, b) {
+  if (!a || !b) return null;
+  const A = String(a).toUpperCase().trim();
+  const B = String(b).toUpperCase().trim();
+  if (A.length !== 4 || B.length !== 4) return null;
+  const axisNames = ['외향/내향(E/I)', '감각/직관(S/N)', '사고/감정(T/F)', '판단/인식(J/P)'];
+  const detail = [];
+  let same = 0;
+  for (let i = 0; i < 4; i++) {
+    const match = A[i] === B[i];
+    if (match) same += 1;
+    detail.push({ axis: axisNames[i], me: A[i], partner: B[i], match });
+  }
+  const labels = {
+    4: { title: '거울 듀오', sub: '네 가지 축이 똑같은 쌍둥이형. 말 안 해도 통하는 대신, 둘 다 같은 맹점에 빠지기 쉬워요.' },
+    3: { title: '닮은꼴 커플', sub: '성향이 대체로 같아 편안해요. 한 축만 달라서 서로를 살짝 보완해주는 균형.' },
+    2: { title: '보완 콤비', sub: '닮은 점·다른 점이 반반. 배울 거리 많고 대화가 다채로워요.' },
+    1: { title: '반대 매력', sub: '꽤 다른 조합. 서로 새로운 세계를 열어주는 자극적 관계.' },
+    0: { title: '정반대 자석', sub: '완전 반대 성향. 오히려 끌리지만 소통엔 의식적 노력이 필요해요.' },
+  };
+  return { same_axes: same, label: labels[same].title, sub: labels[same].sub, axes: detail };
+}
+
+router.get('/rooms/:code/couple-love', async (req, res) => {
+  const { code } = req.params;
+  const { uuid, partner_uuid } = req.query;
+  if (!uuid || !partner_uuid) return res.status(400).json({ error: 'uuid, partner_uuid required' });
+  if (uuid === partner_uuid) return res.status(400).json({ error: 'same uuid' });
+
+  try {
+    const roomRes = await pool.query('SELECT id, questions_json, question_count FROM rooms WHERE room_code = $1', [code]);
+    if (roomRes.rows.length === 0) return res.status(404).json({ error: 'room not found' });
+    const room_id = roomRes.rows[0].id;
+
+    // mutual pair 검증 (match_json.pairs 중 type=mutual)
+    const myMr = await pool.query(
+      'SELECT match_json, votes_json FROM member_results WHERE uuid = $1 AND room_id = $2',
+      [uuid, room_id]
+    );
+    if (myMr.rows.length === 0) return res.status(404).json({ error: 'not a member' });
+    const pairs = Array.isArray(myMr.rows[0].match_json?.pairs) ? myMr.rows[0].match_json.pairs : [];
+    const isMutual = pairs.some(p => p && p.type === 'mutual'
+      && ((p.a?.uuid === uuid && p.b?.uuid === partner_uuid)
+        || (p.a?.uuid === partner_uuid && p.b?.uuid === uuid)));
+    // couples 팩은 항상 2인이고 매칭 로직 없음 — match_json.pairs 가 비어있음.
+    // 이 경우 pack_id 로 우회 검증 (couples 팩이면 two members 자동 통과).
+    let allowed = isMutual;
+    if (!allowed) {
+      const pkRes = await pool.query('SELECT pack_id FROM rooms WHERE id = $1', [room_id]);
+      const pack_id = pkRes.rows[0]?.pack_id;
+      if (pack_id === 'couples') {
+        const ct = await pool.query('SELECT COUNT(*) AS cnt FROM room_members WHERE room_id = $1 AND uuid = ANY($2)', [room_id, [uuid, partner_uuid]]);
+        allowed = parseInt(ct.rows[0].cnt, 10) === 2;
+      }
+    }
+    if (!allowed) return res.status(403).json({ error: 'not a mutual pair' });
+
+    const myVotes = myMr.rows[0].votes_json || {};
+    const pRes = await pool.query(
+      'SELECT votes_json FROM member_results WHERE uuid = $1 AND room_id = $2',
+      [partner_uuid, room_id]
+    );
+    const partnerVotes = (pRes.rows[0] && pRes.rows[0].votes_json) || {};
+
+    const profRes = await pool.query(
+      'SELECT uuid, nickname, gender, mbti FROM room_members WHERE room_id = $1 AND uuid = ANY($2)',
+      [room_id, [uuid, partner_uuid]]
+    );
+    const me = profRes.rows.find(r => r.uuid === uuid) || {};
+    const partner = profRes.rows.find(r => r.uuid === partner_uuid) || {};
+
+    const allQs = Array.isArray(roomRes.rows[0].questions_json) ? roomRes.rows[0].questions_json : [];
+    const enabled = allQs.filter(q => q && q.enabled !== false);
+    const qcount = Number.isFinite(roomRes.rows[0].question_count) ? roomRes.rows[0].question_count : enabled.length;
+    const used = enabled.slice(0, qcount);
+
+    const details = [];
+    let total = 0, matched = 0;
+    for (const q of used) {
+      const qid = String(q.id);
+      const mine = myVotes[qid] || null;
+      const theirs = partnerVotes[qid] || null;
+      if (!mine || !theirs) continue;
+      total += 1;
+      const match = mine === theirs;
+      if (match) matched += 1;
+      const opts = q.options || [];
+      details.push({
+        question: q.question || '',
+        my_answer: mine,
+        partner_answer: theirs,
+        my_text: String(opts[mine === 'A' ? 0 : 1] || '').replace(/^[AB]\.\s*/, ''),
+        partner_text: String(opts[theirs === 'A' ? 0 : 1] || '').replace(/^[AB]\.\s*/, ''),
+        match,
+      });
+    }
+    const pct = total > 0 ? Math.round(matched / total * 100) : 0;
+
+    // 하이라이트: 일치 1~2 · 불일치 1개 — 대화거리 제공
+    const matches = details.filter(d => d.match);
+    const mismatches = details.filter(d => !d.match);
+    const highlights = [];
+    if (matches[0]) highlights.push({ ...matches[0], verdict: 'match' });
+    if (matches[1]) highlights.push({ ...matches[1], verdict: 'match' });
+    if (mismatches[0]) highlights.push({ ...mismatches[0], verdict: 'mismatch' });
+
+    const mbti = mbtiCompat(me.mbti, partner.mbti);
+
+    // 분석 텍스트 (규칙 기반 — Claude API 는 옵션으로 나중에)
+    const summary = [];
+    if (mbti) summary.push(`MBTI: ${me.mbti} × ${partner.mbti} — ${mbti.label}. ${mbti.sub}`);
+    else summary.push('MBTI 정보가 부족해서 성격 축 비교는 생략했어요.');
+    if (total > 0) {
+      summary.push(`탐구 ${total}문항 중 ${matched}개 같은 선택 (${pct}% 일치).`);
+      if (pct >= 80) summary.push('가치관이 거의 같은 편 — 큰 갈등이 적은 안정형.');
+      else if (pct >= 60) summary.push('통하는 부분이 많아 편안한 조합.');
+      else if (pct >= 40) summary.push('다른 부분도 꽤 있어 서로 배울 거리가 많음.');
+      else summary.push('다른 게 더 많아서 대화로 조율하는 맛이 큰 관계.');
+    }
+
+    res.json({
+      me: { uuid: me.uuid, nickname: me.nickname || '나', gender: me.gender || null, mbti: me.mbti || null },
+      partner: { uuid: partner.uuid, nickname: partner.nickname || '상대', gender: partner.gender || null, mbti: partner.mbti || null },
+      mbti_compat: mbti,
+      total,
+      matched,
+      pct,
+      highlights,
+      summary: summary.join(' '),
+    });
+  } catch (err) {
+    console.error('[ai.js] /couple-love error:', err);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
 module.exports = router;
