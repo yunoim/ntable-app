@@ -351,4 +351,80 @@ router.get('/result', async (req, res) => {
   }
 });
 
+// GET /api/rooms/:code/couple-card?uuid=&partner_uuid=
+// 사랑의 작대기 상호 매칭 커플 A/B 선택 비교 (인스타 공유 카드 데이터).
+// 서버 검증: mutual pair 아닌 경우 403.
+router.get('/rooms/:code/couple-card', async (req, res) => {
+  const { code } = req.params;
+  const { uuid, partner_uuid } = req.query;
+  if (!uuid || !partner_uuid) return res.status(400).json({ error: 'uuid, partner_uuid required' });
+  if (uuid === partner_uuid) return res.status(400).json({ error: 'same uuid' });
+
+  try {
+    const roomRes = await pool.query('SELECT id FROM rooms WHERE room_code = $1', [code]);
+    if (roomRes.rows.length === 0) return res.status(404).json({ error: 'room not found' });
+    const room_id = roomRes.rows[0].id;
+
+    // mutual pair 검증 — member_results.match_json.pairs 에 type=mutual 존재 확인
+    const myMr = await pool.query(
+      'SELECT match_json, votes_json FROM member_results WHERE uuid = $1 AND room_id = $2',
+      [uuid, room_id]
+    );
+    if (myMr.rows.length === 0) return res.status(404).json({ error: 'not a member' });
+    const pairs = Array.isArray(myMr.rows[0].match_json?.pairs) ? myMr.rows[0].match_json.pairs : [];
+    const isMutualPair = pairs.some(p => p && p.type === 'mutual'
+      && ((p.a?.uuid === uuid && p.b?.uuid === partner_uuid)
+        || (p.a?.uuid === partner_uuid && p.b?.uuid === uuid)));
+    if (!isMutualPair) return res.status(403).json({ error: 'not a mutual pair' });
+
+    const myVotes = myMr.rows[0].votes_json || {};
+    const pRes = await pool.query(
+      'SELECT votes_json FROM member_results WHERE uuid = $1 AND room_id = $2',
+      [partner_uuid, room_id]
+    );
+    const partnerVotes = (pRes.rows[0] && pRes.rows[0].votes_json) || {};
+
+    const nickRes = await pool.query(
+      `SELECT uuid, nickname FROM room_members WHERE room_id = $1 AND uuid = ANY($2)`,
+      [room_id, [uuid, partner_uuid]]
+    );
+    const nickMap = {};
+    for (const r of nickRes.rows) nickMap[r.uuid] = r.nickname;
+
+    const qRes = await pool.query(
+      'SELECT questions_json, question_count FROM rooms WHERE id = $1',
+      [room_id]
+    );
+    const allQs = (qRes.rows[0] && qRes.rows[0].questions_json) || [];
+    const enabledQs = allQs.filter(q => q && q.enabled !== false);
+    const qcount = Number.isFinite(qRes.rows[0]?.question_count) ? qRes.rows[0].question_count : enabledQs.length;
+    const usedQs = enabledQs.slice(0, qcount);
+
+    const questions = [];
+    let matched = 0;
+    for (const q of usedQs) {
+      const qid = String(q.id);
+      const mine = myVotes[qid] || null;
+      const theirs = partnerVotes[qid] || null;
+      const opts = q.options || [];
+      const optA = String(opts[0] || '').replace(/^A\.\s*/, '');
+      const optB = String(opts[1] || '').replace(/^B\.\s*/, '');
+      const match = mine != null && theirs != null && mine === theirs;
+      if (match) matched += 1;
+      questions.push({ q: q.question || '', optA, optB, mine, theirs, match });
+    }
+
+    res.json({
+      me: { uuid, nickname: nickMap[uuid] || '나' },
+      partner: { uuid: partner_uuid, nickname: nickMap[partner_uuid] || '상대' },
+      total: questions.length,
+      matched,
+      questions,
+    });
+  } catch (err) {
+    console.error('couple-card error:', err);
+    res.status(500).json({ error: 'db error' });
+  }
+});
+
 module.exports = router;
