@@ -857,6 +857,10 @@
               const btn = document.getElementById('insta-btn');
               if (btn) btn.style.display = 'none';
             }
+          } else if (msg.type === 'connection_mutual') {
+            // 후기 연결 투표 상호 지명 — 내가 pair 에 포함되면 섹션 재조회
+            const involved = (msg.a && msg.a.uuid === uuid) || (msg.b && msg.b.uuid === uuid);
+            if (involved) refreshConnectionMutuals();
           }
         } catch (_) {}
       };
@@ -865,10 +869,11 @@
     } catch (_) {}
   }
   connectResultWs();
-  // 모바일 보호모드(화면 꺼짐) 복귀 시 WS 재연결
+  // 모바일 보호모드(화면 꺼짐) 복귀 시 WS 재연결 + 연결 투표 상태 재조회
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
     if (!_ws || _ws.readyState > 1) { try { connectResultWs(); } catch (_) {} }
+    if (typeof refreshConnectionMutuals === 'function') refreshConnectionMutuals();
   });
 
   async function loadPersonality() {
@@ -1200,7 +1205,9 @@
             ${data.fi_count ? `<div class="fi-badge">❤️ ${data.fi_count}명이 나에게 관심 표시</div>` : ''}
           </div>
           ${topHtml}
+          <div id="connection-mutuals-slot"></div>
         `;
+        refreshConnectionMutuals();
       } else {
         // 참여 상황별 fallback — fi_count 유무로 온도감 구분
         const hasInterest = (data.fi_count || 0) > 0;
@@ -1219,7 +1226,8 @@
               <div class="match-fallback-text">매칭은 타이밍이에요. 오늘 나눈 대화가<br>다음 누군가와의 연결로 이어질 거예요.</div>
             </div>
           `;
-        matchEl.innerHTML = mutualHtml + coupleBtnHtml + fallback;
+        matchEl.innerHTML = mutualHtml + coupleBtnHtml + fallback + '<div id="connection-mutuals-slot"></div>';
+        refreshConnectionMutuals();
       }
       } // end else (non-couples 분기)
 
@@ -1434,6 +1442,33 @@
       btn.disabled = false;
       btn.textContent = '인스타 공개하기 📲';
     }
+  }
+
+  // ── 후기 연결 투표 상호 지명(서로 또 만나고 싶어요) ───
+  async function refreshConnectionMutuals() {
+    const slot = document.getElementById('connection-mutuals-slot');
+    if (!slot) return;
+    try {
+      const r = await fetch(`/api/connections/status?room_code=${encodeURIComponent(room_code)}&uuid=${encodeURIComponent(uuid)}`);
+      if (!r.ok) return;
+      const d = await r.json();
+      const conns = Array.isArray(d.mutuals) ? d.mutuals : [];
+      const esc = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      if (conns.length === 0) { slot.innerHTML = ''; return; }
+      slot.innerHTML = `
+        <div class="match-frame" style="padding:22px;margin-top:14px;border-color:rgba(126,232,162,0.45);">
+          <div class="match-eyebrow" style="color:#7ee8a2;">🤝 서로 또 만나고 싶어요</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
+            ${conns.map(m => `
+              <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:rgba(126,232,162,0.1);border:1px solid rgba(126,232,162,0.38);border-radius:10px;">
+                <span style="color:#7ee8a2;font-size:16px;">💫</span>
+                <span style="color:var(--white);font-weight:600;font-size:14px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(m.nickname || '익명')}</span>
+                <span style="font-size:10.5px;color:var(--text-muted);letter-spacing:0.06em;">서로 지목</span>
+              </div>`).join('')}
+          </div>
+          <div style="margin-top:10px;font-size:11.5px;color:var(--text-muted);letter-spacing:0.02em;line-height:1.55;">후기에서 서로 '또 만나고 싶은 사람'으로 지목한 상대</div>
+        </div>`;
+    } catch (_) {}
   }
 
   // ── 탐구 문항별 선택자 플로팅 모달 ───────────────
