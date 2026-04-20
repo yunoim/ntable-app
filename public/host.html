@@ -1827,8 +1827,8 @@
     <button type="button" id="sidebar-tv-btn" class="sidebar-tv-btn" onclick="openTVModal()" hidden>📺 TV 연결</button>
     <button type="button" id="sidebar-end-btn" class="sidebar-end-btn" onclick="closeRoom()" hidden>🛑 모임 종료</button>
   </div>
-  <div id="waiting-section">
-    <!-- 자동 입장 (2026-04-19) — 승인 절차 폐지. 참가자는 즉시 입장. 호스트는 강퇴 권한 유지. -->
+  <div id="waiting-section" hidden>
+    <!-- 자동 입장 (2026-04-19) — 승인 절차 폐지. 전체 섹션 hidden (2026-04-21) — 참가자 UI 는 intro panel 의 #mp-list-wrap / #profile-carousel 로 일원화. -->
     <div id="waiting-area" hidden>
       <div class="section-label">대기 중 <span class="section-count" id="waiting-count">0</span></div>
       <button type="button" id="approve-all-btn">전체 승인</button>
@@ -1885,7 +1885,7 @@
       <!-- 모바일 전용 접이식 참가자 리스트 (PC 에서는 profile-carousel 사용) -->
       <div id="mp-list-wrap" data-open="true" hidden>
         <button type="button" id="mp-list-toggle" class="mp-list-head" onclick="toggleMpList()">
-          <span class="mp-list-title">👥 참가자 <span id="mp-list-count">0</span></span>
+          <span class="mp-list-title">👥 참가자 목록<span id="mp-list-count" hidden>0</span></span>
           <span class="mp-list-chev" aria-hidden="true">▾</span>
         </button>
         <div id="mp-list-body" class="mp-list-body"></div>
