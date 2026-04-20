@@ -1741,6 +1741,12 @@ const STATE = {
   }
 })();
 
+// 모바일 보호모드(화면 꺼짐) 복귀 시 WS 재연결
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  if (!STATE.ws || STATE.ws.readyState > 1) { try { connectWS(); } catch (_) {} }
+});
+
 function showNicknameOverlay() {
   const overlay = document.getElementById('nicknameOverlay');
   if (!overlay) return;

@@ -523,6 +523,12 @@
   // 초기 로드
   loadStatus();
   connectWs();
+  // 모바일 보호모드(화면 꺼짐) 복귀 시 WS 재연결 + 상태 재조회
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if (!_ws || _ws.readyState > 1) { try { connectWs(); } catch (_) {} }
+    loadStatus();
+  });
 </script>
 </body>
 </html>
