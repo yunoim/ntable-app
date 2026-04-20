@@ -811,6 +811,9 @@
     z-index: 1;
   }
 
+  /* skip_free_chat 팩(couples 등)은 '자유대화' 단계를 아예 숨김 */
+  body.skip-free-chat .phase-step[data-tab="free"] { display: none !important; }
+
   /* Phase header */
   #phase-bar {
     display: flex;
@@ -2120,12 +2123,15 @@ async function loadRoomInfo() {
       return;
     }
     state.room = room;
+    state.packDefaults = (room.pack_defaults && typeof room.pack_defaults === 'object') ? room.pack_defaults : {};
+    if (state.packDefaults.skip_free_chat === true) document.body.classList.add('skip-free-chat');
     state.displayFields = Array.isArray(room.display_fields) ? room.display_fields : ['birth_year','region','industry','interest'];
     state.birthYearFormat = room.birth_year_format || 'exact';
     state.hostRole = room.host_role || 'host_only';
     state.questionCount = Number.isFinite(room.question_count) ? room.question_count : 10;
     state.closingSteps = Array.isArray(room.closing_steps) ? room.closing_steps : ['mvp'];
     state.closingSequence = stepsToPhases(state.closingSteps);
+    state.skipFreeChat = state.packDefaults.skip_free_chat === true;
 
     // 호스트가 participant 면 본인 카드도 approvedUsers 에 포함
     if (state.hostRole === 'participant') {
@@ -2730,7 +2736,7 @@ function updatePrimaryButton() {
       if (state.currentQIdx < state.questions.length - 1) {
         btn.textContent = '다음 문항 →';
       } else {
-        btn.textContent = '자유대화로 →';
+        btn.textContent = state.skipFreeChat ? '마무리로 →' : '자유대화로 →';
       }
       btn.style.display = 'inline-flex';
       if (hint) hint.style.display = 'none';
@@ -2914,6 +2920,9 @@ function onPrimary() {
         state.currentQIdx++;
         updateState({ phase: 'explore', current_tab: 'explore', question_index: state.currentQIdx });
         renderQuestion();
+      } else if (state.skipFreeChat) {
+        // couples 등 skip_free_chat 팩은 자유대화 생략 → 바로 마무리
+        switchTab('ending');
       } else {
         updateState({ phase: 'free', current_tab: 'free' });
         switchTab('free');
@@ -2932,9 +2941,10 @@ function onPrimary() {
 }
 
 function onBack() {
-  const i = TAB_ORDER.indexOf(state.activeTab);
+  const order = state.skipFreeChat ? TAB_ORDER.filter(t => t !== 'free') : TAB_ORDER;
+  const i = order.indexOf(state.activeTab);
   if (i > 0) {
-    const tab = TAB_ORDER[i - 1];
+    const tab = order[i - 1];
     switchTab(tab);
     const phase = TAB_TO_PHASE[tab] || tab;
     updateState({ phase, current_tab: phase });

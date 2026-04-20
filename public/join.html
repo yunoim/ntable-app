@@ -383,9 +383,26 @@ async function init() {
 }
 
 function rebuildSteps() {
-  // couples: 닉 → 기본 → 사진 → 확인 (4단계)
-  // 일반:    닉 → 기본 → 지역 → 업종 → MBTI → 관심사 → [인스타] → 사진 → 확인 (8~9단계)
-  // 인스타 step은 ROOM.instagram_collect=true 일 때만 (default: dating·icebreaker 팩)
+  // pack_defaults.wizard_fields 기반으로 동적 구성 (Phase A).
+  // 없으면 legacy 경로로 fallback (couples vs 일반 이분).
+  const wf = ROOM.pack_defaults && Array.isArray(ROOM.pack_defaults.wizard_fields)
+    ? ROOM.pack_defaults.wizard_fields : null;
+  if (wf) {
+    const steps = ['nick'];
+    const hasGender = wf.includes('gender');
+    const hasBirth = wf.includes('birth_year');
+    if (hasGender || hasBirth) steps.push('basic'); // basic step 은 gender + birth_year 집합
+    if (wf.includes('region')) steps.push('region');
+    if (wf.includes('industry')) steps.push('industry');
+    if (wf.includes('mbti')) steps.push('mbti');
+    if (wf.includes('interest')) steps.push('interest');
+    if (wf.includes('instagram') && ROOM.instagram_collect === true) steps.push('instagram');
+    if (wf.includes('emoji')) steps.push('photo'); // photo step = emoji/avatar 선택
+    steps.push('confirm');
+    STEPS = steps;
+    return;
+  }
+  // legacy fallback — pack_defaults 미탑재 방 또는 서버 응답 누락 시
   const isCouples = ROOM.pack_id === 'couples';
   const collectInsta = ROOM.instagram_collect === true;
   const steps = ['nick', 'basic'];
@@ -497,29 +514,39 @@ function renderStep() {
             <button type="button" class="chip${data.hide_birth_year?' selected':''}" data-group="hide_birth_year" data-value="true">🔒 다른 참가자에게 숨김</button>
           </div>
         </div>`;
-      body = `
-        <div class="step-num">${stepNum} · 기본 정보 <span style="opacity:0.6;font-weight:400;">(선택)</span></div>
-        <h2 class="step-title">간단히 알려주세요</h2>
-        <p class="step-sub">매칭·표시에 쓰여요.</p>
-        <div class="step-tip"><span class="step-tip-icon">💡</span><span>정확하게 입력할수록 <strong>나와 맞는 사람을 찾을 확률</strong>이 높아져요.</span></div>
-        <div class="field">
-          <div class="field-label">성별</div>
-          <div class="chip-row">
-            <button type="button" class="chip${data.gender==='male'?' selected':''}" data-group="gender" data-value="male">남성</button>
-            <button type="button" class="chip${data.gender==='female'?' selected':''}" data-group="gender" data-value="female">여성</button>
-            <button type="button" class="chip${data.gender==='unspecified'?' selected':''}" data-group="gender" data-value="unspecified">선택 안 함</button>
+      {
+        const wf = ROOM.pack_defaults && Array.isArray(ROOM.pack_defaults.wizard_fields)
+          ? ROOM.pack_defaults.wizard_fields : null;
+        const showGender = wf ? wf.includes('gender') : true;
+        const showBirth = wf ? wf.includes('birth_year') : true;
+        const genderSection = showGender ? `
+          <div class="field">
+            <div class="field-label">성별</div>
+            <div class="chip-row">
+              <button type="button" class="chip${data.gender==='male'?' selected':''}" data-group="gender" data-value="male">남성</button>
+              <button type="button" class="chip${data.gender==='female'?' selected':''}" data-group="gender" data-value="female">여성</button>
+              <button type="button" class="chip${data.gender==='unspecified'?' selected':''}" data-group="gender" data-value="unspecified">선택 안 함</button>
+            </div>
+          </div>` : '';
+        const birthSection = showBirth ? `
+          <div class="field">
+            <div class="field-label">출생연도 <span style="opacity:0.5;font-size:11px;">기본 1990</span></div>
+            <select id="birthYearInput" class="year-select">${yearOpts}</select>
           </div>
-        </div>
-        <div class="field">
-          <div class="field-label">출생연도 <span style="opacity:0.5;font-size:11px;">기본 1990</span></div>
-          <select id="birthYearInput" class="year-select">${yearOpts}</select>
-        </div>
-        ${fmtSection}
-        <div class="actions">
-          ${prevBtn}
-          <button type="button" class="btn btn-next" onclick="nextStep()">다음</button>
-        </div>
-      `;
+          ${fmtSection}` : '';
+        body = `
+          <div class="step-num">${stepNum} · 기본 정보 <span style="opacity:0.6;font-weight:400;">(선택)</span></div>
+          <h2 class="step-title">간단히 알려주세요</h2>
+          <p class="step-sub">매칭·표시에 쓰여요.</p>
+          <div class="step-tip"><span class="step-tip-icon">💡</span><span>정확하게 입력할수록 <strong>나와 맞는 사람을 찾을 확률</strong>이 높아져요.</span></div>
+          ${genderSection}
+          ${birthSection}
+          <div class="actions">
+            ${prevBtn}
+            <button type="button" class="btn btn-next" onclick="nextStep()">다음</button>
+          </div>
+        `;
+      }
       break;
     }
     case 'region': {
@@ -719,20 +746,27 @@ function renderStep() {
         const metro = (typeof detectMetro === 'function') ? detectMetro(regionDisplay) : '';
         if (metro && regionDisplay.startsWith(metro + ' ')) regionDisplay = metro;
       }
+      // 팩별 수집 필드만 확인 화면에 노출
+      const wfConf = ROOM.pack_defaults && Array.isArray(ROOM.pack_defaults.wizard_fields)
+        ? ROOM.pack_defaults.wizard_fields : null;
+      const showFld = (f) => !wfConf || wfConf.includes(f);
+      const avatarRow = showFld('emoji')
+        ? `<div class="summary-row"><span class="key">아바타</span><span class="val">${data.emoji ? `<span style="font-size:22px;">${escHtml(data.emoji)}</span>` : '<span class="empty">생략</span>'}</span></div>`
+        : '';
       body = `
         <div class="step-num">${stepNum} · 확인</div>
         <h2 class="step-title">이렇게 입장해요</h2>
         <p class="step-sub">${subText}</p>
         <div class="summary">
-          <div class="summary-row"><span class="key">아바타</span><span class="val">${data.emoji ? `<span style="font-size:22px;">${escHtml(data.emoji)}</span>` : '<span class="empty">생략</span>'}</span></div>
+          ${avatarRow}
           <div class="summary-row"><span class="key">닉네임</span><span class="val">${escHtml(data.nickname)}</span></div>
-          ${rowH('성별', genderLabel, false)}
-          ${rowH('출생연도', birthDisplay, data.hide_birth_year)}
-          ${rowH('지역', regionDisplay, data.hide_region)}
-          ${rowH('업종', data.industry, data.hide_industry)}
-          ${rowH('MBTI', data.mbti, false)}
-          ${rowH('관심사', data.interest, data.hide_interest)}
-          ${rowH('인스타그램', data.instagram ? '@' + data.instagram : '', data.hide_instagram)}
+          ${showFld('gender') ? rowH('성별', genderLabel, false) : ''}
+          ${showFld('birth_year') ? rowH('출생연도', birthDisplay, data.hide_birth_year) : ''}
+          ${showFld('region') ? rowH('지역', regionDisplay, data.hide_region) : ''}
+          ${showFld('industry') ? rowH('업종', data.industry, data.hide_industry) : ''}
+          ${showFld('mbti') ? rowH('MBTI', data.mbti, false) : ''}
+          ${showFld('interest') ? rowH('관심사', data.interest, data.hide_interest) : ''}
+          ${showFld('instagram') ? rowH('인스타그램', data.instagram ? '@' + data.instagram : '', data.hide_instagram) : ''}
         </div>
         <div class="actions">
           ${prevBtn}
