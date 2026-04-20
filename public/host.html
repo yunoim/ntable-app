@@ -814,6 +814,10 @@
   /* skip_free_chat 팩(couples 등)은 '자유대화' 단계를 아예 숨김 */
   body.skip-free-chat .phase-step[data-tab="free"] { display: none !important; }
 
+  /* auth-header.js 의 공통 로그인 pill — 호스트 페이지에선 우상단 ⋮ 더보기 와 겹쳐서 숨김.
+     계정 연동 상태는 ⋮ 더보기 → '내 정보' 모달 에서 확인·변경 가능. */
+  .nt-auth-pill { display: none !important; }
+
   /* ── 모바일 참가자 리스트 + 카드 모달 ─────────── */
   #mp-list-wrap { display: none; } /* 데스크탑은 항상 숨김 — profile-carousel 로 노출 */
   .mp-list-head {
@@ -1828,8 +1832,10 @@
       <button type="button" id="approve-all-btn">전체 승인</button>
       <div id="waiting-list"></div>
     </div>
-    <div class="section-label">참가자 <span class="section-count" id="approved-count">0</span></div>
-    <div id="approved-list"></div>
+    <!-- 사이드바 참가자 리스트는 intro panel 의 #profile-carousel(PC) + #mp-list-wrap(모바일, 접이식+카드 모달)로 대체 (2026-04-21).
+         JS 의 renderApprovedList() 가 여전히 이 DOM 에 접근하므로 빈 wrapper 는 유지 (count 엘리먼트도 참조). -->
+    <div class="section-label" hidden>참가자 <span class="section-count" id="approved-count">0</span></div>
+    <div id="approved-list" hidden></div>
   </div>
 </aside>
 
