@@ -3629,7 +3629,7 @@ async function sendNudge() {
       host_uuid: state.uuid, message: '자리를 이동해볼까요 🔀',
     });
     toast('셔플 넛지 전송 ✓');
-  } catch { toast('전송 실패'); }
+  } catch { toast('전송에 실패했어요. 잠시 후 다시 시도해주세요.'); }
 }
 
 async function throwCard() {
@@ -3928,7 +3928,7 @@ async function setHostRole(role) {
     if (voteBtns) voteBtns.classList.toggle('show', role === 'participant');
     toast(role === 'participant' ? '참여 모드로 전환' : '진행 전담 모드로 전환');
   } catch {
-    toast('네트워크 오류');
+    toast('네트워크가 불안정해요. 잠시 후 다시 시도해주세요.');
   }
 }
 

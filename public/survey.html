@@ -533,7 +533,7 @@
           msg = '해당 모임을 찾을 수 없어요. (탭하면 홈으로)';
           bannerOnClickHome = true;
         } else {
-          msg = '후기 제출 불가. (탭하면 홈으로)';
+          msg = '후기를 제출할 수 없는 상태예요. (탭하면 홈으로)';
           bannerOnClickHome = true;
         }
         ineligibleBanner.innerHTML = '<div>' + msg + '</div>' + actions;
@@ -712,7 +712,7 @@
       localStorage.removeItem('pending_survey');
       showDone(mutuals);
     } catch (err) {
-      alert(err.message || '네트워크 오류');
+      alert(err.message || '네트워크가 불안정해요. 잠시 후 다시 시도해주세요.');
       btn.disabled = false;
       btn.textContent = '후기 제출하기';
     }

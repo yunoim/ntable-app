@@ -347,7 +347,7 @@ async function init() {
   document.getElementById('roomTag').textContent = `모임 코드 ${ROOM_CODE}`;
   try {
     const r = await fetch(`/api/rooms/${ROOM_CODE}`);
-    if (!r.ok) { renderErr('모임 정보를 불러올 수 없어요'); return; }
+    if (!r.ok) { renderErr('모임 정보를 불러올 수 없어요. 새로고침하거나 잠시 후 다시 시도해주세요.'); return; }
     ROOM = await r.json();
     if (ROOM.status === 'closed') { renderErr('이 모임은 이미 종료됐어요'); return; }
     document.getElementById('roomTitle').textContent = ROOM.title || ROOM_CODE;
@@ -393,7 +393,7 @@ async function init() {
     renderProgress();
     renderStep();
   } catch (e) {
-    renderErr('서버 연결 실패');
+    renderErr('서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.');
   }
 }
 
@@ -1149,7 +1149,7 @@ async function submitJoin() {
     } catch (_) {}
     location.replace(ROOM.isHost ? `/room/${ROOM_CODE}/host` : `/room/${ROOM_CODE}`);
   } catch (e) {
-    err.textContent = '서버 연결 실패';
+    err.textContent = '서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.';
     btn.disabled = false;
     btn.textContent = '입장하기';
   }

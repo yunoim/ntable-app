@@ -1447,8 +1447,8 @@
 <div class="screen" id="screenWaiting">
   <button type="button" class="waiting-logout" onclick="guestLogout()" aria-label="이 모임에서 나가기">모임 나가기</button>
   <div class="waiting-msg">
-    <h2>호스트 승인을<br>기다리고 있어요</h2>
-    <p id="waitingStatus">방금 도착. 호스트가 확인 중이에요.</p>
+    <h2>모임이 곧 시작돼요</h2>
+    <p id="waitingStatus">입장 완료! 호스트가 모임을 시작하면 자동으로 이어집니다.</p>
     <div class="dots-loader">
       <span></span><span></span><span></span>
     </div>
@@ -1781,7 +1781,7 @@ const STATE = {
 
   try {
     const res = await fetch(`/api/rooms/${STATE.roomCode}`);
-    if (!res.ok) { showError('모임 정보를 불러올 수 없어요.'); return; }
+    if (!res.ok) { showError('모임 정보를 불러올 수 없어요. 새로고침하거나 잠시 후 다시 시도해주세요.'); return; }
     const room = await res.json();
     STATE.room = room;
 
@@ -1887,7 +1887,7 @@ async function submitNickname() {
     switchScreen('waiting');
     connectWS();
   } catch (e) {
-    msg.textContent = '서버 연결 실패';
+    msg.textContent = '서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.';
     btn.disabled = false;
     btn.textContent = '입장하기';
   }
@@ -2402,8 +2402,8 @@ function startWaitingTimer() {
     const secs = Math.floor((Date.now() - waitingStart) / 1000);
     const mins = Math.floor(secs / 60);
     if (statusEl) {
-      if (secs < 60) statusEl.textContent = '방금 도착. 호스트가 확인 중이에요.';
-      else statusEl.textContent = `${mins}분 경과 · 호스트 확인을 기다리고 있어요`;
+      if (secs < 60) statusEl.textContent = '입장 완료! 호스트가 모임을 시작하면 자동으로 이어집니다.';
+      else statusEl.textContent = `${mins}분 경과 · 호스트가 곧 시작할 거예요`;
     }
     if (secs >= 300 && alertBtn && alertBtn.hidden) {
       alertBtn.hidden = false;
@@ -3302,7 +3302,7 @@ async function submitVote(type) {
   } catch (_) {
     submitBtn.disabled = false;
     submitBtn.textContent = type === 'mvp' ? '투표 완료' : '선택 완료';
-    if (typeof toast === 'function') toast('전송 실패. 다시 시도해주세요');
+    if (typeof toast === 'function') toast('전송에 실패했어요. 잠시 후 다시 시도해주세요.');
     return;
   }
 
@@ -3421,7 +3421,7 @@ async function revealInstagram() {
       btn.style.display = 'none';
     }
   } catch {
-    resultBox.textContent = '오류가 발생했어요. 다시 시도해주세요.';
+    resultBox.textContent = '문제가 발생했어요. 잠시 후 다시 시도해주세요.';
     btn.textContent = '📸 인스타그램 공개하기';
     btn.style.opacity = '';
     btn.disabled = false;
