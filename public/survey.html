@@ -710,16 +710,50 @@
     }
   }
 
-  function showDone(mutuals) {
+  // 상호 선택 상대 누적 — 제출 응답 + WS broadcast 양쪽에서 갱신
+  const mutualMap = new Map(); // target_uuid → nickname
+  function updateMutualBadge() {
     const wrap = document.getElementById('mutualWrap');
-    if (mutuals && mutuals.length) {
-      const names = mutuals.map(m => escHtml(m.nickname)).join(', ');
-      wrap.innerHTML = `<div class="mutual-badge">💫 <strong>${names}</strong>님과 서로 선택했어요</div>`;
-    } else {
-      wrap.innerHTML = '';
+    if (!wrap) return;
+    if (mutualMap.size === 0) { wrap.innerHTML = ''; return; }
+    const names = [...mutualMap.values()].map(escHtml).join(', ');
+    wrap.innerHTML = `<div class="mutual-badge">💫 <strong>${names}</strong>님과 서로 선택했어요</div>`;
+  }
+  function showDone(mutuals) {
+    if (Array.isArray(mutuals)) {
+      for (const m of mutuals) {
+        if (m && m.uuid && m.nickname) mutualMap.set(m.uuid, m.nickname);
+      }
     }
+    updateMutualBadge();
     document.getElementById('doneOverlay').classList.add('show');
   }
+
+  // WS 연결 — 내가 먼저 제출한 뒤 상대가 나중에 나를 선택하면 실시간으로 '서로 선택' 뱃지 갱신
+  let _surveyWs = null;
+  function connectSurveyWs() {
+    try {
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      _surveyWs = new WebSocket(`${proto}://${location.host}/ws/${room_code}/${uuid}`);
+      _surveyWs.onmessage = (e) => {
+        try {
+          const msg = JSON.parse(e.data);
+          if (msg.type !== 'connection_mutual') return;
+          const involved = (msg.a && msg.a.uuid === uuid) || (msg.b && msg.b.uuid === uuid);
+          if (!involved) return;
+          const other = msg.a?.uuid === uuid ? msg.b : msg.a;
+          if (!other || !other.uuid || !other.nickname) return;
+          mutualMap.set(other.uuid, other.nickname);
+          updateMutualBadge();
+          // 완료 오버레이가 아직 뜨지 않았다면 자연스럽게 보이도록 띄움 (제출은 이미 됐다는 의미)
+          document.getElementById('doneOverlay').classList.add('show');
+        } catch (_) {}
+      };
+      _surveyWs.onclose = () => { setTimeout(connectSurveyWs, 5000); };
+      _surveyWs.onerror = () => { try { _surveyWs.close(); } catch (_) {} };
+    } catch (_) {}
+  }
+  connectSurveyWs();
 
   function goResult() {
     location.href = `/result?room=${room_code}&uuid=${uuid}`;

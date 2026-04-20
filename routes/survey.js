@@ -180,6 +180,31 @@ router.post('/connections', async (req, res) => {
       [room_id, uuid, cleanPicks]
     );
 
+    // 새로 성사된 상호 선택에 대해 WS broadcast — 이미 제출한 상대도 실시간으로 '서로 선택' 뱃지 갱신.
+    if (mutuals.rows.length > 0) {
+      const selfRes = await pool.query(
+        `SELECT COALESCE(rm.nickname, u.nickname) AS nickname
+           FROM room_members rm
+           LEFT JOIN users u ON u.uuid = rm.uuid
+          WHERE rm.room_id = $1 AND rm.uuid = $2
+          UNION ALL
+          SELECT nickname FROM users WHERE uuid = $2
+          LIMIT 1`,
+        [room_id, uuid]
+      );
+      const myNick = selfRes.rows[0]?.nickname || '익명';
+      try {
+        const wsModule = require('./ws');
+        for (const m of mutuals.rows) {
+          wsModule.broadcastToRoom(room_code, {
+            type: 'connection_mutual',
+            a: { uuid, nickname: myNick },
+            b: { uuid: m.uuid, nickname: m.nickname },
+          });
+        }
+      } catch (_) {}
+    }
+
     res.json({ saved: cleanPicks.length, mutuals: mutuals.rows });
   } catch (err) {
     console.error('connections error:', err);
