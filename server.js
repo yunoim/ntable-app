@@ -167,11 +167,49 @@ userAuthRouter.init(require('./db').pool);
 
 const PORT = process.env.PORT || 8080;
 
+// ── 보관 기간 cron: N일 경과한 status=closed 방 + 연관 테이블 자동 파기 ──
+// 기본 OFF (destructive). Railway env 에서 ROOM_RETENTION_ENABLED=1 설정 시 하루 1회 실행.
+// ROOM_RETENTION_DAYS (기본 30) 경과 후 closed 상태 방만 대상.
+const RETENTION_DAYS = Math.max(1, parseInt(process.env.ROOM_RETENTION_DAYS || '30', 10) || 30);
+const RETENTION_ENABLED = process.env.ROOM_RETENTION_ENABLED === '1';
+
+async function cleanExpiredRooms() {
+  try {
+    const pool = require('./db').pool;
+    const { rows } = await pool.query(
+      `SELECT id FROM rooms
+        WHERE status = 'closed'
+          AND created_at < NOW() - ($1 || ' days')::interval`,
+      [String(RETENTION_DAYS)]
+    );
+    if (rows.length === 0) return;
+    const ids = rows.map(r => r.id);
+    // FK ON DELETE CASCADE 가 없는 테이블 수동 DELETE (member_results, survey_responses, room_connections, room_state 는 FK 있지만 명시적 cascade X)
+    await pool.query('DELETE FROM insta_selects WHERE room_id = ANY($1)', [ids]);
+    await pool.query('DELETE FROM room_connections WHERE room_id = ANY($1)', [ids]);
+    await pool.query('DELETE FROM member_results WHERE room_id = ANY($1)', [ids]);
+    await pool.query('DELETE FROM survey_responses WHERE room_id = ANY($1)', [ids]);
+    await pool.query('DELETE FROM room_state WHERE room_id = ANY($1)', [ids]);
+    await pool.query('DELETE FROM room_members WHERE room_id = ANY($1)', [ids]);
+    await pool.query('DELETE FROM rooms WHERE id = ANY($1)', [ids]);
+    console.log(`[retention] deleted ${ids.length} rooms older than ${RETENTION_DAYS} days`);
+  } catch (err) {
+    console.error('[retention] cron error:', err && err.message);
+  }
+}
+
 // Init DB then start server
 initDB()
   .then(() => {
     server.listen(PORT, () => {
       console.log(`[server] Running on http://localhost:${PORT}`);
+      if (RETENTION_ENABLED) {
+        console.log(`[retention] cron enabled — ${RETENTION_DAYS}일 경과 closed 방 자동 파기`);
+        setTimeout(cleanExpiredRooms, 30 * 1000); // 서버 시작 30초 후 첫 실행
+        setInterval(cleanExpiredRooms, 24 * 60 * 60 * 1000); // 매일
+      } else {
+        console.log('[retention] cron disabled (ROOM_RETENTION_ENABLED != 1)');
+      }
     });
   })
   .catch((err) => {

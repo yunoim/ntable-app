@@ -1663,12 +1663,14 @@
     if (!pager || !dots.length) return;
     const homeWrap = document.getElementById('home-link-wrap');
     const sync = () => {
+      // 매번 라이브 쿼리 — applyPackGates 가 페이지/도트 제거한 뒤에도 정확
+      const liveDots = document.querySelectorAll('#pager-dots .pager-dot');
       const idx = Math.round(pager.scrollLeft / (pager.clientWidth || 1));
-      dots.forEach((d, i) => d.classList.toggle('active', i === idx));
-      // 홈으로 버튼은 마지막 가시 페이지에서만 노출
+      liveDots.forEach((d, i) => d.classList.toggle('active', i === idx));
+      // 홈으로 버튼은 마지막 페이지에서만 노출
       if (homeWrap) {
-        const lastVisibleIdx = dots.reduce((acc, d, i) => d.style.display === 'none' ? acc : i, 0);
-        const atLast = idx >= lastVisibleIdx;
+        const lastIdx = liveDots.length - 1;
+        const atLast = idx >= lastIdx;
         homeWrap.style.opacity = atLast ? '1' : '0';
         homeWrap.style.pointerEvents = atLast ? 'auto' : 'none';
       }
@@ -1750,13 +1752,17 @@
       const title = exCard ? exCard.querySelector('.card-title') : null;
       if (title) title.textContent = '💘 오늘의 인연과 다시 만나기';
     }
-    // result_sections 에 'summary' 가 없는 팩은 페이지 4(모임 요약) 자체 숨김 + 도트 제거
+    // result_sections 에 'summary' 가 없는 팩은 페이지 4(모임 요약) DOM 자체 제거 + 해당 도트 제거.
+    // display:none 만 걸면 pager 의 scrollLeft/clientWidth 계산에 여전히 4페이지가 포함돼 마우스 드래그·스와이프 시 빈 페이지로 스냅됨 → DOM 제거로 pager 총 너비 자체를 단축.
     const sections = packDefaults && Array.isArray(packDefaults.result_sections) ? packDefaults.result_sections : null;
     if (sections && !sections.includes('summary')) {
       const page4 = document.querySelector('#pager section.page[data-page="3"]');
-      if (page4) page4.style.display = 'none';
+      if (page4 && page4.parentNode) page4.parentNode.removeChild(page4);
       const dot4 = document.querySelector('#pager-dots .pager-dot[data-dot="3"]');
-      if (dot4) dot4.style.display = 'none';
+      if (dot4 && dot4.parentNode) dot4.parentNode.removeChild(dot4);
+      // pager 스크롤 위치가 제거 후에도 맨 앞에 유지되도록 초기화
+      const pager = document.getElementById('pager');
+      if (pager) pager.scrollLeft = 0;
     }
   }
   // loadResult 내부에서 data.pack_defaults 수신 후 호출하기 위한 전역 노출
