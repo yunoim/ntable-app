@@ -9,7 +9,7 @@
 <script src="/oauth-redirect.js"></script>
 <script src="/auth-header.js" defer></script>
 <script src="/remember-toggle.js" defer></script>
-<title>ntable — 호스트 프레젠테이션</title>
+<title>ntable — 모임장 프레젠테이션</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -815,7 +815,7 @@
   /* skip_free_chat 팩(couples 등)은 '자유대화' 단계를 아예 숨김 */
   body.skip-free-chat .phase-step[data-tab="free"] { display: none !important; }
 
-  /* auth-header.js 의 공통 로그인 pill — 호스트 페이지에선 우상단 ⋮ 더보기 와 겹쳐서 숨김.
+  /* auth-header.js 의 공통 로그인 pill — 모임장 페이지에선 우상단 ⋮ 더보기 와 겹쳐서 숨김.
      계정 연동 상태는 ⋮ 더보기 → '내 정보' 모달 에서 확인·변경 가능. */
   .nt-auth-pill { display: none !important; }
 
@@ -1558,7 +1558,7 @@
   /* Mobile sidebar toggle — hidden on desktop */
   #mobile-sidebar-toggle { display: none; }
 
-  /* approved-list 호스트 태그 폭 충분 확보 */
+  /* approved-list 모임장 태그 폭 충분 확보 */
   .approved-host-tag { white-space: nowrap; overflow: visible; max-width: none; }
 
   /* ── Responsive: tablet → laptop (1100px 이하) ── */
@@ -1625,7 +1625,7 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    /* 호스트 누적 통계 2×2 그리드 (모바일, qr-side 내부) */
+    /* 모임장 누적 통계 2×2 그리드 (모바일, qr-side 내부) */
     .host-stats {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1771,7 +1771,7 @@
 
   /* ═══ Case 1 (큰 화면 단독, presenter-style) ═════════════
      폭 기반 자동 전환 — JS·WS·상태 로직 건드리지 않음, CSS-only
-     설계: Notion "호스트 UX 3케이스 설계" 페이지 참조
+     설계: Notion "모임장 UX 3케이스 설계" 페이지 참조
      2026-04-20: 브레이크포인트 1024 → 960 (태블릿 가로·13인치 노트북 포함)
      ─────────────────────────────────────────────────────── */
   @media (min-width: 960px) {
@@ -1844,7 +1844,7 @@
         <div id="stat-login-hint" class="stat-login-hint" hidden>다른 기기에서도 누적 유지하려면 <a href="#" id="stat-login-link">로그인</a></div>
       </div>
     </div>
-    <!-- 사이드바 액션 버튼들은 상단 [📋 호스트 도구] 드롭다운으로 이전됨. 코드 보존(hidden) — 호환·접근성. -->
+    <!-- 사이드바 액션 버튼들은 상단 [📋 모임장 도구] 드롭다운으로 이전됨. 코드 보존(hidden) — 호환·접근성. -->
     <button type="button" id="qr-expand-btn" onclick="openQRModal()" aria-label="QR 크게 보기" hidden>🔍 QR 크게 보기</button>
     <button type="button" id="copy-url-btn" hidden>입장 링크 복사</button>
     <button type="button" id="sidebar-kakao-btn" class="sidebar-kakao-btn" onclick="kakaoShare()" hidden>💛 카카오톡으로 초대</button>
@@ -1948,7 +1948,7 @@
       </div>
 
       <div class="free-grid">
-        <!-- 자리 셔플 카드 폐기 (2026-04-19) — 호스트가 자연스럽게 분위기 조정하도록 -->
+        <!-- 자리 셔플 카드 폐기 (2026-04-19) — 모임장이 자연스럽게 분위기 조정하도록 -->
         <div class="free-card" id="free-topic-card">
           <div class="card-head">🃏 질문 카드</div>
           <div class="question-selector" id="free-q-list"></div>
@@ -1985,12 +1985,12 @@
         <div class="free-card">
           <div class="card-head" id="closing-card-head">🏆 오늘의 주인공 투표</div>
           <div id="mvp-list"></div>
-          <!-- participant 호스트 본인 투표 UI -->
+          <!-- participant 모임장 본인 투표 UI -->
           <div id="host-self-vote-wrap" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(212,168,67,0.06);border:1px solid var(--gold-border);border-radius:10px;">
-            <div style="font-size:12px;color:var(--gold-light);margin-bottom:8px;">내 선택 (호스트 본인)</div>
+            <div style="font-size:12px;color:var(--gold-light);margin-bottom:8px;">내 선택 (모임장 본인)</div>
             <div id="host-self-vote-options"></div>
           </div>
-          <div class="card-help" id="closing-card-help" style="font-size:12px;color:var(--text-muted);margin-top:8px;line-height:1.5;">참가자가 직접 투표합니다. 호스트 화면은 실시간 집계만 표시.</div>
+          <div class="card-help" id="closing-card-help" style="font-size:12px;color:var(--text-muted);margin-top:8px;line-height:1.5;">참가자가 직접 투표합니다. 모임장 화면은 실시간 집계만 표시.</div>
           <button type="button" class="csub-next-btn" id="closingNextBtn" onclick="advanceClosingPhase()">다음 단계 →</button>
         </div>
         <div class="free-card" id="match-result-card" style="display:none;">
@@ -2078,7 +2078,7 @@
   </div>
 </div>
 
-<!-- 운영 옵션 모달 (탐구 문항 / 자유대화 / 호스트 역할 / 화면 형태) -->
+<!-- 운영 옵션 모달 (탐구 문항 / 자유대화 / 모임장 역할 / 화면 형태) -->
 <div id="room-settings-modal" role="dialog" aria-modal="true" style="position:fixed;inset:0;z-index:1500;display:none;align-items:center;justify-content:center;">
   <div onclick="closeRoomSettings()" style="position:absolute;inset:0;background:rgba(0,0,0,0.6);"></div>
   <div style="position:relative;background:#141d35;border:1px solid var(--gold-border);border-radius:18px;padding:24px;max-width:420px;width:calc(100% - 32px);max-height:85vh;overflow-y:auto;">
@@ -2111,7 +2111,7 @@
     </div>
 
     <div style="margin-bottom:20px;">
-      <label style="display:block;font-size:11px;color:var(--gold);letter-spacing:0.1em;margin-bottom:8px;">호스트 역할</label>
+      <label style="display:block;font-size:11px;color:var(--gold);letter-spacing:0.1em;margin-bottom:8px;">모임장 역할</label>
       <div style="display:flex;gap:8px;">
         <button type="button" class="rs-chip" data-rs-role="participant" style="flex:1;padding:10px;background:rgba(212,168,67,0.06);border:1px solid var(--gold-border);border-radius:10px;font-size:13px;cursor:pointer;color:var(--white-dim);font-family:inherit;">🙋 참여자로 참가</button>
         <button type="button" class="rs-chip" data-rs-role="host_only" style="flex:1;padding:10px;background:rgba(212,168,67,0.06);border:1px solid var(--gold-border);border-radius:10px;font-size:13px;cursor:pointer;color:var(--white-dim);font-family:inherit;">🎛️ 진행만 (집계·발표)</button>
@@ -2119,7 +2119,7 @@
     </div>
 
     <div style="margin-bottom:20px;">
-      <label style="display:block;font-size:11px;color:var(--gold);letter-spacing:0.1em;margin-bottom:8px;">호스트 화면 형태</label>
+      <label style="display:block;font-size:11px;color:var(--gold);letter-spacing:0.1em;margin-bottom:8px;">모임장 화면 형태</label>
       <div style="display:flex;gap:8px;">
         <button type="button" class="rs-chip" data-rs-mode="mobile" style="flex:1;padding:10px;background:rgba(212,168,67,0.06);border:1px solid var(--gold-border);border-radius:10px;font-size:13px;cursor:pointer;color:var(--white-dim);font-family:inherit;">📱 모바일</button>
         <button type="button" class="rs-chip" data-rs-mode="presenter" style="flex:1;padding:10px;background:rgba(212,168,67,0.06);border:1px solid var(--gold-border);border-radius:10px;font-size:13px;cursor:pointer;color:var(--white-dim);font-family:inherit;">🖥 큰 화면</button>
@@ -2139,7 +2139,7 @@
     <h3 id="settings-title">✏️ 콘텐츠 수정</h3>
     <div class="settings-sub">모임 시작 전에만 편집할 수 있어요.</div>
 
-    <!-- 내 참여 여부는 ⚙ 운영 모달의 '호스트 역할' 으로 일원화 (2026-04-19) -->
+    <!-- 내 참여 여부는 ⚙ 운영 모달의 '모임장 역할' 으로 일원화 (2026-04-19) -->
 
     <div class="settings-tabs">
       <button type="button" class="settings-tab active" data-stab="questions">탐구 질문</button>
@@ -2163,7 +2163,7 @@
       <div class="settings-summary">
         <div>
           <div class="summary-main">사용 중 <span id="settings-tcount-value">0</span> / <span id="settings-tcount-total">0</span>주제</div>
-          <div class="summary-hint">자유대화 중 호스트가 던질 질문 카드 풀이에요.</div>
+          <div class="summary-hint">자유대화 중 모임장이 던질 질문 카드 풀이에요.</div>
         </div>
       </div>
       <div class="settings-list" id="topics-edit-list"></div>
@@ -2186,7 +2186,7 @@
     <div class="qr-modal-brand">ntable</div>
     <img id="qr-modal-img" class="qr-modal-img" src="" alt="모임 입장 QR 코드 (확대)" />
     <div class="qr-modal-code" id="qr-modal-code">—</div>
-    <div class="qr-modal-hint">📨 참가자 초대 — QR 또는 링크를 공유해 주세요.<br>들어온 참가자는 호스트 도구에서 확인 가능합니다.</div>
+    <div class="qr-modal-hint">📨 참가자 초대 — QR 또는 링크를 공유해 주세요.<br>들어온 참가자는 모임장 도구에서 확인 가능합니다.</div>
     <button type="button" id="qr-modal-kakao" class="qr-modal-copy-btn" onclick="kakaoShare()" hidden style="background:#FEE500;color:#3a1d1d;border:none;margin-bottom:8px;font-weight:700;">💛 카카오톡으로 초대</button>
     <button type="button" id="qr-modal-copy" class="qr-modal-copy-btn">🔗 입장 링크 복사</button>
   </div>
@@ -2263,7 +2263,7 @@ async function loadRoomInfo() {
     const room = await res.json();
     if (room.host_uuid && room.host_uuid !== state.uuid) { location.href = '/'; return; }
     if (room.status === 'closed') { location.href = '/create'; return; }
-    // display_mode === 'presenter' 면 presenter 화면으로 자동 이동 (호스트가 큰 화면 선택)
+    // display_mode === 'presenter' 면 presenter 화면으로 자동 이동 (모임장이 큰 화면 선택)
     if (room.display_mode === 'presenter' && !location.pathname.includes('/presenter/')) {
       location.replace(`/presenter/${state.roomCode}`);
       return;
@@ -2294,7 +2294,7 @@ async function loadRoomInfo() {
     state.closingSequence = stepsToPhases(state.closingSteps);
     state.skipFreeChat = state.packDefaults.skip_free_chat === true;
 
-    // 호스트가 participant 면 본인 카드도 approvedUsers 에 포함
+    // 모임장이 participant 면 본인 카드도 approvedUsers 에 포함
     if (state.hostRole === 'participant') {
       try {
         const myRes = await fetch(`/api/rooms/${state.roomCode}/members/${encodeURIComponent(state.uuid)}?viewer=${encodeURIComponent(state.uuid)}`);
@@ -2330,7 +2330,7 @@ async function loadQR() {
     const data = await res.json();
     if (data.qr_data_url) {
       img.src = data.qr_data_url;
-      // 호스트가 모임에 처음 도착하면 게스트 초대 모달을 자동 노출 (세션당 1회)
+      // 모임장이 모임에 처음 도착하면 게스트 초대 모달을 자동 노출 (세션당 1회)
       try {
         const flag = `host_invite_shown_${state.roomCode}`;
         if (!sessionStorage.getItem(flag)) {
@@ -2375,7 +2375,7 @@ function connectWS() {
     state.pongInterval = setInterval(() => {
       if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
     }, 30000);
-    // 호스트 입장 시 기존 참가자에게 사진 다시 broadcast 요청 + 차단 목록 동기화
+    // 모임장 입장 시 기존 참가자에게 사진 다시 broadcast 요청 + 차단 목록 동기화
     try { ws.send(JSON.stringify({ type: 'request_photos' })); } catch (_) {}
     try { ws.send(JSON.stringify({ type: 'request_banlist' })); } catch (_) {}
     // 본인 사진(wizard에서 저장) broadcast — 게스트와 동일 패턴
@@ -2435,7 +2435,7 @@ function handleWSMessage(msg) {
       break;
     }
     case 'recover_request': {
-      // 다른 기기에서 같은 닉네임으로 복구 요청 — 호스트가 육안 식별 후 승인/거부
+      // 다른 기기에서 같은 닉네임으로 복구 요청 — 모임장이 육안 식별 후 승인/거부
       showRecoverApprovalModal(msg);
       break;
     }
@@ -2475,21 +2475,21 @@ function handleWSMessage(msg) {
       toast(`⏳ ${msg.nickname}님이 ${msg.minutes}분째 대기 중 — 승인을 확인해주세요`);
       break;
     case 'photo_update':
-      // 참가자 사진 수신 (서버는 relay만 — 호스트 메모리 STATE에만 보관)
+      // 참가자 사진 수신 (서버는 relay만 — 모임장 메모리 STATE에만 보관)
       if (msg.photo) state.photos[msg.uuid] = msg.photo;
       else delete state.photos[msg.uuid];
       renderApprovedList();
       renderProfiles();
       break;
     case 'insta_mutual':
-      // 인스타 매칭 공개 — 호스트는 인스타 자체 안 보고 카운트만
+      // 인스타 매칭 공개 — 모임장은 인스타 자체 안 보고 카운트만
       state.instaRevealCount = (state.instaRevealCount || 0) + 1;
       if (typeof toast === 'function') toast(`💌 인스타 공개 매칭 +1 (총 ${state.instaRevealCount}쌍)`);
       renderHostStats();
       setTimeout(() => { if (typeof loadHostCumulativeStats === 'function') loadHostCumulativeStats(); }, 1500);
       break;
     case 'photo_banlist':
-      // 호스트 전용 — 차단 목록 sync
+      // 모임장 전용 — 차단 목록 sync
       state.bannedPhotos = new Set(msg.banned || []);
       renderApprovedList();
       renderProfiles();
@@ -2502,7 +2502,7 @@ function handleWSMessage(msg) {
   }
 }
 
-// 호스트 — 부적절 사진 강제 차단 (모임 동안 재업로드 불가)
+// 모임장 — 부적절 사진 강제 차단 (모임 동안 재업로드 불가)
 function photoKick(targetUuid, nickname) {
   if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
     toast('연결이 끊겼어요');
@@ -2517,7 +2517,7 @@ function photoKick(targetUuid, nickname) {
   toast('사진 제거 + 재업로드 차단');
 }
 
-// 호스트 — 사진 차단 해제
+// 모임장 — 사진 차단 해제
 function photoUnban(targetUuid, nickname) {
   if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
     toast('연결이 끊겼어요');
@@ -2578,7 +2578,7 @@ function renderWaitingList() {
   }
 }
 
-// 호스트 누적 통계 (이 호스트가 진행한 모든 모임 합산)
+// 모임장 누적 통계 (이 모임장이 진행한 모든 모임 합산)
 // host_uuid는 device localStorage uuid 기준 — OAuth 미연동 시 device 변경하면 통계 초기화됨
 function renderHostStats() {
   // 현재 모임 매칭/인스타는 누적에 자연 반영되므로 별도 라인 없음
@@ -2642,10 +2642,10 @@ function renderApprovedList() {
       ? `<img class="approved-photo" src="${escHtml(photo)}" alt="">`
       : (isBanned ? `<span class="approved-banned-dot" title="사진 차단됨">🚫</span>` : `<span class="approved-dot"></span>`);
     const isSelf = u.uuid === state.uuid;
-    // 호스트 본인은 강퇴/사진강퇴 모두 불가 — 라벨로 명시
+    // 모임장 본인은 강퇴/사진강퇴 모두 불가 — 라벨로 명시
     let actionHtml = '';
     if (isSelf) {
-      actionHtml = `<span class="approved-host-tag">👑 호스트</span>`;
+      actionHtml = `<span class="approved-host-tag">👑 모임장</span>`;
     } else {
       let photoBtn = '';
       if (photo) {
@@ -2661,7 +2661,7 @@ function renderApprovedList() {
   }
 }
 
-// 호스트 — 참가자 강퇴
+// 모임장 — 참가자 강퇴
 async function kickUser(targetUuid, nickname) {
   if (!confirm(`"${nickname || '이 참가자'}"를 이 모임에서 내보낼까요?\n모임에서 즉시 나가게 돼요.`)) return;
   try {
@@ -2718,7 +2718,7 @@ function renderProfiles() {
     card.className = 'profile-card';
     card.dataset.uuid = u.uuid;
     const isHostCard = u.uuid === state.host_uuid || u.uuid === state.uuid;
-    const hostBadge = isHostCard ? `<div class="profile-host-badge" title="모임 호스트">👑 호스트</div>` : '';
+    const hostBadge = isHostCard ? `<div class="profile-host-badge" title="모임 모임장">👑 모임장</div>` : '';
     card.innerHTML = `
       ${hostBadge}
       ${avatarHtml}
@@ -3064,7 +3064,7 @@ function appendChatMsg(msg) {
   const div = document.createElement('div');
   div.className = 'chat-msg';
   const isMe = msg.uuid && msg.uuid === state.uuid;
-  const label = isMe ? '나(호스트)' : anonLabel(msg.uuid);
+  const label = isMe ? '나(모임장)' : anonLabel(msg.uuid);
   div.innerHTML = `<strong>${escHtml(label)}</strong> · ${escHtml(msg.message || msg.text || '')}`;
   log.appendChild(div);
   log.scrollTop = log.scrollHeight;
@@ -3086,16 +3086,16 @@ function updatePrimaryButton() {
     case 'intro':
       btn.textContent = '모임 시작';
       btn.style.display = 'inline-flex';
-      // 최소 2명(호스트 포함) 이상이어야 시작 가능 — 시각 feedback
+      // 최소 2명(모임장 포함) 이상이어야 시작 가능 — 시각 feedback
       {
         const total = state.approvedUsers.length + (state.hostRole === 'host_only' ? 0 : 0);
-        // approvedUsers 이미 호스트 본인 포함 (participant인 경우 init에서 push됨)
+        // approvedUsers 이미 모임장 본인 포함 (participant인 경우 init에서 push됨)
         const canStart = total >= 2;
         btn.disabled = !canStart;
         btn.style.opacity = canStart ? '' : '0.5';
         btn.style.cursor = canStart ? '' : 'not-allowed';
         if (hint) {
-          hint.textContent = canStart ? '모임 중간에도 입장이 가능해요' : `참가자 ${total}명 · 호스트 포함 2명부터 시작할 수 있어요`;
+          hint.textContent = canStart ? '모임 중간에도 입장이 가능해요' : `참가자 ${total}명 · 모임장 포함 2명부터 시작할 수 있어요`;
           hint.style.color = canStart ? '' : '#ff8a8a';
           hint.style.display = '';
         }
@@ -3191,7 +3191,7 @@ function startFreeTimer(minutes) {
   }
 }
 
-// 호스트가 자유대화 타이머 연장 — N분 추가 (게스트도 동일 endsAt 적용)
+// 모임장이 자유대화 타이머 연장 — N분 추가 (게스트도 동일 endsAt 적용)
 function extendFreeTimer(minutes) {
   const base = (_freeTimerEndsAt && _freeTimerEndsAt > Date.now()) ? _freeTimerEndsAt : Date.now();
   const newEndsAt = base + minutes * 60 * 1000;
@@ -3245,7 +3245,7 @@ function bindEvents() {
 
   document.getElementById('approve-all-btn').addEventListener('click', approveAll);
 
-  // 호스트 익명 채팅 입력
+  // 모임장 익명 채팅 입력
   const chatInp = document.getElementById('host-chat-input');
   const chatSend = document.getElementById('host-chat-send');
   const sendChat = () => {
@@ -3386,7 +3386,7 @@ async function loadAndRenderExploreResult() {
   }
 }
 
-// 호스트·게스트 공용: explore-result 카드 HTML 생성
+// 모임장·게스트 공용: explore-result 카드 HTML 생성
 function renderExploreResultHtml(data, myUuid) {
   const myMember = data.members.find(m => m.uuid === myUuid);
   const myVotes = (myMember && myMember.votes_json) || {};
@@ -3524,7 +3524,7 @@ function isOppositeGender(a, b) {
   return na && nb && na !== nb;
 }
 
-// participant 호스트 본인 MVP/사랑의 작대기 투표 UI
+// participant 모임장 본인 MVP/사랑의 작대기 투표 UI
 function renderHostSelfVote(phase) {
   const optsEl = document.getElementById('host-self-vote-options');
   if (!optsEl) return;
@@ -3626,7 +3626,7 @@ function renderClosingSubsteps(current) {
   if (help) help.textContent = conf[1];
   if (nextBtn) nextBtn.textContent = isLast ? '모임 종료' : conf[2];
 
-  // participant 호스트 본인 투표 UI — MVP/match 단계만 노출
+  // participant 모임장 본인 투표 UI — MVP/match 단계만 노출
   const selfWrap = document.getElementById('host-self-vote-wrap');
   if (selfWrap) {
     const isParticipantHost = state.hostRole === 'participant';
@@ -3649,7 +3649,6 @@ function renderClosingSubsteps(current) {
         </div>
         <div style="display:flex;gap:10px;margin-top:14px;">
           <button type="button" class="csub-next-btn" style="flex:1;background:transparent;color:#e8b84b;border:1px solid rgba(212,168,67,0.5);" onclick="saveExploreResultImage('#explore-result-card')">📷 사진으로 저장</button>
-          <button type="button" class="csub-next-btn" style="flex:1;" onclick="closeRoom()">모임 종료</button>
         </div>`;
       if (typeof loadAndRenderExploreResult === 'function') loadAndRenderExploreResult();
     }
@@ -3721,7 +3720,7 @@ async function updateState(stateData) {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       if (err.error === 'MIN_MEMBERS') {
-        toast(err.message || '호스트 포함 최소 2명부터 시작할 수 있어요');
+        toast(err.message || '모임장 포함 최소 2명부터 시작할 수 있어요');
       } else {
         toast('상태 전환 실패');
       }
@@ -3803,7 +3802,7 @@ async function closeRoom() {
       toast('종료 실패: ' + (err.error || res.status));
       return;
     }
-    // 호스트가 참여자였으면 본인도 게스트와 동일하게 후기 → 결과 흐름으로
+    // 모임장이 참여자였으면 본인도 게스트와 동일하게 후기 → 결과 흐름으로
     const isParticipantHost = (state.room && state.room.host_role === 'participant') || state.hostRole === 'participant';
     if (isParticipantHost) {
       location.href = `/survey?room=${state.roomCode}`;
@@ -3964,7 +3963,7 @@ async function openSettings() {
     toast('모임 시작 후에는 편집할 수 없어요'); return;
   }
   try {
-    // ?all=1 — 풀 30개 전체 받기 (호스트 편집 전용)
+    // ?all=1 — 풀 30개 전체 받기 (모임장 편집 전용)
     const [qRes, tRes] = await Promise.all([
       api(`/api/rooms/${state.roomCode}/questions?all=1`),
       api(`/api/rooms/${state.roomCode}/free-topics?all=1`),
@@ -4056,7 +4055,7 @@ async function setHostRole(role) {
     }
     state.hostRole = role;
     renderHostRoleToggle();
-    // 호스트 투표 UI 표시/숨김 즉시 반영
+    // 모임장 투표 UI 표시/숨김 즉시 반영
     const voteBtns = document.getElementById('host-vote-btns');
     if (voteBtns) voteBtns.classList.toggle('show', role === 'participant');
     toast(role === 'participant' ? '참여 모드로 전환' : '진행 전담 모드로 전환');
@@ -4551,7 +4550,7 @@ async function clearDeviceCacheFromModal() {
 }
 document.getElementById('open-my-info-btn')?.addEventListener('click', openMyInfo);
 
-// 호스트 도구 드롭다운 폐기 — 모든 항목을 ⋮ 더보기로 통합 (2026-04-19)
+// 모임장 도구 드롭다운 폐기 — 모든 항목을 ⋮ 더보기로 통합 (2026-04-19)
 function closeHostTools() { /* legacy noop — 호환성 유지용 */ }
 
 // ⋮ 더보기 드롭다운 toggle (콘텐츠 수정·운영·내 정보·TV·종료 통합)

@@ -26,7 +26,7 @@ function genPairCode() {
   return s;
 }
 
-// 호스트 재접속 grace period (3시간 — 자유토킹 고려)
+// 모임장 재접속 grace period (3시간 — 자유토킹 고려)
 const HOST_GRACE_MS = 3 * 60 * 60 * 1000;
 
 function broadcastToRoom(room_code, message, excludeUuid = null, targetUuid = null) {
@@ -176,7 +176,7 @@ function init(server) {
       }
       rooms[room_code].clients.set(uuid, ws);
 
-      // 호스트 재접속 → grace timer 취소
+      // 모임장 재접속 → grace timer 취소
       if (uuid === hostUuid && rooms[room_code].hostGraceTimer) {
         clearTimeout(rooms[room_code].hostGraceTimer);
         rooms[room_code].hostGraceTimer = null;
@@ -186,7 +186,7 @@ function init(server) {
 
       // user_joined broadcast (자신 제외) — 즉시 발송
       broadcastToRoom(room_code, { type: 'user_joined', uuid, nickname }, uuid);
-      // 자동 입장 (2026-04-19) — 호스트 승인 절차 폐지. 참가자는 즉시 approved.
+      // 자동 입장 (2026-04-19) — 모임장 승인 절차 폐지. 참가자는 즉시 approved.
       if (uuid !== hostUuid) {
         broadcastToRoom(room_code, { type: 'approved', uuid });
       }
@@ -233,7 +233,7 @@ function init(server) {
               ts: Date.now(),
             });
           } else if (msg.type === 'waiting_too_long') {
-            // 게스트가 일정 시간 이상 대기 → 호스트에게만 알림
+            // 게스트가 일정 시간 이상 대기 → 모임장에게만 알림
             try {
               const r = await pool.query(
                 'SELECT host_uuid FROM rooms WHERE room_code = $1',
@@ -290,7 +290,7 @@ function init(server) {
                 try { ws.send(JSON.stringify({ type: 'intro_update', uuid: iUuid, intro: iIntro })); } catch (_) {}
               }
             }
-            // 현재 room_state catch-up — 재접속자가 호스트의 진행 상황(현재 phase·question_index)에 동기화되도록
+            // 현재 room_state catch-up — 재접속자가 모임장의 진행 상황(현재 phase·question_index)에 동기화되도록
             try {
               const stateRes = await pool.query(
                 `SELECT rs.state_json
@@ -312,7 +312,7 @@ function init(server) {
               requester_uuid: uuid,
             }, uuid);
           } else if (msg.type === 'photo_kick') {
-            // 호스트만 가능 — 부적절 사진 강제 제거 + 모임 동안 재업로드 차단
+            // 모임장만 가능 — 부적절 사진 강제 제거 + 모임 동안 재업로드 차단
             const room = rooms[room_code];
             if (!room || uuid !== room.hostUuid) return;
             const target = String(msg.target_uuid || '');
@@ -325,13 +325,13 @@ function init(server) {
               photo: '',
               kicked: true,
             });
-            // 호스트에게만 banlist 갱신
+            // 모임장에게만 banlist 갱신
             broadcastToRoom(room_code, {
               type: 'photo_banlist',
               banned: [...room.photoBanned],
             }, null, room.hostUuid);
           } else if (msg.type === 'photo_unban') {
-            // 호스트만 가능 — 차단 해제
+            // 모임장만 가능 — 차단 해제
             const room = rooms[room_code];
             if (!room || uuid !== room.hostUuid) return;
             const target = String(msg.target_uuid || '');
@@ -346,7 +346,7 @@ function init(server) {
               type: 'photo_unblocked',
             }, null, target);
           } else if (msg.type === 'request_banlist') {
-            // 호스트가 reconnect 시 현재 차단 상태 요청
+            // 모임장이 reconnect 시 현재 차단 상태 요청
             const room = rooms[room_code];
             if (!room || uuid !== room.hostUuid) return;
             broadcastToRoom(room_code, {
@@ -354,7 +354,7 @@ function init(server) {
               banned: [...(room.photoBanned || [])],
             }, null, room.hostUuid);
           } else if (msg.type === 'timer_set') {
-            // 호스트만 가능 — 자유대화 타이머 ends_at 설정 + 모든 client에 broadcast
+            // 모임장만 가능 — 자유대화 타이머 ends_at 설정 + 모든 client에 broadcast
             const room = rooms[room_code];
             if (!room || uuid !== room.hostUuid) return;
             const endsAt = parseInt(msg.ends_at, 10);
@@ -391,7 +391,7 @@ function init(server) {
 
         rooms[room_code].clients.delete(uuid);
 
-        // 호스트 이탈 → 3시간 grace timer 시작, 방은 유지
+        // 모임장 이탈 → 3시간 grace timer 시작, 방은 유지
         if (uuid === rooms[room_code].hostUuid) {
           rooms[room_code].hostDisconnectedAt = Date.now();
           if (rooms[room_code].hostGraceTimer) {
@@ -424,7 +424,7 @@ function init(server) {
         // 일반 게스트 이탈
         broadcastToRoom(room_code, { type: 'user_left', uuid });
 
-        // 방에 아무도 없고 호스트도 grace 아님 → 메모리 정리
+        // 방에 아무도 없고 모임장도 grace 아님 → 메모리 정리
         if (rooms[room_code].clients.size === 0 && !rooms[room_code].hostGraceTimer) {
           delete rooms[room_code];
         }
@@ -535,7 +535,7 @@ function handleObserverConnection(ws, room_code) {
   });
 }
 
-// 페어링 코드 → room_code 연결 (호스트 attach API에서 호출)
+// 페어링 코드 → room_code 연결 (모임장 attach API에서 호출)
 function attachTVToRoom(pairCode, room_code) {
   const token = pairCodeToToken.get(pairCode);
   if (!token) return { ok: false, error: 'INVALID_CODE' };

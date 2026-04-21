@@ -256,7 +256,7 @@ const PACK_FLOW_DEFAULTS = {
   'friends-reunion': ['explore-result'],      // 오랜만 — 탐구 결과 카드
   dating: ['mvp', 'match'],                   // 연애 — MVP + 작대기
   teambuilding: ['mvp', 'explore-result'],    // 팀빌딩 — MVP + 결과
-  'playlist-share': ['mvp', 'explore-result'],// 플리 공유회 — BEST 플리 투표 + 탐구 결과
+  'playlist-share': ['mvp', 'match', 'explore-result'],// 플리 공유회 — BEST 플리 + 또 만나고 싶은 사람 + 탐구 결과
   'nights-stories': ['mvp'],                  // 나의 이야기 찾기 — 오늘의 주인공만
 };
 
@@ -290,14 +290,14 @@ const CONTENT_KIND = {
 
 // 팩별 UX 정책 (wizard 수집 · 카드 노출 · 결과 페이지 섹션 · 인스타 교환)
 // Read-time 에 /api/rooms/:code · /api/result 응답으로 내려줌 (스냅샷 저장 X).
-// 호스트가 display_fields 추가·hide_* 토글로 사용자별 override 가능.
+// 모임장이 display_fields 추가·hide_* 토글로 사용자별 override 가능.
 const WIZARD_FIELDS_ALL = ['nickname', 'emoji', 'gender', 'birth_year', 'region', 'industry', 'mbti', 'interest', 'instagram'];
 const DISPLAY_FIELDS_ALL = ['birth_year', 'region', 'industry', 'mbti', 'interest'];
 const RESULT_SECTIONS_ALL = ['ai_personality', 'couple_love', 'couple_card', 'best_match', 'mutual_pairs', 'mvp', 'explore_result', 'summary'];
 
 // skip_free_chat: true 면 탐구(explore) → 자유대화(free) 건너뛰고 바로 마무리(ending).
 // wizard_fields: 게스트가 입장 마법사에서 수집하는 필드.
-// display_fields_default: 결과카드·참가자카드에 보이는 필드 기본값 (호스트 override 가능).
+// display_fields_default: 결과카드·참가자카드에 보이는 필드 기본값 (모임장 override 가능).
 // result_sections: 결과 페이지에서 렌더될 섹션 화이트리스트.
 const PACK_DEFAULTS = {
   // 커플/듀오 — 닉·이모지·MBTI·출생연도만. 자유대화 skip · 매칭·MVP·인스타 없음.
@@ -402,7 +402,7 @@ const PACK_DEFAULTS = {
     insta_opposite_gender_only: false, // playlist-share — 음악 취향 기반, 동성·이성 무관
     best_match_enabled: true,
     mvp_enabled: true,
-    match_pairs_enabled: false,
+    match_pairs_enabled: true,
     labels: {
       page2_card_title: '🎵 오늘의 BEST 플리',
       best_match_eyebrow: '음악 취향이 비슷한 사람',

@@ -1288,7 +1288,7 @@
           <div class="stats-row" style="margin-top:16px;">
             <div class="stat-box">
               <div class="stat-num" style="font-size:26px;color:var(--gold-light);letter-spacing:2px;">${stars}</div>
-              <div class="stat-label">오늘 호스트 평가 · ${hs.host_rating_count}명 응답</div>
+              <div class="stat-label">오늘 모임장 평가 · ${hs.host_rating_count}명 응답</div>
             </div>
           </div>`;
       }
@@ -1338,18 +1338,35 @@
       saveBtn.disabled = true;
       saveBtn.textContent = '저장 중…';
       status.textContent = '';
+      const resetBtn = () => {
+        if (!document.body.contains(saveBtn)) return;
+        saveBtn.disabled = false;
+        saveBtn.textContent = '저장';
+      };
+      const timeoutId = setTimeout(() => {
+        resetBtn();
+        status.textContent = '저장이 지연돼요. 다시 시도해주세요.';
+        status.style.color = '#ff8a8a';
+      }, 15000);
       try {
+        const ctrl = new AbortController();
+        const fetchTimer = setTimeout(() => ctrl.abort(), 12000);
         const r = await fetch(`/api/rooms/${room_code}/me/instagram`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ uuid, instagram: val }),
+          signal: ctrl.signal,
         });
+        clearTimeout(fetchTimer);
         if (!r.ok) throw new Error('save failed');
         // 저장 직후 reveal 재요청 — 상대도 입력했으면 즉시 공개
-        await requestInsta();
+        try { await requestInsta(); } catch (_) {}
+        clearTimeout(timeoutId);
+        // DOM이 아직 같은 saveBtn이면(리렌더 안 일어난 케이스) 상태 복구
+        resetBtn();
       } catch (e) {
-        saveBtn.disabled = false;
-        saveBtn.textContent = '저장';
+        clearTimeout(timeoutId);
+        resetBtn();
         status.textContent = '저장 실패. 다시 시도해주세요.';
         status.style.color = '#ff8a8a';
       }

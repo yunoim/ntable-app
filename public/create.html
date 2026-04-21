@@ -731,7 +731,7 @@
 
       <!-- ⚙ 상세 설정 — 전면 제거 (2026-04-19 spec)
            - 카드 표시 정보·출생연도 표시·지역 세부·사진 업로드 → join wizard 2/8로 이동
-           - 탐구 문항 수·자유대화·호스트 역할·화면 형태 → 호스트 대시보드 차후 구현
+           - 탐구 문항 수·자유대화·모임장 역할·화면 형태 → 모임장 대시보드 차후 구현
            - 현재는 5개 모임 카드별 default 그대로 사용 -->
       <div class="advanced-toggle" hidden style="display:none !important;">
         <button type="button" id="advancedBtn" aria-expanded="false">⚙</button>
@@ -765,10 +765,10 @@
           <div class="qcount-hint">타이머 체크 시 15분 default · 미체크 시 자유대화 타이머 없음</div>
         </div>
 
-        <!-- 카드 표시 정보·출생연도 표시 방식은 join wizard 'display' step으로 이동 (호스트 전용) -->
+        <!-- 카드 표시 정보·출생연도 표시 방식은 join wizard 'display' step으로 이동 (모임장 전용) -->
 
         <div class="field-group">
-          <label>호스트 역할</label>
+          <label>모임장 역할</label>
           <div class="display-fields-row">
             <label class="df-chip"><input type="radio" name="adv_hostRole" value="participant" checked> 🙋 참여자로 참가</label>
             <label class="df-chip"><input type="radio" name="adv_hostRole" value="host_only"> 🎛️ 진행만</label>
@@ -776,7 +776,7 @@
         </div>
 
         <div class="field-group">
-          <label>호스트 화면 형태</label>
+          <label>모임장 화면 형태</label>
           <div class="display-fields-row">
             <label class="df-chip"><input type="radio" name="adv_displayMode" value="mobile" checked> 📱 모바일</label>
             <label class="df-chip"><input type="radio" name="adv_displayMode" value="presenter"> 🖥 큰 화면</label>
@@ -806,7 +806,7 @@
 
   <script>
     let uuid = null;
-    // host_role 기본값 'participant' — 모임 생성 후 호스트 화면 설정 모달에서 토글 가능
+    // host_role 기본값 'participant' — 모임 생성 후 모임장 화면 설정 모달에서 토글 가능
     const DEFAULT_HOST_ROLE = 'participant';
     let selectedPack = null;
     let packs = [];
@@ -941,7 +941,8 @@
           birth_year_format: 'decade_half',
           host_role: 'participant', display_mode: 'mobile',
           photo_enabled: true, region_detail: false,
-          free_chat_timer_minutes: 120, free_chat_chat_enabled: true, free_chat_topic_card_enabled: true,
+          free_chat_timer_minutes: 120, free_chat_chat_enabled: true, free_chat_topic_card_enabled: false,
+          instagram_collect: true,
         },
       },
       {

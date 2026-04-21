@@ -34,7 +34,7 @@ app.use(cors({
   credentials: true,
 }));
 
-// 호스트별 라우팅
+// 모임장별 라우팅
 // - demo.ntable.kr → app.ntable.kr 로 301 redirect (기존 QR·공유 링크 보호)
 // - admin.ntable.kr → /admin·/api/* 외 경로는 /admin 으로 정돈 (관리자 전용 도메인)
 app.use((req, res, next) => {

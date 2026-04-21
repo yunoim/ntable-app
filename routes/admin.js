@@ -39,7 +39,7 @@ async function isWaitingPhase(room_id) {
 
 router.get('/rooms/:code/questions', async (req, res) => {
   const { code } = req.params;
-  // ?all=1 — 호스트 편집 모달용: 풀 전체 반환 (enabled=false 포함 + tier 필드)
+  // ?all=1 — 모임장 편집 모달용: 풀 전체 반환 (enabled=false 포함 + tier 필드)
   const returnAll = req.query.all === '1' || req.query.all === 'true';
   try {
     const r = await pool.query(
@@ -90,7 +90,7 @@ router.get('/rooms/:code/free-topics', async (req, res) => {
 });
 
 // ─── PUT /api/rooms/:code/questions ─────────────────────────────────────────
-// 호스트가 waiting 단계에서 질문/문항수 편집
+// 모임장이 waiting 단계에서 질문/문항수 편집
 router.put('/rooms/:code/questions', async (req, res) => {
   const { code } = req.params;
   const { host_uuid, questions, question_count } = req.body;
@@ -108,7 +108,7 @@ router.put('/rooms/:code/questions', async (req, res) => {
     }
 
     // 정규화: { id, tier, question, options: ["A. ...", "B. ..."], enabled }
-    // tier/enabled 는 호스트 편집 UI(풀 30개 전체)에서 전송됨. 구 클라이언트 호환:
+    // tier/enabled 는 모임장 편집 UI(풀 30개 전체)에서 전송됨. 구 클라이언트 호환:
     // - tier 없으면 null
     // - enabled 없으면 true 로 간주해 보존 (이 경우 슬라이더 qcount 로 실사용 수 제한)
     const validTiers = ['surface', 'preference', 'deep'];
@@ -161,7 +161,7 @@ router.put('/rooms/:code/questions', async (req, res) => {
 });
 
 // ─── PUT /api/rooms/:code/host-role ──────────────────────────────────────────
-// 호스트가 자기 참여 여부를 토글 (waiting phase 에서만)
+// 모임장이 자기 참여 여부를 토글 (waiting phase 에서만)
 router.put('/rooms/:code/host-role', async (req, res) => {
   const { code } = req.params;
   const { host_uuid, host_role } = req.body;
@@ -243,13 +243,13 @@ router.post('/rooms/:code/state', async (req, res) => {
     const room = await verifyHost(code, host_uuid);
     if (!room) return res.status(403).json({ error: '권한 없음' });
 
-    // 최소 2명(호스트 포함) 가드 — waiting → 활성 phase 전환 시 적용
+    // 최소 2명(모임장 포함) 가드 — waiting → 활성 phase 전환 시 적용
     if (state.phase && state.phase !== 'waiting') {
       const memberCount = getRoomClients(code).length;
       if (memberCount < 2) {
         return res.status(400).json({
           error: 'MIN_MEMBERS',
-          message: '호스트 포함 최소 2명이 있어야 시작할 수 있어요.',
+          message: '모임장 포함 최소 2명이 있어야 시작할 수 있어요.',
           current: memberCount,
           required: 2,
         });
@@ -438,7 +438,7 @@ router.post('/rooms/:code/vote/mvp', async (req, res) => {
 });
 
 // ─── POST /api/rooms/:code/mvp-finalize ──────────────────────────────────────
-// 호스트가 MVP 결과 발표 단계로 진입할 때 호출. 1위 mvp 산정 + broadcast 'mvp_announce'.
+// 모임장이 MVP 결과 발표 단계로 진입할 때 호출. 1위 mvp 산정 + broadcast 'mvp_announce'.
 router.post('/rooms/:code/mvp-finalize', async (req, res) => {
   const { code } = req.params;
   const { host_uuid } = req.body;

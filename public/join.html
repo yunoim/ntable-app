@@ -130,7 +130,7 @@
     margin-bottom: 8px;
     letter-spacing: 0.04em;
   }
-  input[type=text], input[type=number], select.year-select {
+  input[type=text], input[type=number], input[type=url], input[type=email], select.year-select {
     width: 100%;
     padding: 14px 16px;
     background: rgba(212,168,67,0.06);
@@ -140,6 +140,11 @@
     font-size: 17px;
     font-family: inherit;
     text-align: center;
+  }
+  input[type=url] {
+    text-align: left;
+    font-size: 15px;
+    letter-spacing: 0.01em;
   }
   select.year-select { appearance: none; -webkit-appearance: none; cursor: pointer; }
   select.year-select option { background: #131c33; color: #ffffff; }
@@ -353,14 +358,14 @@ async function init() {
     if (ROOM.status === 'closed') { renderErr('이 모임은 이미 종료됐어요'); return; }
     document.getElementById('roomTitle').textContent = ROOM.title || ROOM_CODE;
 
-    // 호스트 / 게스트 판별 — host_uuid 매칭
+    // 모임장 / 게스트 판별 — host_uuid 매칭
     ROOM.isHost = ROOM.host_uuid && ROOM.host_uuid === UUID;
     if (ROOM.isHost) {
       const sub = document.querySelector('.room-tag');
-      if (sub) sub.textContent = `참여 코드 ${ROOM_CODE} · 호스트`;
+      if (sub) sub.textContent = `참여 코드 ${ROOM_CODE} · 모임장`;
     }
 
-    // 이미 join 했으면 바로 호스트/게스트 화면으로 (단 ?edit=1이면 wizard 재진행 — 내 정보 수정용)
+    // 이미 join 했으면 바로 모임장/게스트 화면으로 (단 ?edit=1이면 wizard 재진행 — 내 정보 수정용)
     const isEdit = new URLSearchParams(location.search).get('edit') === '1';
     const meRes = await fetch(`/api/rooms/${ROOM_CODE}/me?uuid=${encodeURIComponent(UUID)}`);
     const me = meRes.ok ? await meRes.json() : { joined: false };
@@ -386,7 +391,7 @@ async function init() {
       }
     }
 
-    // 호스트 = 'display' step 추가 (display_fields/birth_year_format 결정 → server PATCH)
+    // 모임장 = 'display' step 추가 (display_fields/birth_year_format 결정 → server PATCH)
     // couples는 성별·출생연도만 (지역/업종/MBTI/관심사 스킵)
     rebuildSteps();
 
@@ -515,11 +520,11 @@ function renderStep() {
         return html;
       })();
       const fmt = ROOM.birth_year_format || (isCouples ? 'exact' : 'decade_half');
-      // 호스트는 표시 방식 4옵션(decade/decade_half/exact/hide), 게스트는 hide 토글만
+      // 모임장은 표시 방식 4옵션(decade/decade_half/exact/hide), 게스트는 hide 토글만
       const fmtSection = isHost
         ? `
         <div class="field">
-          <div class="field-label">출생연도 표시 방식 <span style="opacity:0.5;font-size:11px;">호스트가 모두에게 적용</span></div>
+          <div class="field-label">출생연도 표시 방식 <span style="opacity:0.5;font-size:11px;">모임장이 모두에게 적용</span></div>
           <div class="chip-row">
             <button type="button" class="chip${fmt==='decade'&&!data.hide_birth_year?' selected':''}" data-group="bfmt" data-value="decade">30대 (10대 단위)</button>
             <button type="button" class="chip${fmt==='decade_half'&&!data.hide_birth_year?' selected':''}" data-group="bfmt" data-value="decade_half">30초·중·후 (기본·권장)</button>
@@ -531,7 +536,7 @@ function renderStep() {
         <div class="field">
           <div class="field-label">내 출생연도 공개</div>
           <div class="chip-row">
-            <button type="button" class="chip${!data.hide_birth_year?' selected':''}" data-group="hide_birth_year" data-value="false">호스트 설정대로 표시 (${fmt==='decade'?'30대':fmt==='decade_half'?'30초·중·후':'정확한 연도'})</button>
+            <button type="button" class="chip${!data.hide_birth_year?' selected':''}" data-group="hide_birth_year" data-value="false">모임장 설정대로 표시 (${fmt==='decade'?'30대':fmt==='decade_half'?'30초·중·후':'정확한 연도'})</button>
             <button type="button" class="chip${data.hide_birth_year?' selected':''}" data-group="hide_birth_year" data-value="true">🔒 다른 참가자에게 숨김</button>
           </div>
         </div>`;
@@ -581,7 +586,7 @@ function renderStep() {
       const rdSection = isHost
         ? `
         <div class="field">
-          <div class="field-label">지역 표시 방식 <span style="opacity:0.5;font-size:11px;">호스트가 모두에게 적용</span></div>
+          <div class="field-label">지역 표시 방식 <span style="opacity:0.5;font-size:11px;">모임장이 모두에게 적용</span></div>
           <div class="chip-row">
             <button type="button" class="chip${!rd && !data.hide_region?' selected':''}" data-group="rdfmt" data-value="false">시·도만 (예: 서울)</button>
             <button type="button" class="chip${rd && !data.hide_region?' selected':''}" data-group="rdfmt" data-value="true">광역시는 구까지 (예: 강남)</button>
@@ -592,7 +597,7 @@ function renderStep() {
         <div class="field">
           <div class="field-label">내 지역 공개</div>
           <div class="chip-row">
-            <button type="button" class="chip${!data.hide_region?' selected':''}" data-group="hide_region" data-value="false">호스트 설정대로 표시 (${rd?'광역시 구까지':'시·도만'})</button>
+            <button type="button" class="chip${!data.hide_region?' selected':''}" data-group="hide_region" data-value="false">모임장 설정대로 표시 (${rd?'광역시 구까지':'시·도만'})</button>
             <button type="button" class="chip${data.hide_region?' selected':''}" data-group="hide_region" data-value="true">🔒 다른 참가자에게 숨김</button>
           </div>
         </div>`;
@@ -666,7 +671,7 @@ function renderStep() {
         <p class="step-sub">유튜브·스포티파이·애플뮤직 등 URL. 15분 분량 추천.</p>
         <div class="step-tip"><span class="step-tip-icon">🎧</span><span>참가자 카드에 플리 링크 버튼이 노출돼요. 모임 중 스피커로 재생·익명 채팅 반응까지.</span></div>
         <div class="field">
-          <input type="url" id="playlistInput" maxlength="500" placeholder="https://music.youtube.com/... 또는 https://open.spotify.com/..." value="${escHtml(data.playlist || '')}" autocapitalize="none" autocorrect="off" spellcheck="false" style="font-size:14px;">
+          <input type="url" id="playlistInput" inputmode="url" maxlength="500" placeholder="https://music.youtube.com/... 또는 https://open.spotify.com/..." value="${escHtml(data.playlist || '')}" autocapitalize="none" autocorrect="off" spellcheck="false">
         </div>
         <div class="actions">
           ${prevBtn}
@@ -779,14 +784,14 @@ function renderStep() {
     }
     case 'confirm':
       const subText = ROOM.isHost
-        ? '호스트로 모임을 시작해요. 게스트들에게는 이렇게 보입니다.'
+        ? '모임장으로 모임을 시작해요. 게스트들에게는 이렇게 보입니다.'
         : '아래 정보로 다른 참가자에게 보입니다.';
       const submitLabel = ROOM.isHost ? '모임 만들고 게스트 초대하기' : '입장하기';
       const genderLabel = data.gender === 'male' ? '남성' : data.gender === 'female' ? '여성' : data.gender === 'unspecified' ? '선택 안 함' : '';
-      // 호스트가 설정한 birth_year_format 에 맞춘 실제 표시값
+      // 모임장이 설정한 birth_year_format 에 맞춘 실제 표시값
       const fmtBy = ROOM.birth_year_format || 'exact';
       const birthDisplay = data.birth_year ? formatBirthYear(data.birth_year, fmtBy) : '';
-      // 호스트 region_detail=false 면 구 정보 숨기고 시·도만 표시 (다른 참가자에게 보일 형태)
+      // 모임장 region_detail=false 면 구 정보 숨기고 시·도만 표시 (다른 참가자에게 보일 형태)
       let regionDisplay = data.region || '';
       if (regionDisplay && ROOM.region_detail === false) {
         const metro = (typeof detectMetro === 'function') ? detectMetro(regionDisplay) : '';
@@ -829,7 +834,7 @@ function renderStep() {
   renderProgress();
 }
 
-// 호스트 birth_year_format 에 맞춰 연도 → 표시 문자열 (host.html 과 동일 로직)
+// 모임장 birth_year_format 에 맞춰 연도 → 표시 문자열 (host.html 과 동일 로직)
 function formatBirthYear(year, format) {
   if (!year) return '';
   const y = new Date().getFullYear();
@@ -904,7 +909,7 @@ document.addEventListener('click', (e) => {
   if (!group) return;
   const wasSelected = chip.classList.contains('selected');
 
-  // 호스트 출생연도 표시 방식 (decade/decade_half/exact/hide)
+  // 모임장 출생연도 표시 방식 (decade/decade_half/exact/hide)
   if (group === 'bfmt') {
     document.querySelectorAll('.chip[data-group="bfmt"]').forEach(c => c.classList.remove('selected'));
     chip.classList.add('selected');
@@ -913,7 +918,7 @@ document.addEventListener('click', (e) => {
       data.hide_birth_year = true;
     } else {
       data.hide_birth_year = false;
-      // 호스트 결정 → server PATCH (방 규칙 변경)
+      // 모임장 결정 → server PATCH (방 규칙 변경)
       ROOM.birth_year_format = v;
       patchRoomDisplay({ birth_year_format: v });
     }
@@ -926,7 +931,7 @@ document.addEventListener('click', (e) => {
     data.hide_birth_year = chip.dataset.value === 'true';
     return;
   }
-  // 호스트 지역 표시 방식 (false/true/hide) — 항상 renderStep으로 구 UI 재평가 + 광역시 구 잔재 정리
+  // 모임장 지역 표시 방식 (false/true/hide) — 항상 renderStep으로 구 UI 재평가 + 광역시 구 잔재 정리
   if (group === 'rdfmt') {
     const v = chip.dataset.value;
     if (v === 'hide') {
@@ -1058,7 +1063,7 @@ function skipInstagram() {
   renderStep();
 }
 
-// 호스트 표시 방식 변경 시 server PATCH (인라인)
+// 모임장 표시 방식 변경 시 server PATCH (인라인)
 async function patchRoomDisplay(payload) {
   if (!ROOM.isHost) return;
   try {
@@ -1199,14 +1204,14 @@ function renderErr(msg) {
 }
 
 // ── 닉네임 복구 플로우 ──────────────────────
-// 이 방에서 쓰던 닉네임이 이미 다른 uuid 로 등록됨 → 호스트 승인 하에 내 새 uuid 로 기존 답안 승계.
+// 이 방에서 쓰던 닉네임이 이미 다른 uuid 로 등록됨 → 모임장 승인 하에 내 새 uuid 로 기존 답안 승계.
 function renderRecoverCta(nickname) {
   const err = document.getElementById('errMsg');
   if (!err) return;
   err.innerHTML = `
     <div style="padding:14px;border:1px solid rgba(212,168,67,0.45);border-radius:12px;background:rgba(212,168,67,0.08);text-align:left;">
       <div style="font-weight:700;color:#f5f2ec;margin-bottom:6px;">"${escHtml(nickname)}" — 이 방에서 이미 사용 중이에요</div>
-      <div style="font-size:12.5px;color:#c9cdd6;line-height:1.55;margin-bottom:10px;">같은 닉네임으로 전에 입장했던 기기라면 <strong>복구 요청</strong> 가능해요. 호스트가 승인하면 지금까지의 답안·투표가 이 기기로 이어져요.</div>
+      <div style="font-size:12.5px;color:#c9cdd6;line-height:1.55;margin-bottom:10px;">같은 닉네임으로 전에 입장했던 기기라면 <strong>복구 요청</strong> 가능해요. 모임장이 승인하면 지금까지의 답안·투표가 이 기기로 이어져요.</div>
       <button type="button" id="recoverBtn" style="width:100%;padding:10px;background:var(--gold);color:var(--navy);border:none;border-radius:8px;font-weight:700;font-family:inherit;font-size:13px;cursor:pointer;">이 방에서 쓰던 닉네임이에요 · 복구 요청</button>
     </div>`;
   const rb = document.getElementById('recoverBtn');
@@ -1215,7 +1220,7 @@ function renderRecoverCta(nickname) {
 
 async function requestRecover(nickname) {
   const err = document.getElementById('errMsg');
-  err.innerHTML = `<div style="padding:12px;color:#e8b84b;text-align:center;">호스트에게 복구 요청 보냈어요. 승인 대기 중…</div>`;
+  err.innerHTML = `<div style="padding:12px;color:#e8b84b;text-align:center;">모임장에게 복구 요청 보냈어요. 승인 대기 중…</div>`;
   try {
     const r = await fetch(`/api/rooms/${ROOM_CODE}/recover-request`, {
       method: 'POST',
@@ -1227,11 +1232,11 @@ async function requestRecover(nickname) {
       err.innerHTML = `<div style="color:#ff8a8a;">복구 요청 실패 — ${escHtml(j.error || '잠시 후 다시 시도')}</div>`;
       return;
     }
-    // 60초간 2초 간격 폴링 — 호스트 승인 시 /me?uuid=new_uuid 가 joined:true
+    // 60초간 2초 간격 폴링 — 모임장 승인 시 /me?uuid=new_uuid 가 joined:true
     let tries = 0;
     const timer = setInterval(async () => {
       tries++;
-      if (tries > 30) { clearInterval(timer); err.innerHTML = `<div style="color:#ff8a8a;">승인 대기 시간이 지났어요. 호스트에게 다시 요청해주세요.</div>`; return; }
+      if (tries > 30) { clearInterval(timer); err.innerHTML = `<div style="color:#ff8a8a;">승인 대기 시간이 지났어요. 모임장에게 다시 요청해주세요.</div>`; return; }
       try {
         const meR = await fetch(`/api/rooms/${ROOM_CODE}/me?uuid=${encodeURIComponent(UUID)}`);
         if (!meR.ok) return;

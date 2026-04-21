@@ -8,7 +8,7 @@
   "name_rules": "소문자 고정. 대문자·NTABLE·N-Table 등 변형 금지.",
 
   "tagline": {
-    "public_main": "누구나 호스트가 되는 모임",
+    "public_main": "누구나 모임장이 되는 모임",
     "public_eyebrow": "오프라인 모임 진행 도우미",
     "public_hero_alt": "QR 하나로 시작되는 오프라인 모임 툴킷",
     "internal_main": "누구나 유잼 모임장이 되도록",

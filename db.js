@@ -46,7 +46,7 @@ async function initDB() {
       if (e.code !== '42701') throw e;
     }
 
-    // 방별 커스텀 질문/주제 jsonb — 생성 시점 md 스냅샷 + 호스트 편집분
+    // 방별 커스텀 질문/주제 jsonb — 생성 시점 md 스냅샷 + 모임장 편집분
     try {
       await client.query(`ALTER TABLE rooms ADD COLUMN questions_json JSONB`);
     } catch (e) {
@@ -64,8 +64,8 @@ async function initDB() {
       if (e.code !== '42701') throw e;
     }
 
-    // 게스트 카드에 표시할 필드 (호스트가 방 생성 시 결정)
-    // display_fields: ["birth_year","region","industry","interest"] 중 호스트 선택
+    // 게스트 카드에 표시할 필드 (모임장이 방 생성 시 결정)
+    // display_fields: ["birth_year","region","industry","interest"] 중 모임장 선택
     // birth_year_format: 'exact' (1990) | 'decade_half' (30초/30중/30후)
     try {
       await client.query(`ALTER TABLE rooms ADD COLUMN display_fields JSONB DEFAULT '["birth_year","region","industry","interest"]'::jsonb`);
@@ -78,14 +78,14 @@ async function initDB() {
       if (e.code !== '42701') throw e;
     }
 
-    // 호스트 화면 형태 — 'mobile' | 'presenter' (큰 화면)
+    // 모임장 화면 형태 — 'mobile' | 'presenter' (큰 화면)
     try {
       await client.query(`ALTER TABLE rooms ADD COLUMN display_mode VARCHAR(20) DEFAULT 'mobile'`);
     } catch (e) {
       if (e.code !== '42701') throw e;
     }
 
-    // 게스트 사진 업로드 허용 여부 (호스트가 결정)
+    // 게스트 사진 업로드 허용 여부 (모임장이 결정)
     try {
       await client.query(`ALTER TABLE rooms ADD COLUMN photo_enabled BOOLEAN DEFAULT TRUE`);
     } catch (e) {
@@ -106,7 +106,7 @@ async function initDB() {
       if (e.code !== '42701') throw e;
     }
 
-    // 자유대화 구성 (호스트가 방 생성 시 결정)
+    // 자유대화 구성 (모임장이 방 생성 시 결정)
     // - free_chat_timer_minutes: 0 = 타이머 없음 / N분 = N분 카운트다운
     // - free_chat_chat_enabled: 익명채팅 입력창 노출 여부
     // - free_chat_topic_card_enabled: 주제카드 분배 가능 여부
@@ -114,11 +114,11 @@ async function initDB() {
     try { await client.query(`ALTER TABLE rooms ADD COLUMN free_chat_chat_enabled BOOLEAN DEFAULT TRUE`); } catch (e) { if (e.code !== '42701') throw e; }
     try { await client.query(`ALTER TABLE rooms ADD COLUMN free_chat_topic_card_enabled BOOLEAN DEFAULT TRUE`); } catch (e) { if (e.code !== '42701') throw e; }
 
-    // 인스타그램 수집 — 호스트가 toggle 가능. wizard에서 인스타 step 노출 여부.
+    // 인스타그램 수집 — 모임장이 toggle 가능. wizard에서 인스타 step 노출 여부.
     // create 시 dating·icebreaker 팩만 default true.
     try { await client.query(`ALTER TABLE rooms ADD COLUMN instagram_collect BOOLEAN DEFAULT FALSE`); } catch (e) { if (e.code !== '42701') throw e; }
 
-    // 모임 시각 — 호스트가 create.html에서 입력 (선택). QR/카카오 공유 텍스트에 노출.
+    // 모임 시각 — 모임장이 create.html에서 입력 (선택). QR/카카오 공유 텍스트에 노출.
     try { await client.query(`ALTER TABLE rooms ADD COLUMN meeting_at TIMESTAMPTZ`); } catch (e) { if (e.code !== '42701') throw e; }
 
     // 아바타 이모지 — 사진 안 올린 사용자를 위한 대안 (토끼/호랑이/여우 등). users + room_members 양쪽
@@ -247,7 +247,7 @@ async function initDB() {
       if (e.code !== '42710' && e.code !== '42P07') throw e;
     }
 
-    // survey_responses 업그레이드 — 호스트 평가·카테고리 태그·UNIQUE
+    // survey_responses 업그레이드 — 모임장 평가·카테고리 태그·UNIQUE
     try {
       await client.query(`ALTER TABLE survey_responses ADD COLUMN host_rating INTEGER`);
     } catch (e) { if (e.code !== '42701') throw e; }

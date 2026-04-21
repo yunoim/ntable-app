@@ -272,7 +272,7 @@ router.delete('/panel/users/:uuid', requireAdmin, async (req, res) => {
     await client.query('DELETE FROM survey_responses WHERE uuid = $1', [uuid]);
     await client.query('DELETE FROM room_members WHERE uuid = $1', [uuid]);
     await client.query('DELETE FROM room_connections WHERE from_uuid = $1 OR to_uuid = $1', [uuid]);
-    // 호스트로 등록된 방은 NULL 처리 (FK 위반 방지) + 닫기
+    // 모임장으로 등록된 방은 NULL 처리 (FK 위반 방지) + 닫기
     await client.query("UPDATE rooms SET host_uuid = NULL, status = 'closed' WHERE host_uuid = $1", [uuid]);
     await client.query('DELETE FROM users WHERE uuid = $1', [uuid]);
     await client.query('COMMIT');
@@ -290,7 +290,7 @@ router.delete('/panel/users/:uuid', requireAdmin, async (req, res) => {
 router.get('/panel/surveys', requireAdmin, async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit || '50', 10) || 50, 500);
   try {
-    // nickname — 응답자의 방별 닉네임 우선 (호스트가 참여자로 참여한 경우 포함)
+    // nickname — 응답자의 방별 닉네임 우선 (모임장이 참여자로 참여한 경우 포함)
     const { rows } = await pool.query(
       `SELECT s.*,
               COALESCE(rm.nickname, u.nickname) AS nickname,
@@ -402,7 +402,7 @@ router.get('/panel/nps-trend', requireAdmin, async (req, res) => {
   }
 });
 
-// GET /api/panel/hosts-leaderboard — 호스트별 평균 NPS·만족도·호스트 별점
+// GET /api/panel/hosts-leaderboard — 모임장별 평균 NPS·만족도·모임장 별점
 router.get('/panel/hosts-leaderboard', requireAdmin, async (req, res) => {
   try {
     const { rows } = await pool.query(

@@ -1,11 +1,11 @@
 // ntable 공통 '내 정보 기억' 플로팅 토글 — 익명(OAuth 미인증) 사용자 전용.
 // OAuth 인증 상태에서는 auth-header.js 의 #ntAuthPill 이 동일 역할(토글 OFF = 로그아웃)을 맡으므로 여기선 주입하지 않는다.
-// login.html 은 자체 토글 사용, 호스트 페이지는 #host-remember-slot 에 인라인 배치.
+// login.html 은 자체 토글 사용, 모임장 페이지는 #host-remember-slot 에 인라인 배치.
 
 (function () {
   if (document.getElementById('loginToggle')) return;           // login 페이지는 자체 토글 사용
   if (document.getElementById('ntRememberToggle')) return;      // 중복 방지
-  // 호스트 페이지처럼 인라인 슬롯이 있으면 OAuth 여부와 무관하게 주입 (auth-pill 은 host.html CSS 로 숨김 처리).
+  // 모임장 페이지처럼 인라인 슬롯이 있으면 OAuth 여부와 무관하게 주입 (auth-pill 은 host.html CSS 로 숨김 처리).
   // 슬롯이 없는 플로팅 모드일 때만, OAuth 인증자는 #ntAuthPill 이 동일 역할을 하므로 중복 주입 금지.
   const hasInlineSlot = !!document.getElementById('host-remember-slot');
   if (!hasInlineSlot) {
@@ -16,7 +16,7 @@
   const read = () => { try { return localStorage.getItem(KEY) === 'true'; } catch (_) { return false; } };
   const write = (v) => { try { localStorage.setItem(KEY, v ? 'true' : 'false'); } catch (_) {} };
 
-  // 호스트 페이지처럼 전용 슬롯이 있으면 그 안에 인라인으로 배치 (더보기·방코드 사이).
+  // 모임장 페이지처럼 전용 슬롯이 있으면 그 안에 인라인으로 배치 (더보기·방코드 사이).
   // 슬롯이 없으면 우상단 플로팅 (phase-bar 있으면 아래로).
   const hostSlot = document.getElementById('host-remember-slot');
   const hasPhaseBar = !!document.getElementById('phase-bar');
@@ -88,7 +88,7 @@
   wrap.className = hostSlot ? 'nt-remember-toggle nt-rt-inline' : 'nt-remember-toggle';
   wrap.setAttribute('role', 'switch');
   wrap.setAttribute('aria-label', '내 정보 기억하기');
-  // 인라인 모드(호스트 상단)는 공간 좁으니 라벨 생략
+  // 인라인 모드(모임장 상단)는 공간 좁으니 라벨 생략
   wrap.innerHTML = hostSlot
     ? `<span class="nt-rt-knob" aria-hidden="true"></span><span class="nt-rt-label" style="font-size:10px;">기억</span>`
     : `<span class="nt-rt-knob" aria-hidden="true"></span><span class="nt-rt-label">내 정보 기억</span>`;

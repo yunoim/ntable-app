@@ -377,7 +377,7 @@
       <div class="stats-grid" id="matchSummaryGrid"></div>
       <div class="table-wrap" id="matchRoomsTable"></div>
 
-      <div class="section-h">호스트 리더보드 (NPS 순)</div>
+      <div class="section-h">모임장 리더보드 (NPS 순)</div>
       <div class="table-wrap" id="hostsLeaderboard"></div>
     </div>
 
@@ -662,15 +662,15 @@ function renderHostsLeaderboard(rows) {
   }
   const tbody = rows.map((r, i) => `<tr>
     <td data-label="순위">${i + 1}</td>
-    <td data-label="호스트">${escHtml(r.nickname)}</td>
+    <td data-label="모임장">${escHtml(r.nickname)}</td>
     <td data-label="모임 수">${r.rooms_hosted}</td>
     <td data-label="응답">${r.responses}</td>
     <td data-label="NPS">${r.avg_nps ?? '-'}</td>
     <td data-label="만족도">${r.avg_satisfaction ?? '-'}</td>
-    <td data-label="호스트 별점">${r.avg_host_rating ?? '-'}</td>
+    <td data-label="모임장 별점">${r.avg_host_rating ?? '-'}</td>
   </tr>`).join('');
   wrap.innerHTML = `<table>
-    <thead><tr><th>#</th><th>호스트</th><th>모임 수</th><th>응답</th><th>NPS</th><th>만족도</th><th>호스트 별점</th></tr></thead>
+    <thead><tr><th>#</th><th>모임장</th><th>모임 수</th><th>응답</th><th>NPS</th><th>만족도</th><th>모임장 별점</th></tr></thead>
     <tbody>${tbody}</tbody>
   </table>`;
 }
@@ -686,7 +686,7 @@ function renderLiveSnap(s) {
     <div class="stat-card">
       <div class="stat-label">지금 참여 중인 사람</div>
       <div class="stat-value">${s.participants}</div>
-      <div class="stat-sub">호스트 포함 동시 접속</div>
+      <div class="stat-sub">모임장 포함 동시 접속</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">오늘 생성된 모임</div>
@@ -844,7 +844,7 @@ function filterRooms(s) {
 
 function renderRoomsTable(rooms, containerId, withActions) {
   const c = document.getElementById(containerId);
-  if (!rooms.length) { c.innerHTML = '<div class="empty"><span class="empty-icon">📭</span>아직 열린 모임이 없어요<span class="empty-hint">호스트가 모임을 만들면 여기에 표시됩니다.</span></div>'; return; }
+  if (!rooms.length) { c.innerHTML = '<div class="empty"><span class="empty-icon">📭</span>아직 열린 모임이 없어요<span class="empty-hint">모임장이 모임을 만들면 여기에 표시됩니다.</span></div>'; return; }
   const sortArrow = key => (withActions && roomsSortKey === key)
     ? `<span class="sort-indicator">${roomsSortDir === 'asc' ? '▲' : '▼'}</span>` : '';
   const sortClass = key => withActions ? `class="sortable${roomsSortKey === key ? ' active' : ''}" onclick="onSortRooms('${key}')"` : '';
@@ -854,7 +854,7 @@ function renderRoomsTable(rooms, containerId, withActions) {
         ${withActions ? '<th style="width:32px;"><input type="checkbox" id="roomsSelectAll" aria-label="전체 선택" onclick="toggleSelectAllRooms(this.checked)"></th>' : ''}
         <th>CODE</th>
         <th ${sortClass('title')}>제목${sortArrow('title')}</th>
-        <th ${sortClass('host')}>호스트${sortArrow('host')}</th>
+        <th ${sortClass('host')}>모임장${sortArrow('host')}</th>
         <th ${sortClass('participants')}>참가${sortArrow('participants')}</th>
         <th ${sortClass('status')}>상태${sortArrow('status')}</th>
         <th ${sortClass('created_at')}>생성${sortArrow('created_at')}</th>
@@ -866,7 +866,7 @@ function renderRoomsTable(rooms, containerId, withActions) {
           ${withActions ? `<td data-label="선택"><input type="checkbox" class="room-check" data-code="${esc(r.room_code)}" data-status="${esc(r.status)}" onclick="onRoomCheck(this)" aria-label="선택: ${esc(r.room_code)}"></td>` : ''}
           <td data-label="CODE" style="font-family:monospace;color:var(--gold)">${esc(r.room_code)}</td>
           <td data-label="제목">${esc(r.title)}</td>
-          <td data-label="호스트">${esc(r.host_nickname || '-')}</td>
+          <td data-label="모임장">${esc(r.host_nickname || '-')}</td>
           <td data-label="참가">${r.participants}</td>
           <td data-label="상태">${statusTag(r.status)}</td>
           <td data-label="생성" style="color:var(--text-muted);font-size:12px">${fmtDate(r.created_at)}</td>
@@ -959,7 +959,7 @@ async function viewRoom(code) {
     const r = d.room;
     document.getElementById('modalBody').innerHTML = `
       <h2>${esc(r.title)} <span style="color:var(--text-muted);font-size:13px">(${esc(r.room_code)})</span></h2>
-      <div class="kv-row"><span class="kv-k">호스트</span><span class="kv-v">${esc(r.host_nickname || '-')} · ${esc(r.host_uuid)}</span></div>
+      <div class="kv-row"><span class="kv-k">모임장</span><span class="kv-v">${esc(r.host_nickname || '-')} · ${esc(r.host_uuid)}</span></div>
       <div class="kv-row"><span class="kv-k">역할</span><span class="kv-v">${esc(r.host_role)}</span></div>
       <div class="kv-row"><span class="kv-k">상태</span><span class="kv-v">${statusTag(r.status)}</span></div>
       <div class="kv-row"><span class="kv-k">생성</span><span class="kv-v">${fmtDate(r.created_at)}</span></div>
@@ -1025,7 +1025,7 @@ function renderUsersTable(users) {
     <table>
       <thead><tr>
         <th>닉네임</th><th>성별</th><th>출생</th><th>MBTI</th><th>지역</th><th>인스타</th>
-        <th>호스트</th><th>참가</th><th>가입</th><th></th>
+        <th>모임장</th><th>참가</th><th>가입</th><th></th>
       </tr></thead>
       <tbody>
       ${users.map(u => `
@@ -1036,7 +1036,7 @@ function renderUsersTable(users) {
           <td data-label="MBTI">${u.mbti || '-'}</td>
           <td data-label="지역">${esc(u.region || '-')}</td>
           <td data-label="인스타">${u.instagram ? '@' + esc(u.instagram) : '-'}</td>
-          <td data-label="호스트">${u.hosted_rooms}</td>
+          <td data-label="모임장">${u.hosted_rooms}</td>
           <td data-label="참가">${u.participations}</td>
           <td data-label="가입" style="color:var(--text-muted);font-size:12px">${fmtDate(u.created_at)}</td>
           <td data-label=""><button type="button" class="btn-sm red" onclick="deleteUser('${esc(u.uuid)}','${esc(u.nickname)}')">삭제</button></td>

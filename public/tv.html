@@ -82,7 +82,7 @@
   <div class="label">TV Pairing Code</div>
   <div class="code" id="code">— — — — — —</div>
   <div class="help">
-    호스트 모바일 화면에서 <strong>「TV 연결」</strong> 버튼을 누르고<br>
+    모임장 모바일 화면에서 <strong>「TV 연결」</strong> 버튼을 누르고<br>
     위 코드를 입력해주세요.
   </div>
   <div class="ttl"><strong id="ttlSec">300</strong>초 후 코드가 만료됩니다</div>
@@ -112,7 +112,7 @@ function connect() {
     try { msg = JSON.parse(e.data); } catch { return; }
     if (msg.type === 'pair_code') {
       document.getElementById('code').textContent = msg.code;
-      document.getElementById('status').textContent = '호스트 입력 대기 중…';
+      document.getElementById('status').textContent = '모임장 입력 대기 중…';
       ttl = msg.expires_in || 300;
       startTtl();
     } else if (msg.type === 'attached') {

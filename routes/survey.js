@@ -7,7 +7,7 @@ const VALID_TAGS = [
   'conversation', 'host', 'matching', 'questions', 'space', 'people', 'pacing',
 ];
 
-// POST /api/survey — 본설문 (호스트 평가·카테고리·본문 포함)
+// POST /api/survey — 본설문 (모임장 평가·카테고리·본문 포함)
 router.post('/survey', async (req, res) => {
   const {
     uuid, room_code,
@@ -43,7 +43,7 @@ router.post('/survey', async (req, res) => {
       return res.status(409).json({ error: 'ALREADY_SUBMITTED', message: '이미 후기를 제출했어요' });
     }
 
-    // 호스트 본인은 자기 자신 평가 제외 (저장하되 무시)
+    // 모임장 본인은 자기 자신 평가 제외 (저장하되 무시)
     const isHost = uuid === host_uuid;
     const finalHostRating = isHost ? null : (Number.isInteger(host_rating) ? host_rating : null);
     const finalHostComment = isHost ? null : (host_comment || null);
@@ -379,7 +379,7 @@ router.get('/result', async (req, res) => {
       return { question_id: qid, top_answer: top[0], count: top[1] };
     });
 
-    // 호스트 평가 집계 (평균만 공개, 개별 코멘트는 관리자만)
+    // 모임장 평가 집계 (평균만 공개, 개별 코멘트는 관리자만)
     const hostAgg = await pool.query(
       `SELECT AVG(host_rating)::float AS avg_host_rating,
               COUNT(host_rating)::int AS host_rating_count,

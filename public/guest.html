@@ -1448,7 +1448,7 @@
   <button type="button" class="waiting-logout" onclick="guestLogout()" aria-label="이 모임에서 나가기">모임 나가기</button>
   <div class="waiting-msg">
     <h2>모임이 곧 시작돼요</h2>
-    <p id="waitingStatus">입장 완료! 호스트가 모임을 시작하면 자동으로 이어집니다.</p>
+    <p id="waitingStatus">입장 완료! 모임장이 모임을 시작하면 자동으로 이어집니다.</p>
     <div class="dots-loader">
       <span></span><span></span><span></span>
     </div>
@@ -1459,7 +1459,7 @@
     <div class="preview-title" id="previewTitle">—</div>
     <div class="preview-meta">
       <span class="preview-host-chip">
-        <span>🎤</span><span>호스트 <strong id="previewHost">—</strong></span>
+        <span>🎤</span><span>모임장 <strong id="previewHost">—</strong></span>
       </span>
       <span class="preview-members-chip">
         <span class="preview-dot"></span><span><strong id="previewMemberCount">0</strong>명 접속</span>
@@ -1504,8 +1504,8 @@
     </div>
   </details>
 
-  <button type="button" id="alertHostBtn" class="alert-host-btn" onclick="alertHost()" hidden aria-label="호스트에게 알림 보내기">
-    🔔 호스트에게 알림 보내기
+  <button type="button" id="alertHostBtn" class="alert-host-btn" onclick="alertHost()" hidden aria-label="모임장에게 알림 보내기">
+    🔔 모임장에게 알림 보내기
   </button>
 </div>
 
@@ -1559,7 +1559,7 @@
   </div>
   <div class="carousel-hint" id="carouselHint">← 좌우로 넘겨보세요 →</div>
   <div class="carousel-indicators" id="carouselIndicators"></div>
-  <!-- 모바일 전용 접이식 참가자 리스트 (호스트 UI 동일, 강퇴 제외) -->
+  <!-- 모바일 전용 접이식 참가자 리스트 (모임장 UI 동일, 강퇴 제외) -->
   <div id="guest-mp-list-wrap" data-open="true" hidden>
     <button type="button" class="mp-list-head" onclick="toggleGuestMpList()">
       <span class="mp-list-title">👥 참가자 목록</span>
@@ -1642,7 +1642,7 @@
     </div>
     <div class="closing-wait-msg" id="closingWaitMsg" hidden>
       <div class="closing-wait-icon">⏳</div>
-      <div>호스트가 다음 단계로 진행할 때까지 기다려주세요</div>
+      <div>모임장이 다음 단계로 진행할 때까지 기다려주세요</div>
     </div>
   </div>
 </div>
@@ -1759,7 +1759,7 @@ const STATE = {
   myProfile: null,
   photos: {}, // uuid → dataURL (서버에 저장되지 않음, WS broadcast 휘발성)
   intros: {}, // uuid → 한줄 자기소개 (서버 미저장, 휘발성)
-  photoBanned: false, // 호스트가 본인 사진 차단했는지
+  photoBanned: false, // 모임장이 본인 사진 차단했는지
   carouselIndex: 0,
   touchStartX: 0,
   mouseStartX: 0,
@@ -1807,7 +1807,7 @@ const STATE = {
     STATE.myProfile = { uuid: STATE.uuid, nickname: me.nickname, ...me };
     renderMyProfile();
 
-    // 호스트 현재 화면으로 catch-up — 재접속·중간 입장 모두 즉시 동기화
+    // 모임장 현재 화면으로 catch-up — 재접속·중간 입장 모두 즉시 동기화
     const cur = room.current_state;
     if (cur && cur.current_tab) {
       const tab = cur.current_tab;
@@ -1935,7 +1935,7 @@ function switchScreen(state) {
   else stopGuestFreeTimer();
 }
 
-// 자유대화 옵션 적용 (모임 생성 시 결정된 free_chat_*) — 호스트 timer endsAt에 동기화
+// 자유대화 옵션 적용 (모임 생성 시 결정된 free_chat_*) — 모임장 timer endsAt에 동기화
 let _guestFreeTimerInterval = null;
 let _guestFreeTimerEndsAt = 0;
 function applyGuestFreeChatOptions() {
@@ -1957,10 +1957,10 @@ function applyGuestFreeChatOptions() {
 function setGuestFreeTimerEndsAt(endsAt) {
   const prev = _guestFreeTimerEndsAt || 0;
   _guestFreeTimerEndsAt = endsAt || 0;
-  // 호스트가 시간을 늘렸으면(>30초 차이) toast로 안내
+  // 모임장이 시간을 늘렸으면(>30초 차이) toast로 안내
   if (prev > 0 && _guestFreeTimerEndsAt > prev + 30000) {
     const addedMin = Math.round((_guestFreeTimerEndsAt - prev) / 60000);
-    if (typeof showMiniToast === 'function') showMiniToast(`⏱ 호스트가 +${addedMin}분 연장`);
+    if (typeof showMiniToast === 'function') showMiniToast(`⏱ 모임장이 +${addedMin}분 연장`);
   }
   if (_guestFreeTimerInterval) { clearInterval(_guestFreeTimerInterval); _guestFreeTimerInterval = null; }
   const el = document.getElementById('guestFreeTimer');
@@ -2037,9 +2037,9 @@ function connectWS() {
       location.replace(`/survey?room=${STATE.roomCode}`);
       return;
     }
-    // 호스트가 강퇴
+    // 모임장이 강퇴
     if (e.code === 4006 || /kicked/i.test(e.reason || '')) {
-      if (typeof toast === 'function') toast('호스트가 모임에서 내보냈어요');
+      if (typeof toast === 'function') toast('모임장이 모임에서 내보냈어요');
       setTimeout(() => location.replace('/'), 1200);
       return;
     }
@@ -2165,7 +2165,7 @@ async function handleWSMessage(msg) {
     }
 
     case 'free_timer':
-      // 호스트가 자유대화 타이머를 설정/연장 — endsAt에 동기화
+      // 모임장이 자유대화 타이머를 설정/연장 — endsAt에 동기화
       setGuestFreeTimerEndsAt(parseInt(msg.ends_at, 10) || 0);
       break;
     case 'vote_result':
@@ -2231,10 +2231,10 @@ async function handleWSMessage(msg) {
       break;
 
     case 'room_updated':
-      // 호스트가 운영 옵션 변경 — 영향받는 화면 즉시 갱신
+      // 모임장이 운영 옵션 변경 — 영향받는 화면 즉시 갱신
       if (msg.changes) {
         Object.assign(STATE.room, msg.changes);
-        // host_role 변경 시 멤버 목록 다시 fetch (host_only면 호스트가 carousel에서 빠짐)
+        // host_role 변경 시 멤버 목록 다시 fetch (host_only면 모임장이 carousel에서 빠짐)
         if ('host_role' in msg.changes) {
           loadIntroData();
         }
@@ -2271,19 +2271,19 @@ async function handleWSMessage(msg) {
       break;
 
     case 'photo_blocked':
-      // 호스트가 본인 사진을 차단 (재업로드도 차단됨)
+      // 모임장이 본인 사진을 차단 (재업로드도 차단됨)
       STATE.photoBanned = true;
       delete STATE.photos[STATE.uuid];
       setMyAvatarPhoto('');
       try { localStorage.removeItem(`ntable_photo_${STATE.roomCode}`); } catch (_) {}
-      if (typeof toast === 'function') toast('호스트가 사진 업로드를 제한했어요');
+      if (typeof toast === 'function') toast('모임장이 사진 업로드를 제한했어요');
       const myAv = document.getElementById('myAvatar');
-      if (myAv) { myAv.disabled = true; myAv.title = '호스트가 사진 업로드를 제한했어요'; }
+      if (myAv) { myAv.disabled = true; myAv.title = '모임장이 사진 업로드를 제한했어요'; }
       if (STATE.members && STATE.members.length) renderCarousel();
       break;
 
     case 'photo_unblocked':
-      // 호스트가 차단 해제
+      // 모임장이 차단 해제
       STATE.photoBanned = false;
       if (typeof toast === 'function') toast('사진 업로드 제한이 해제됐어요');
       const myAv2 = document.getElementById('myAvatar');
@@ -2291,14 +2291,14 @@ async function handleWSMessage(msg) {
       break;
 
     case 'mvp_announce':
-      // 호스트가 MVP 결과 발표 → mvpOverlay 표시 (matching_result 와 분리)
+      // 모임장이 MVP 결과 발표 → mvpOverlay 표시 (matching_result 와 분리)
       showMVPOverlay(msg.mvp);
       break;
 
     case 'kicked':
       if (msg.target_uuid === STATE.uuid) {
         try { if (STATE.ws) STATE.ws.close(); } catch (_) {}
-        if (typeof toast === 'function') toast('호스트가 모임에서 내보냈어요');
+        if (typeof toast === 'function') toast('모임장이 모임에서 내보냈어요');
         setTimeout(() => location.replace('/'), 1200);
       }
       break;
@@ -2424,8 +2424,8 @@ function startWaitingTimer() {
     const secs = Math.floor((Date.now() - waitingStart) / 1000);
     const mins = Math.floor(secs / 60);
     if (statusEl) {
-      if (secs < 60) statusEl.textContent = '입장 완료! 호스트가 모임을 시작하면 자동으로 이어집니다.';
-      else statusEl.textContent = `${mins}분 경과 · 호스트가 곧 시작할 거예요`;
+      if (secs < 60) statusEl.textContent = '입장 완료! 모임장이 모임을 시작하면 자동으로 이어집니다.';
+      else statusEl.textContent = `${mins}분 경과 · 모임장이 곧 시작할 거예요`;
     }
     if (secs >= 300 && alertBtn && alertBtn.hidden) {
       alertBtn.hidden = false;
@@ -2447,7 +2447,7 @@ function alertHost() {
   btn.disabled = true;
   setTimeout(() => {
     if (!btn) return;
-    btn.textContent = '🔔 호스트에게 알림 보내기';
+    btn.textContent = '🔔 모임장에게 알림 보내기';
     btn.disabled = false;
   }, 60000);
 }
@@ -2645,7 +2645,7 @@ function renderCarousel() {
   renderGuestMpList();
 }
 
-// 모바일 접이식 리스트 (호스트 renderMpList 와 동일 구조, 강퇴 버튼 제외)
+// 모바일 접이식 리스트 (모임장 renderMpList 와 동일 구조, 강퇴 버튼 제외)
 function renderGuestMpList() {
   const wrap = document.getElementById('guest-mp-list-wrap');
   const body = document.getElementById('guest-mp-list-body');
@@ -3279,7 +3279,7 @@ async function renderGuestExploreResult() {
   }
 }
 
-// 호스트·게스트 공용
+// 모임장·게스트 공용
 function renderExploreResultHtml(data, myUuid) {
   const myMember = data.members.find(m => m.uuid === myUuid);
   const myVotes = (myMember && myMember.votes_json) || {};

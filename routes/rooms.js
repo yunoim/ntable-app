@@ -41,7 +41,7 @@ router.post('/rooms', async (req, res) => {
     return res.status(500).json({ error: 'no pack available' });
   }
 
-  // 표시 필드 옵션 (호스트가 정함) — 팩 기본값을 폴백으로. couples 같이 최소 노출 팩 은 display_fields 가 빈 배열 가까울 수 있음 (mbti 는 별도 로직으로 항상 노출).
+  // 표시 필드 옵션 (모임장이 정함) — 팩 기본값을 폴백으로. couples 같이 최소 노출 팩 은 display_fields 가 빈 배열 가까울 수 있음 (mbti 는 별도 로직으로 항상 노출).
   // mbti·playlist 는 opt-in 표시 슬롯 — 카드 렌더러는 현재 mbti 게이트 없이 상시 노출, playlist 만 showPlaylist 로 게이트.
   const ALLOWED_FIELDS = ['birth_year', 'region', 'industry', 'interest', 'mbti', 'playlist'];
   const packDisplayDefault = Array.isArray(getPackDefaults(pack.id).display_fields_default)
@@ -71,7 +71,7 @@ router.post('/rooms', async (req, res) => {
     const dt = new Date(req.body.meeting_at);
     if (Number.isFinite(dt.getTime())) meeting_at = dt.toISOString();
   }
-  // 팩별 closing flow (호스트 override 가능) — pack_defaults 로 재검증해서
+  // 팩별 closing flow (모임장 override 가능) — pack_defaults 로 재검증해서
   // couples 처럼 mvp/match 비활성 팩에 'mvp','match' 수동 추가 시도 차단.
   const validSteps = ['mvp', 'match', 'explore-result'];
   const packDef = getPackDefaults(pack.id);
@@ -107,7 +107,7 @@ router.post('/rooms', async (req, res) => {
   }
 
   // 팩 스냅샷 — 방 생성 시점에 tier별 셔플 + question_count 기준 enabled 분배
-  // 풀 30개 전체 저장. 호스트가 편집 모달에서 enabled 토글·순서·텍스트 수정 가능.
+  // 풀 30개 전체 저장. 모임장이 편집 모달에서 enabled 토글·순서·텍스트 수정 가능.
   const questionsSeed = buildRoomQuestions(pack, question_count);
   const topicsSeed = buildRoomTopics(pack);
 
@@ -172,7 +172,7 @@ router.get('/rooms/:code', async (req, res) => {
   );
   if (result.rows.length === 0) return res.status(404).json({ error: 'room not found' });
   const room = result.rows[0];
-  // 현재 room_state 포함 — 게스트가 페이지 로드 시 바로 호스트 화면으로 진입할 수 있도록
+  // 현재 room_state 포함 — 게스트가 페이지 로드 시 바로 모임장 화면으로 진입할 수 있도록
   let current_state = null;
   try {
     const sr = await pool.query('SELECT state_json FROM room_state WHERE room_id = $1', [room.id]);
@@ -189,7 +189,7 @@ router.get('/rooms/:code', async (req, res) => {
 // 인증 전(게스트 대기 화면)에서 노출할 최소 공개 정보
 router.get('/rooms/:code/preview', async (req, res) => {
   const { code } = req.params;
-  // host_nickname — room_members 우선 (호스트가 참여자로 참여한 경우 방별 닉네임), users 는 legacy fallback
+  // host_nickname — room_members 우선 (모임장이 참여자로 참여한 경우 방별 닉네임), users 는 legacy fallback
   const r = await pool.query(
     `SELECT r.room_code, r.title, r.status,
             COALESCE(rm.nickname, u.nickname) AS host_nickname
@@ -213,8 +213,8 @@ router.get('/rooms/:code/preview', async (req, res) => {
 });
 
 // GET /api/rooms/:code/members
-// host_role === 'host_only' 인 호스트는 응답에서 제외
-// ?viewer=<uuid> 로 viewer ≠ member 인 항목은 hide_* 마스킹 (호스트는 마스킹 X — 운영 필요)
+// host_role === 'host_only' 인 모임장은 응답에서 제외
+// ?viewer=<uuid> 로 viewer ≠ member 인 항목은 hide_* 마스킹 (모임장은 마스킹 X — 운영 필요)
 router.get('/rooms/:code/members', async (req, res) => {
   const { code } = req.params;
   const viewer = req.query.viewer;
@@ -254,7 +254,7 @@ router.get('/rooms/:code/members', async (req, res) => {
     );
     users.rows.forEach(u => memberMap.set(u.uuid, u));
   }
-  // viewer 마스킹 (호스트가 viewer면 마스킹 X — 운영용)
+  // viewer 마스킹 (모임장이 viewer면 마스킹 X — 운영용)
   const out = clients.map(u => {
     const m = memberMap.get(u);
     if (!m) return null;
@@ -295,7 +295,7 @@ router.post('/rooms/:code/approve', async (req, res) => {
   if (approve_all) {
     const clients = wsModule.getRoomClients(code);
     for (const uuid of clients) {
-      // 모든 클라이언트에게 broadcast (호스트·게스트 전부) — 호스트 UI 동기화 필수
+      // 모든 클라이언트에게 broadcast (모임장·게스트 전부) — 모임장 UI 동기화 필수
       wsModule.broadcastToRoom(code, { type: 'approved', uuid });
     }
     return res.json({ approved: clients });
@@ -307,7 +307,7 @@ router.post('/rooms/:code/approve', async (req, res) => {
 });
 
 // GET /api/rooms/:code/members/:uuid — 특정 멤버 프로필 조회 (방별 익명 — room_members 우선)
-// ?viewer=<uuid> 로 viewer ≠ target이면 hide_* 필드 마스킹. 호스트 viewer는 마스킹 X (운영 필요).
+// ?viewer=<uuid> 로 viewer ≠ target이면 hide_* 필드 마스킹. 모임장 viewer는 마스킹 X (운영 필요).
 router.get('/rooms/:code/members/:uuid', async (req, res) => {
   const { code, uuid } = req.params;
   const viewer = req.query.viewer;
@@ -330,7 +330,7 @@ router.get('/rooms/:code/members/:uuid', async (req, res) => {
     return res.json(u.rows[0]);
   }
   const row = { ...m.rows[0] };
-  // 본인이 아니고 호스트도 아닌 viewer가 보면 hide 적용
+  // 본인이 아니고 모임장도 아닌 viewer가 보면 hide 적용
   if (viewer && viewer !== uuid && !isHostViewer) {
     if (row.hide_birth_year) row.birth_year = null;
     if (row.hide_region) row.region = null;
@@ -361,7 +361,7 @@ router.get('/rooms/:code/explore-result', async (req, res) => {
   // enabled=true 인 문항만 (없는 레거시 방은 slice 로 호환)
   const enabledQuestions = allQuestions.filter(q => q && q.enabled !== false);
   const qcount = Number.isFinite(room.rows[0].question_count) ? room.rows[0].question_count : enabledQuestions.length;
-  const questions = enabledQuestions.slice(0, qcount); // 호스트가 정한 문항 수만큼만
+  const questions = enabledQuestions.slice(0, qcount); // 모임장이 정한 문항 수만큼만
   const members = await pool.query(
     `SELECT mr.uuid, mr.votes_json,
             COALESCE(rm.nickname, '익명') AS nickname,
@@ -510,7 +510,7 @@ router.post('/rooms/:code/join', async (req, res) => {
   }
 });
 
-// POST /api/tv/attach — 호스트가 페어링 코드 입력해서 TV를 자기 방에 연결
+// POST /api/tv/attach — 모임장이 페어링 코드 입력해서 TV를 자기 방에 연결
 router.post('/tv/attach', async (req, res) => {
   const { code, room_code, host_uuid } = req.body || {};
   if (!code || !room_code || !host_uuid) {
@@ -529,7 +529,7 @@ router.post('/tv/attach', async (req, res) => {
   res.json({ ok: true });
 });
 
-// POST /api/rooms/:code/kick — 호스트가 특정 참가자를 방에서 추방
+// POST /api/rooms/:code/kick — 모임장이 특정 참가자를 방에서 추방
 router.post('/rooms/:code/kick', async (req, res) => {
   const { code } = req.params;
   const host_uuid = req.body.host_uuid || req.body.uuid;
@@ -544,7 +544,7 @@ router.post('/rooms/:code/kick', async (req, res) => {
   if (target_uuid === host_uuid) return res.status(400).json({ error: 'cannot kick host' });
 
   const wsModule = require('./ws');
-  // 1) 모든 참가자에게 사용자 강퇴 broadcast (호스트는 list 갱신, 게스트들은 user_left 로 인식)
+  // 1) 모든 참가자에게 사용자 강퇴 broadcast (모임장은 list 갱신, 게스트들은 user_left 로 인식)
   wsModule.broadcastToRoom(code, {
     type: 'kicked',
     target_uuid,
@@ -599,7 +599,7 @@ router.get('/rooms/:code/qr', async (req, res) => {
   }
 });
 
-// GET /api/host-stats/:host_uuid — 특정 호스트의 누적 운영 통계
+// GET /api/host-stats/:host_uuid — 특정 모임장의 누적 운영 통계
 router.get('/host-stats/:host_uuid', async (req, res) => {
   const { host_uuid } = req.params;
   if (!host_uuid) return res.status(400).json({ error: 'host_uuid required' });
@@ -697,7 +697,7 @@ router.get('/stats', async (req, res) => {
     for (const code of activeRooms) {
       participants += wsModule.getRoomClients(code).length;
     }
-    // 누적 통계: 의미 있는 모임만 카운트 — 최소 2명 이상 참여한 방 (호스트 단독 테스트 제외)
+    // 누적 통계: 의미 있는 모임만 카운트 — 최소 2명 이상 참여한 방 (모임장 단독 테스트 제외)
     // 모든 통계가 동일 기준(2명+) 이어야 정합 — total_attendances · unique_people 도 1명짜리 방 제외
     const [totalRoomsRow, totalAttendRow, uniquePeopleRow] = await Promise.all([
       pool.query('SELECT COUNT(*)::int AS cnt FROM rooms r WHERE (SELECT COUNT(*) FROM room_members rm WHERE rm.room_id = r.id) >= 2'),
@@ -720,7 +720,7 @@ router.get('/stats', async (req, res) => {
   }
 });
 
-// PATCH /api/rooms/:code/settings — 호스트 대시보드에서 운영 옵션 변경
+// PATCH /api/rooms/:code/settings — 모임장 대시보드에서 운영 옵션 변경
 // body: { uuid, question_count, free_chat_timer_minutes, free_chat_chat_enabled, free_chat_topic_card_enabled, host_role, display_mode }
 router.patch('/rooms/:code/settings', async (req, res) => {
   const { code } = req.params;
@@ -998,7 +998,7 @@ router.patch('/rooms/:code/me/profile', async (req, res) => {
   res.json({ ok: true });
 });
 
-// PATCH /api/rooms/:code/display — 호스트가 join wizard 'display' step에서 결정
+// PATCH /api/rooms/:code/display — 모임장이 join wizard 'display' step에서 결정
 // body: { uuid, display_fields, birth_year_format, region_detail, photo_enabled }
 router.patch('/rooms/:code/display', async (req, res) => {
   const { code } = req.params;
@@ -1032,9 +1032,9 @@ router.patch('/rooms/:code/display', async (req, res) => {
 });
 
 // ── 닉네임 복구 (localStorage 유실·기기 교체 대응) ──────────────────
-// 같은 방에서 쓰던 닉네임이 이미 있고 내 uuid 와 다를 때, 호스트 승인 하에 uuid 를 새로 것으로 rebind.
+// 같은 방에서 쓰던 닉네임이 이미 있고 내 uuid 와 다를 때, 모임장 승인 하에 uuid 를 새로 것으로 rebind.
 // 기존 답안(votes/match/fi_count/playlist_link/insta_select/connection) 전부 승계.
-// 보안: 호스트가 본인 emoji/닉네임 보고 육안 식별 후 승인 — 같은 물리 공간 이벤트 스코프에서 동작.
+// 보안: 모임장이 본인 emoji/닉네임 보고 육안 식별 후 승인 — 같은 물리 공간 이벤트 스코프에서 동작.
 
 const pendingRecoveries = new Map(); // key: `${room_id}:${new_uuid}` → { nickname, old_uuid, room_id, created_at }
 
@@ -1105,7 +1105,7 @@ router.post('/rooms/:code/recover-approve', async (req, res) => {
     await client.query('UPDATE insta_selects SET target_uuid = $1 WHERE room_id = $2 AND target_uuid = $3', [new_uuid, room_id, old_uuid]);
     await client.query('UPDATE playlist_links SET uuid = $1 WHERE room_id = $2 AND uuid = $3', [new_uuid, room_id, old_uuid]);
     await client.query('UPDATE survey_responses SET uuid = $1 WHERE room_id = $2 AND uuid = $3', [new_uuid, room_id, old_uuid]);
-    // 방이 있다면 호스트 uuid 도 (호스트가 본인 복구한 경우 — 현재 UI 에선 불가능하지만 방어)
+    // 방이 있다면 모임장 uuid 도 (모임장이 본인 복구한 경우 — 현재 UI 에선 불가능하지만 방어)
     await client.query('UPDATE rooms SET host_uuid = $1 WHERE id = $2 AND host_uuid = $3', [new_uuid, room_id, old_uuid]);
     await client.query('COMMIT');
   } catch (err) {

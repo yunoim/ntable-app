@@ -1,7 +1,7 @@
 # ntable-app — 데모 형상 개발 허브
 
 > **Notion 동기화**: 2026-04-17
-> **목적**: 누구나 호스트가 되어 실제 모임을 열고 진행할 수 있는 경량 플랫폼
+> **목적**: 누구나 모임장이 되어 실제 모임을 열고 진행할 수 있는 경량 플랫폼
 > **기존 ntable(ns)과 완전 분리된 병렬 프로젝트**
 > **🧊 ns 동결 (2026-04-17부)**: ns는 신규 개발 중단. 플랫폼 작업은 이 디렉토리 + `ntable-landing/`에만 집중.
 
@@ -79,14 +79,14 @@
 
 - **인증**: OAuth 없음. 닉네임 + 브라우저 UUID (localStorage)
   - 닉네임 재로그인 지원 (localStorage 유실 시 복구 가능)
-- **호스트 진입**: `app.ntable.kr` 접속 = 무조건 호스트. 로비 없음.
+- **모임장 진입**: `app.ntable.kr` 접속 = 무조건 모임장. 로비 없음.
 - **게스트 진입**: 오프라인(QR 스캔) / 온라인(URL 공유) 동시 혼합 가능
 - **입장 URL**: 방 생성 시 `https://app.ntable.kr/room/:code` 자동 생성 + QR + URL 복사 버튼
-- **승인**: 호스트 수동 승인 (개별/전체)
-- **호스트 역할**: 방 생성 시 선택 — 진행 전담 / 게스트 겸임
+- **승인**: 모임장 수동 승인 (개별/전체)
+- **모임장 역할**: 방 생성 시 선택 — 진행 전담 / 게스트 겸임
 - **결제/계좌/SMS/Discord 없음**
 - **동시 모임 수 제한 없음**, 최대 참가자 제한 없음
-- **호스트 자격**: 누구나 (prod에서는 게스트 3회 이상 시 자동 부여)
+- **모임장 자격**: 누구나 (prod에서는 게스트 3회 이상 시 자동 부여)
 - **관리자 페이지**: `/admin` (Google OAuth + admin_users 화이트리스트, super_admin: skb.yunho.im@gmail.com)
 
 ## 파일 구조 (병렬 개발 — 담당 파일만 수정)
@@ -99,14 +99,14 @@ ntable-app/
 │   ├── auth.js         # 인증 API (닉네임 로그인/재로그인)
 │   ├── rooms.js        # 방 생성/조회/QR/승인/종료
 │   ├── ws.js           # WebSocket (chat broadcast 포함)
-│   ├── admin.js        # 호스트 진행 (투표/매칭/넛지/인스타공개)
+│   ├── admin.js        # 모임장 진행 (투표/매칭/넛지/인스타공개)
 │   ├── survey.js       # POST /api/survey, GET /api/result
 │   ├── ai.js           # GET /api/personality (규칙 기반)
 │   └── panel.js        # 관리자 API (/api/panel/*)
 ├── public/
 │   ├── login.html      # 닉네임 재로그인 지원
 │   ├── create.html     # 방 생성 (로그아웃)
-│   ├── host.html       # 호스트 (로그아웃, MVP 실시간)
+│   ├── host.html       # 모임장 (로그아웃, MVP 실시간)
 │   ├── guest.html      # 게스트 (매칭/인스타/채팅)
 │   ├── survey.html, result.html, admin.html
 ├── questions/season1.md  # 연애 밸런스 게임 13문항
@@ -139,7 +139,7 @@ ntable-app/
 |--------|---------|------|
 | `user_joined` | uuid, nickname | 입장 알림 |
 | `user_left` | uuid | 퇴장 알림 |
-| `approved` | uuid | 호스트 승인 (**전체 broadcast**) |
+| `approved` | uuid | 모임장 승인 (**전체 broadcast**) |
 | `state_update` | state_json | 탭/단계 전환 |
 | `vote_result` | question_id, counts | 투표 집계 |
 | `nudge` | message | 자리 셔플 |
@@ -157,7 +157,7 @@ ntable-app/
 - `DATABASE_URL` — Railway 자동 주입
 - `PORT` — Railway 자동
 - `GOOGLE_CLIENT_ID` · `GOOGLE_CLIENT_SECRET` · `ADMIN_OAUTH_REDIRECT_URI` — 관리자 OAuth (필수)
-- `KAKAO_JS_KEY` — 호스트 카카오 공유 (선택, 없으면 카카오 버튼 숨김)
+- `KAKAO_JS_KEY` — 모임장 카카오 공유 (선택, 없으면 카카오 버튼 숨김)
 - `PUBLIC_ORIGIN` — 선택
 
 ## 구현 완료 현황
