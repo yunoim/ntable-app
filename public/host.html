@@ -1967,7 +1967,7 @@
         </button>
         <div id="mp-list-body" class="mp-list-body"></div>
       </div>
-      <div id="no-approved" class="empty-msg" style="text-align:center; padding: 40px 0; font-size: 16px;">
+      <div id="no-approved" class="empty-msg" data-copy="empty_states.no_members" style="text-align:center; padding: 40px 0; font-size: 16px;">
         아직 참가자가 없어요. QR을 공유해 모임을 시작해보세요.
       </div>
     </div>
@@ -2289,6 +2289,13 @@ function init() {
   if (!state.roomCode || !state.uuid) {
     location.href = '/';
     return;
+  }
+
+  // T-21 (2026-04-22): brand.json 로드 후 정적 data-copy 요소 치환 (no_members 등)
+  if (typeof loadBrand === 'function') {
+    loadBrand().then(() => {
+      if (typeof applyCopyToDOM === 'function') applyCopyToDOM(document);
+    }).catch(() => {});
   }
 
   document.getElementById('room-code').textContent = state.roomCode;
@@ -3074,7 +3081,8 @@ function updateMVPList() {
     rows = state.approvedUsers.map(u => ({ uuid: u.uuid, nickname: u.nickname, fi_count: 0 }));
   }
   if (!rows.length) {
-    list.innerHTML = '<div class="empty-msg" style="padding:12px 0;">아직 투표가 없어요</div>';
+    const noVotesMsg = (typeof t === 'function' ? t('empty_states.no_votes') : '아직 투표가 없어요');
+    list.innerHTML = `<div class="empty-msg" style="padding:12px 0;">${noVotesMsg}</div>`;
     return;
   }
   rows = [...rows].sort((a, b) => (b.fi_count || 0) - (a.fi_count || 0));

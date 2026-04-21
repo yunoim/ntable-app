@@ -1563,7 +1563,7 @@
   <button type="button" class="waiting-logout" onclick="guestLogout()" aria-label="이 모임에서 나가기">모임 나가기</button>
   <div class="waiting-msg">
     <h2>모임이 곧 시작돼요</h2>
-    <p id="waitingStatus">입장 완료! 모임장이 모임을 시작하면 자동으로 이어집니다.</p>
+    <p id="waitingStatus" data-copy="empty_states.waiting_host">입장 완료! 모임장이 모임을 시작하면 자동으로 이어집니다.</p>
     <div class="dots-loader">
       <span></span><span></span><span></span>
     </div>
@@ -1898,9 +1898,12 @@ const STATE = {
   if (!pathMatch) { showError('잘못된 접속 경로입니다.'); return; }
   STATE.roomCode = pathMatch[1];
 
-  // T-20 (2026-04-22): brand.json 런타임 로드 — 후속 t() 호출 준비
+  // T-20/T-21 (2026-04-22): brand.json 런타임 로드 + 정적 data-copy 요소 치환
   if (typeof loadBrand === 'function') {
-    try { await loadBrand(); } catch (_) { /* 실패해도 하드코딩 폴백 사용 */ }
+    try {
+      await loadBrand();
+      if (typeof applyCopyToDOM === 'function') applyCopyToDOM(document);
+    } catch (_) { /* 실패해도 하드코딩 폴백 사용 */ }
   }
 
   // uuid 보장 (없으면 자동 생성 — 첫 화면 안 거치고 바로 link 진입한 경우)
