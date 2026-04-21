@@ -786,9 +786,12 @@ router.post('/rooms/:code/insta-select', async (req, res) => {
   if (uuid === target_uuid) return res.status(400).json({ error: 'self-select not allowed' });
 
   try {
-    const roomRes = await pool.query('SELECT id FROM rooms WHERE room_code = $1', [code]);
+    const roomRes = await pool.query('SELECT id, pack_id FROM rooms WHERE room_code = $1', [code]);
     if (roomRes.rows.length === 0) return res.status(404).json({ error: 'room not found' });
     const room_id = roomRes.rows[0].id;
+    const pack_id = roomRes.rows[0].pack_id;
+    // 이성 필터 여부는 팩별 정책에 위임 (dating=true, playlist-share 등=false)
+    const opposite_only = getPackDefaults(pack_id).insta_opposite_gender_only === true;
 
     // 본인 인스타 입력 필수
     const meRes = await pool.query(
@@ -800,13 +803,13 @@ router.post('/rooms/:code/insta-select', async (req, res) => {
       return res.status(400).json({ error: 'instagram required', reason: 'me_empty' });
     }
 
-    // 이성 필터 + 대상 존재 확인
+    // 대상 존재 확인 + (팩 정책에 따라) 이성 필터
     const targetRes = await pool.query(
       'SELECT gender FROM room_members WHERE room_id = $1 AND uuid = $2',
       [room_id, target_uuid]
     );
     if (targetRes.rows.length === 0) return res.status(404).json({ error: 'target not found' });
-    if (!isOppositeInsta(meRes.rows[0].gender, targetRes.rows[0].gender)) {
+    if (opposite_only && !isOppositeInsta(meRes.rows[0].gender, targetRes.rows[0].gender)) {
       return res.status(400).json({ error: 'opposite gender only' });
     }
 
@@ -867,9 +870,10 @@ router.get('/rooms/:code/insta-status', async (req, res) => {
   if (!uuid) return res.status(400).json({ error: 'uuid required' });
 
   try {
-    const roomRes = await pool.query('SELECT id FROM rooms WHERE room_code = $1', [code]);
+    const roomRes = await pool.query('SELECT id, pack_id FROM rooms WHERE room_code = $1', [code]);
     if (roomRes.rows.length === 0) return res.status(404).json({ error: 'room not found' });
     const room_id = roomRes.rows[0].id;
+    const opposite_only = getPackDefaults(roomRes.rows[0].pack_id).insta_opposite_gender_only === true;
 
     const meRes = await pool.query(
       'SELECT uuid, nickname, gender, instagram, emoji FROM room_members WHERE room_id = $1 AND uuid = $2',
@@ -878,12 +882,14 @@ router.get('/rooms/:code/insta-status', async (req, res) => {
     if (meRes.rows.length === 0) return res.status(404).json({ error: 'member not found' });
     const me = meRes.rows[0];
 
-    // 이성 참가자 전체
+    // 참가자 전체 (팩 정책에 따라 이성만 필터)
     const othersRes = await pool.query(
       'SELECT uuid, nickname, gender, instagram, emoji FROM room_members WHERE room_id = $1 AND uuid != $2',
       [room_id, uuid]
     );
-    const others = othersRes.rows.filter(o => isOppositeInsta(me.gender, o.gender));
+    const others = opposite_only
+      ? othersRes.rows.filter(o => isOppositeInsta(me.gender, o.gender))
+      : othersRes.rows;
 
     // 내가 선택한 target + 나를 선택한 selector
     const selRes = await pool.query(

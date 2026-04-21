@@ -327,6 +327,7 @@ const PACK_DEFAULTS = {
     result_sections: ['ai_personality', 'best_match', 'mutual_pairs', 'explore_result', 'summary'],
     skip_free_chat: false,
     insta_exchange_enabled: true,
+    insta_opposite_gender_only: true, // dating — 이성만 교환
     best_match_enabled: true,
     mvp_enabled: true,
     match_pairs_enabled: true,
@@ -398,6 +399,7 @@ const PACK_DEFAULTS = {
     result_sections: ['ai_personality', 'best_match', 'mvp', 'explore_result', 'summary'],
     skip_free_chat: false,
     insta_exchange_enabled: true,
+    insta_opposite_gender_only: false, // playlist-share — 음악 취향 기반, 동성·이성 무관
     best_match_enabled: true,
     mvp_enabled: true,
     match_pairs_enabled: false,

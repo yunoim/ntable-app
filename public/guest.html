@@ -3222,6 +3222,11 @@ async function loadClosingData() {
     } catch(_) {}
   }
   document.getElementById('closingRoomTag').textContent = STATE.roomCode;
+  // 로컬에 기록된 투표 완료 상태 복원 — 재접속 시 중복 투표 방지
+  try {
+    if (localStorage.getItem(`ntable_mvp_voted_${STATE.roomCode}`) === '1') STATE.mvpVoted = true;
+    if (localStorage.getItem(`ntable_match_voted_${STATE.roomCode}`) === '1') STATE.matchVoted = true;
+  } catch (_) {}
   // 1:1 모임 특수 처리 폐기 (2026-04-19) — 인원 수 무관하게 MVP/사랑의작대기 항상 노출
   renderVoteList('mvpList', 'mvp');
   renderVoteList('matchList', 'match');
@@ -3346,10 +3351,12 @@ function renderVoteList(containerId, type) {
     return;
   }
 
+  const alreadyDone = type === 'mvp' ? STATE.mvpVoted : STATE.matchVoted;
+
   candidates.forEach(m => {
       const age = ageOf(m.birth_year);
       const item = document.createElement('div');
-      item.className = 'member-vote-item';
+      item.className = 'member-vote-item' + (alreadyDone ? ' done' : '');
       item.dataset.uuid = m.uuid;
       item.innerHTML = `
         <div>
@@ -3357,9 +3364,17 @@ function renderVoteList(containerId, type) {
           <div class="member-vote-meta">${[age, m.mbti].filter(Boolean).join(' · ')}</div>
         </div>
         <div class="vote-check">○</div>`;
-      item.onclick = () => selectVote(item, type, m.uuid);
+      if (!alreadyDone) item.onclick = () => selectVote(item, type, m.uuid);
       container.appendChild(item);
     });
+
+  // 이미 투표 완료 상태면 done 메시지 노출 + 제출 버튼 숨김
+  if (alreadyDone) {
+    const doneMsg = document.getElementById(type === 'mvp' ? 'mvpDoneMsg' : 'matchDoneMsg');
+    const submitBtn = document.getElementById(type === 'mvp' ? 'mvpSubmit' : 'matchSubmit');
+    if (doneMsg) doneMsg.classList.add('show');
+    if (submitBtn) submitBtn.style.display = 'none';
+  }
 }
 
 // 로컬 선택만 (서버 전송은 submitVote에서) — 두번 누르면 취소
@@ -3428,6 +3443,8 @@ async function submitVote(type) {
 
   if (type === 'mvp') STATE.mvpVoted = true;
   else STATE.matchVoted = true;
+  // 로컬 영속 — 재접속·화면 꺼짐 복귀 시 중복 투표 방지 (서버 측엔 voter→target 기록이 없어 복원 불가)
+  try { localStorage.setItem(`ntable_${type}_voted_${STATE.roomCode}`, '1'); } catch (_) {}
 }
 
 // ─── MATCHING RESULT ──────────────────────────────

@@ -477,9 +477,10 @@
         // 사용자 친화 메시지 (서버 raw error 노출 금지)
         const reasonMap = {
           'NOT_PARTICIPANT': '이 모임의 참가자만 선택할 수 있어요.',
-          'SAME_GENDER': '동성 간에는 교환하지 않아요.',
+          'opposite gender only': '이 모임은 이성 간에만 교환돼요.',
           'self-select not allowed': '본인은 선택할 수 없어요.',
           'room not found': '모임을 찾을 수 없어요.',
+          'target not found': '상대방을 찾을 수 없어요.',
         };
         alert(reasonMap[d.error] || '선택 실패 — 잠시 후 다시 시도해주세요.');
         return;
