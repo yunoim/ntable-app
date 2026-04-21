@@ -1,6 +1,6 @@
 {
   "_comment": "ntable 카피 단일 소스. 하드코딩 방지용 참조 문서. 변경 시 docs/brand/ntable-brand-guide.md + Notion 원본도 동시 동기화.",
-  "_version": "1.0.0",
+  "_version": "1.1.0",
   "_updated_at": "2026-04-22",
   "_applies_to": "ntable-app (app.ntable.kr) + ntable-landing (ntable.kr)",
 
@@ -69,10 +69,15 @@
     "profile_lazy_prompt_title": "✨ 프로필 더 채우기",
     "profile_lazy_prompt_duration": "2분",
     "profile_saved_success": "✓ 프로필이 저장됐어요",
-    "nick_resume_cta": "이전에 이 닉으로 참여했다면 이어받기"
+    "nick_resume_cta": "이전에 이 닉으로 참여했다면 이어받기",
+    "couples_instant_badge": "바로 시작",
+    "emoji_quick_label": "자주 쓰는",
+    "emoji_random_btn": "🎲 랜덤",
+    "emoji_more_expand": "더보기 ▼",
+    "emoji_more_collapse": "접기 ▲"
   },
 
-  "_ui_copy_policy": "게스트 온보딩·진행 중 안내·성공 피드백 같은 UI 마이크로카피. error_copy 와 분리해 성격별 톤 관리. nickname_taken_inline 은 실시간 blur 경고용(게스트가 닉네임 입력 중 다른 필드 없이 인라인 노출), nickname_taken 은 서버 응답 실패 토스트용.",
+  "_ui_copy_policy": "게스트 온보딩·진행 중 안내·성공 피드백 같은 UI 마이크로카피. error_copy 와 분리해 성격별 톤 관리. nickname_taken_inline 은 실시간 blur 경고용(게스트가 닉네임 입력 중 다른 필드 없이 인라인 노출), nickname_taken 은 서버 응답 실패 토스트용. 이모지 프리픽스 시맨틱: `✓` 성공 · `⚠️` 경고 · `✨` 초대 · `🎲` 액션(랜덤/재시도). 장식 남발 금지.",
 
   "usage_notes": {
     "1": "이 파일은 런타임 로드용이 아니라 소스 기준 참조 문서. 하드코딩 시 여기 값과 일치 확인.",

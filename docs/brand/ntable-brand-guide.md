@@ -108,7 +108,7 @@
 
 ## 8. UI 마이크로카피 (2026-04-22 신설)
 
-게스트 온보딩·진행 중 안내·성공 피드백 같은 마이크로카피는 `brand.json` 의 `ui_copy` / `error_copy` 블록으로 분리해 관리. 장식 이모지 프리픽스는 시맨틱 고정 (`✓` 성공 · `⚠️` 경고 · `✨` 초대).
+게스트 온보딩·진행 중 안내·성공 피드백 같은 마이크로카피는 `brand.json` 의 `ui_copy` / `error_copy` 블록으로 분리해 관리. 이모지 프리픽스 시맨틱 고정: `✓` 성공 · `⚠️` 경고 · `✨` 초대 · `🎲` 액션(랜덤/재시도). 장식 남발 금지.
 
 ### 대표 사례 (Batch 1+2 도입)
 
@@ -118,6 +118,15 @@
 | 프로필 저장 성공 토스트 | "✓ 프로필이 저장됐어요" | `ui_copy.profile_saved_success` |
 | 닉네임 중복 실시간 경고 (inline) | "⚠️ 이 모임에서 '{nick}' 은 이미 사용 중이에요" | `error_copy.nickname_taken_inline` |
 | 닉네임 이어받기 CTA | "이전에 이 닉으로 참여했다면 이어받기" | `ui_copy.nick_resume_cta` |
+
+### Batch 3 추가 (2026-04-22)
+
+| 상황 | 카피 | brand.json 키 |
+| --- | --- | --- |
+| couples 카드 1-tap 뱃지 (`create.html`) | "바로 시작" | `ui_copy.couples_instant_badge` |
+| 이모지 선택 quick row 라벨 (`join.html`) | "자주 쓰는" | `ui_copy.emoji_quick_label` |
+| 이모지 랜덤 선택 버튼 | "🎲 랜덤" | `ui_copy.emoji_random_btn` |
+| 이모지 풀 펼치기 토글 | "더보기 ▼" / "접기 ▲" | `ui_copy.emoji_more_expand` · `emoji_more_collapse` |
 
 ### 용어 통일
 
@@ -136,3 +145,4 @@
 | --- | --- |
 | 2026-04-21 | 초기 버전. 태그라인·톤·표기 규칙·시리즈 구조 정립. |
 | 2026-04-22 | §8 UI 마이크로카피 섹션 신설. `brand.json` 에 `ui_copy` 블록 + `error_copy.nickname_taken_inline` 추가. 공개 텍스트에서 "방"→"모임" 용어 통일 (`public/join.html` 4곳). |
+| 2026-04-22 | §8 에 Batch 3 항목 추가 (couples 바로 시작 뱃지, 이모지 quick row 라벨·랜덤 버튼·더보기 토글). `brand.json` 에 `couples_instant_badge`·`emoji_quick_label`·`emoji_random_btn`·`emoji_more_expand`·`emoji_more_collapse` 키 추가. 🎲 액션 시맨틱 등록. `_version` 1.0.0 → 1.1.0. |
