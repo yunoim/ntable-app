@@ -13,6 +13,7 @@
 <script src="/auth-header.js" defer></script>
 <script src="/remember-toggle.js" defer></script>
 <script src="/pending-reveals.js" defer></script>
+<script src="/twemoji-brand.js" defer></script>
 <title>오늘의 결과 — ntable</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -737,7 +738,7 @@
         </div>
         <div id="personality-body" style="display:none">
           <!-- html2canvas 캡처 타깃: 이 박스만 이미지로 저장됨 -->
-          <div id="share-card" class="share-card">
+          <div id="share-card" class="share-card" data-twe>
             <div class="share-card-brand">ntable</div>
             <div class="share-card-photo" id="share-photo" style="display:none"></div>
             <div class="share-card-emoji" id="share-emoji">✨</div>
@@ -750,7 +751,7 @@
             <button type="button" id="save-image-btn" class="share-btn" aria-label="이미지 저장">📷 이미지 저장</button>
             <button type="button" id="insta-share-btn" class="share-btn outline" aria-label="공유하기">📸 공유하기</button>
             <!-- T-09 (2026-04-22): Instagram Story 9:16 캡처 전용 off-screen 컨테이너. shareToInstagram 에서만 사용. -->
-            <div id="storyCanvas" aria-hidden="true" style="position:fixed;left:-9999px;top:0;width:1080px;height:1920px;background:linear-gradient(180deg,#0a0f1e 0%,#141d35 100%);color:#f5f2ec;font-family: var(--font-heading);display:flex;flex-direction:column;justify-content:space-between;padding:120px 80px;box-sizing:border-box;"></div>
+            <div id="storyCanvas" data-twe aria-hidden="true" style="position:fixed;left:-9999px;top:0;width:1080px;height:1920px;background:linear-gradient(180deg,#0a0f1e 0%,#141d35 100%);color:#f5f2ec;font-family: var(--font-heading);display:flex;flex-direction:column;justify-content:space-between;padding:120px 80px;box-sizing:border-box;"></div>
           </div>
         </div>
       </div>
@@ -884,7 +885,12 @@
       const data = await r.json();
       document.getElementById('personality-loading').style.display = 'none';
       // 결과(성향 분석)에서 도출된 이모지 사용 — wizard 선택 이모지 대신 결과 기반
-      document.getElementById('share-emoji').textContent = data.emoji || '✨';
+      // T-13: Twemoji 가 textContent 를 img 로 치환하므로 원본 이모지를 dataset 에 보관
+      {
+        const se = document.getElementById('share-emoji');
+        se.dataset.emoji = data.emoji || '✨';
+        se.textContent = se.dataset.emoji;
+      }
       document.getElementById('share-type').textContent = data.personality || '탐구형';
       document.getElementById('personality-text').textContent = data.text || '분석 결과를 불러올 수 없어요.';
       document.getElementById('personality-body').style.display = 'block';
@@ -964,7 +970,8 @@
   function buildStoryCanvas() {
     const sc = document.getElementById('storyCanvas');
     if (!sc) return null;
-    const emoji = document.getElementById('share-emoji')?.textContent || '✨';
+    const seEl = document.getElementById('share-emoji');
+    const emoji = (seEl?.dataset.emoji || seEl?.textContent || '✨').trim() || '✨';
     const type = document.getElementById('share-type')?.textContent || '—';
     const text = (document.getElementById('personality-text')?.textContent || '').slice(0, 140);
     const photoEl = document.getElementById('share-photo');

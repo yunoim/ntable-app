@@ -13,6 +13,7 @@
   <script src="/auth-header.js" defer></script>
   <script src="/remember-toggle.js" defer></script>
   <script src="/pending-reveals.js" defer></script>
+  <script src="/twemoji-brand.js" defer></script>
   <title>모임 만들기 · ntable</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -651,7 +652,7 @@
     <!-- 화면 1: 모임 선택 -->
     <div class="card" id="selectScreen">
       <!-- 둘이서 hero (즉시 모임 생성, 확인 스킵) -->
-      <div class="couples-hero" id="couplesHero">
+      <div class="couples-hero" id="couplesHero" data-twe>
         <span class="couples-hero-eyebrow">둘이서</span>
         <h3 style="font-size:19px;margin-bottom:14px;">연인·가까운 사이</h3>
         <button type="button" class="couples-hero-btn" id="quickCouplesBtn">둘이서 시작하기</button>
@@ -660,7 +661,7 @@
       <div class="group-section-header">아니면 여럿이서</div>
 
       <!-- 4개 모임 카드 (couples 제외) -->
-      <div class="pack-grid" id="packGrid"></div>
+      <div class="pack-grid" id="packGrid" data-twe></div>
     </div>
 
     <!-- TV 페어링 진입점 (Case 2 전용: 폰으로 조작 + 외부 화면에 표시) -->
