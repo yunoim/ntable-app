@@ -980,7 +980,8 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || '모임 생성 실패');
-        window.location.href = `/room/${data.room_code}/join`;
+        // T-02 (2026-04-21): 모임장은 join wizard 우회 — 호스트 화면으로 직행. 프로필 입력은 host.html '내 정보 수정' 모달에서.
+        window.location.href = `/room/${data.room_code}/host`;
       } catch (e) {
         errMsg.textContent = e.message || '모임 생성 중 오류';
       }

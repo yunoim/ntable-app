@@ -1021,7 +1021,8 @@ router.patch('/rooms/:code/me/profile', async (req, res) => {
   res.json({ ok: true });
 });
 
-// PATCH /api/rooms/:code/display — 모임장이 join wizard 'display' step에서 결정
+// PATCH /api/rooms/:code/display — 참가자 카드 표시 규칙 (display_fields, birth_year_format, region_detail, photo_enabled)
+// 가드: 탐구 단계 진입 이후에는 금지 — 이미 입장한 게스트 카드 표시가 소급 변경되는 회귀 방지 (T-02, 2026-04-21)
 // body: { uuid, display_fields, birth_year_format, region_detail, photo_enabled }
 router.patch('/rooms/:code/display', async (req, res) => {
   const { code } = req.params;
@@ -1030,6 +1031,13 @@ router.patch('/rooms/:code/display', async (req, res) => {
   const room = await pool.query('SELECT id, host_uuid FROM rooms WHERE room_code = $1', [code]);
   if (room.rows.length === 0) return res.status(404).json({ error: 'room not found' });
   if (room.rows[0].host_uuid !== uuid) return res.status(403).json({ error: 'host only' });
+  // 탐구·자유대화·마무리 단계 진입 후 display 규칙 변경 차단
+  const stateRes = await pool.query('SELECT state_json FROM room_state WHERE room_id = $1', [room.rows[0].id]);
+  const s = stateRes.rows[0]?.state_json || {};
+  const tab = s.current_tab || s.phase;
+  if (tab && tab !== 'intro' && tab !== 'waiting') {
+    return res.status(403).json({ error: 'DISPLAY_LOCKED', message: '탐구 시작 이후에는 카드 표시 규칙을 바꿀 수 없어요.' });
+  }
   // mbti·playlist 는 opt-in 표시 슬롯 — 카드 렌더러는 현재 mbti 게이트 없이 상시 노출, playlist 만 showPlaylist 로 게이트.
   const ALLOWED_FIELDS = ['birth_year', 'region', 'industry', 'interest', 'mbti', 'playlist'];
   let display_fields = Array.isArray(req.body.display_fields)

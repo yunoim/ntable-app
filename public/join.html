@@ -390,19 +390,18 @@ async function init() {
     if (ROOM.status === 'closed') { renderErr('이 모임은 이미 종료됐어요'); return; }
     document.getElementById('roomTitle').textContent = ROOM.title || ROOM_CODE;
 
-    // 모임장 / 게스트 판별 — host_uuid 매칭
-    ROOM.isHost = ROOM.host_uuid && ROOM.host_uuid === UUID;
-    if (ROOM.isHost) {
-      const sub = document.querySelector('.room-tag');
-      if (sub) sub.textContent = `참여 코드 ${ROOM_CODE} · 모임장`;
+    // T-02 (2026-04-21): join wizard 는 게스트 self-describe 전용. 모임장은 host.html 로 즉시 리다이렉트.
+    if (ROOM.host_uuid && ROOM.host_uuid === UUID) {
+      location.replace(`/room/${ROOM_CODE}/host`);
+      return;
     }
 
-    // 이미 join 했으면 바로 모임장/게스트 화면으로 (단 ?edit=1이면 wizard 재진행 — 내 정보 수정용)
+    // 이미 join 했으면 바로 게스트 화면으로 (단 ?edit=1이면 wizard 재진행 — 내 정보 수정용)
     const isEdit = new URLSearchParams(location.search).get('edit') === '1';
     const meRes = await fetch(`/api/rooms/${ROOM_CODE}/me?uuid=${encodeURIComponent(UUID)}`);
     const me = meRes.ok ? await meRes.json() : { joined: false };
     if (me.joined && !isEdit) {
-      location.replace(ROOM.isHost ? `/room/${ROOM_CODE}/host` : `/room/${ROOM_CODE}`);
+      location.replace(`/room/${ROOM_CODE}`);
       return;
     }
     // edit 모드 — 기존 데이터를 wizard data로 prefill
@@ -528,7 +527,6 @@ function renderStep() {
         ${packBadge}
         <h2 class="step-title">닉네임을 정해주세요</h2>
         <p class="step-sub">모임 안에서만 사용하는 닉네임이에요.</p>
-        ${ROOM.isHost ? `<div style="background:rgba(212,168,67,0.08);border:1px dashed rgba(212,168,67,0.4);border-radius:10px;padding:12px 14px;font-size:12.5px;color:#e8b84b;margin-bottom:18px;line-height:1.55;">📢 여기 입력한 내용은 다른 참가자 카드에 표시됩니다.</div>` : ''}
         <div class="field">
           <input type="text" id="nicknameInput" maxlength="20" placeholder="예: 별빛, lemon, J" autocomplete="off" autocapitalize="off" autocorrect="off" value="${escHtml(data.nickname)}">
           <div id="nickConflict" class="nick-conflict-slot"></div>
@@ -541,7 +539,6 @@ function renderStep() {
       break;
     }
     case 'basic': {
-      const isHost = !!ROOM.isHost;
       const isCouples = ROOM.pack_id === 'couples';
       const defaultYear = data.birth_year || 1990;
       const yearOpts = (() => {
@@ -553,19 +550,8 @@ function renderStep() {
         return html;
       })();
       const fmt = ROOM.birth_year_format || (isCouples ? 'exact' : 'decade_half');
-      // 모임장은 표시 방식 4옵션(decade/decade_half/exact/hide), 게스트는 hide 토글만
-      const fmtSection = isHost
-        ? `
-        <div class="field">
-          <div class="field-label">출생연도 표시 방식 <span style="opacity:0.5;font-size:11px;">모임장이 모두에게 적용</span></div>
-          <div class="chip-row">
-            <button type="button" class="chip${fmt==='decade'&&!data.hide_birth_year?' selected':''}" data-group="bfmt" data-value="decade">30대 (10대 단위)</button>
-            <button type="button" class="chip${fmt==='decade_half'&&!data.hide_birth_year?' selected':''}" data-group="bfmt" data-value="decade_half">30초·중·후 (기본·권장)</button>
-            <button type="button" class="chip${fmt==='exact'&&!data.hide_birth_year?' selected':''}" data-group="bfmt" data-value="exact">정확한 연도 (1990)</button>
-            <button type="button" class="chip${data.hide_birth_year?' selected':''}" data-group="bfmt" data-value="hide">🔒 다른 참가자에게 숨김 (매칭에만 사용)</button>
-          </div>
-        </div>`
-        : `
+      // T-02 (2026-04-21): 게스트 전용 — hide 토글만. 표시 방식 자체는 모임장이 create.html/host 설정에서 확정.
+      const fmtSection = `
         <div class="field">
           <div class="field-label">내 출생연도 공개</div>
           <div class="chip-row">
@@ -609,24 +595,14 @@ function renderStep() {
       break;
     }
     case 'region': {
-      const isHost = !!ROOM.isHost;
       const regionPicked = data.region || '';
       const pickedMetro = detectMetro(regionPicked);
       const metroGu = pickedMetro && regionPicked.startsWith(pickedMetro + ' ')
         ? regionPicked.replace(pickedMetro, '').trim() : '';
       const rd = ROOM.region_detail === true;
       const showGu = rd && pickedMetro && Array.isArray(METRO_GU[pickedMetro]);
-      const rdSection = isHost
-        ? `
-        <div class="field">
-          <div class="field-label">지역 표시 방식 <span style="opacity:0.5;font-size:11px;">모임장이 모두에게 적용</span></div>
-          <div class="chip-row">
-            <button type="button" class="chip${!rd && !data.hide_region?' selected':''}" data-group="rdfmt" data-value="false">시·도만 (예: 서울)</button>
-            <button type="button" class="chip${rd && !data.hide_region?' selected':''}" data-group="rdfmt" data-value="true">광역시는 구까지 (예: 강남)</button>
-            <button type="button" class="chip${data.hide_region?' selected':''}" data-group="rdfmt" data-value="hide">🔒 다른 참가자에게 숨김 (매칭에만 사용)</button>
-          </div>
-        </div>`
-        : `
+      // T-02 (2026-04-21): 게스트 전용 — 표시 방식은 모임장이 create.html/host 설정에서 확정.
+      const rdSection = `
         <div class="field">
           <div class="field-label">내 지역 공개</div>
           <div class="chip-row">
@@ -816,10 +792,8 @@ function renderStep() {
       break;
     }
     case 'confirm':
-      const subText = ROOM.isHost
-        ? '모임장으로 모임을 시작해요. 게스트들에게는 이렇게 보입니다.'
-        : '아래 정보로 다른 참가자에게 보입니다.';
-      const submitLabel = ROOM.isHost ? '모임 만들고 게스트 초대하기' : '입장하기';
+      const subText = '아래 정보로 다른 참가자에게 보입니다.';
+      const submitLabel = '입장하기';
       const genderLabel = data.gender === 'male' ? '남성' : data.gender === 'female' ? '여성' : data.gender === 'unspecified' ? '선택 안 함' : '';
       // 모임장이 설정한 birth_year_format 에 맞춘 실제 표시값
       const fmtBy = ROOM.birth_year_format || 'exact';
@@ -982,46 +956,11 @@ document.addEventListener('click', (e) => {
   if (!group) return;
   const wasSelected = chip.classList.contains('selected');
 
-  // 모임장 출생연도 표시 방식 (decade/decade_half/exact/hide)
-  if (group === 'bfmt') {
-    document.querySelectorAll('.chip[data-group="bfmt"]').forEach(c => c.classList.remove('selected'));
-    chip.classList.add('selected');
-    const v = chip.dataset.value;
-    if (v === 'hide') {
-      data.hide_birth_year = true;
-    } else {
-      data.hide_birth_year = false;
-      // 모임장 결정 → server PATCH (방 규칙 변경)
-      ROOM.birth_year_format = v;
-      patchRoomDisplay({ birth_year_format: v });
-    }
-    return;
-  }
   // 게스트 hide_birth_year 토글
   if (group === 'hide_birth_year') {
     document.querySelectorAll('.chip[data-group="hide_birth_year"]').forEach(c => c.classList.remove('selected'));
     chip.classList.add('selected');
     data.hide_birth_year = chip.dataset.value === 'true';
-    return;
-  }
-  // 모임장 지역 표시 방식 (false/true/hide) — 항상 renderStep으로 구 UI 재평가 + 광역시 구 잔재 정리
-  if (group === 'rdfmt') {
-    const v = chip.dataset.value;
-    if (v === 'hide') {
-      data.hide_region = true;
-      // 시·도만 / 표시 안 함 → 구 선택값 초기화 (서울 강남 → 서울)
-      data.region = stripMetroGu(data.region);
-      ROOM.region_detail = false;
-      patchRoomDisplay({ region_detail: false });
-    } else {
-      data.hide_region = false;
-      const newRd = v === 'true';
-      ROOM.region_detail = newRd;
-      // 시·도만으로 변경 시 광역시 구 잔재 제거
-      if (!newRd) data.region = stripMetroGu(data.region);
-      patchRoomDisplay({ region_detail: newRd });
-    }
-    renderStep(); // 구 row 노출 조건 즉시 재평가
     return;
   }
   // 게스트 hide_region 토글
@@ -1134,18 +1073,6 @@ function skipInstagram() {
   data.hide_instagram = false;
   CURRENT = Math.min(CURRENT + 1, STEPS.length - 1);
   renderStep();
-}
-
-// 모임장 표시 방식 변경 시 server PATCH (인라인)
-async function patchRoomDisplay(payload) {
-  if (!ROOM.isHost) return;
-  try {
-    await fetch(`/api/rooms/${ROOM_CODE}/display`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uuid: UUID, ...payload }),
-    });
-  } catch (_) {}
 }
 
 // 이모지 카테고리 탭 전환 — 현재 step(emoji) 재렌더. data.emoji 는 그대로 보존
@@ -1264,7 +1191,7 @@ async function submitJoin() {
         });
       }
     } catch (_) {}
-    location.replace(ROOM.isHost ? `/room/${ROOM_CODE}/host` : `/room/${ROOM_CODE}`);
+    location.replace(`/room/${ROOM_CODE}`);
   } catch (e) {
     err.textContent = '서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.';
     btn.disabled = false;
