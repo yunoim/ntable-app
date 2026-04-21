@@ -123,6 +123,38 @@
   .step-tip strong { color: #e8b84b; font-weight: 600; }
 
   .field { margin-bottom: 22px; }
+  .nick-conflict-slot { margin-top: 10px; }
+  .nick-conflict {
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .nick-conflict.self {
+    background: rgba(126,232,162,0.08);
+    border: 1px solid rgba(126,232,162,0.35);
+    color: #b4efc9;
+  }
+  .nick-conflict.taken {
+    background: rgba(232,126,126,0.08);
+    border: 1px solid rgba(232,126,126,0.35);
+    color: #f2c0c0;
+  }
+  .nick-conflict-cta {
+    align-self: flex-start;
+    background: transparent;
+    border: 1px solid currentColor;
+    color: inherit;
+    font-family: inherit;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+  }
+  .nick-conflict-cta:hover { background: rgba(255,255,255,0.04); }
   .field-label {
     display: block;
     font-size: 12px;
@@ -499,6 +531,7 @@ function renderStep() {
         ${ROOM.isHost ? `<div style="background:rgba(212,168,67,0.08);border:1px dashed rgba(212,168,67,0.4);border-radius:10px;padding:12px 14px;font-size:12.5px;color:#e8b84b;margin-bottom:18px;line-height:1.55;">📢 여기 입력한 내용은 다른 참가자 카드에 표시됩니다.</div>` : ''}
         <div class="field">
           <input type="text" id="nicknameInput" maxlength="20" placeholder="예: 별빛, lemon, J" autocomplete="off" autocapitalize="off" autocorrect="off" value="${escHtml(data.nickname)}">
+          <div id="nickConflict" class="nick-conflict-slot"></div>
         </div>
         <div class="actions">
           ${prevBtn}
@@ -871,6 +904,38 @@ function rowH(k, v, hidden) {
   return `<div class="summary-row"><span class="key">${k}</span><span class="val">${escHtml(v)}</span></div>`;
 }
 
+let _nickCheckTimer = null;
+let _nickCheckSeq = 0;
+async function runNicknameCheck(name) {
+  const hostBox = document.getElementById('nickConflict');
+  if (hostBox) hostBox.innerHTML = '';
+  if (!name || name.length < 1) return;
+  const mySeq = ++_nickCheckSeq;
+  try {
+    const r = await fetch(`/api/rooms/${ROOM_CODE}/nickname-check?n=${encodeURIComponent(name)}&uuid=${encodeURIComponent(UUID || '')}`);
+    if (!r.ok) return;
+    const j = await r.json();
+    if (mySeq !== _nickCheckSeq) return; // stale
+    if (!hostBox) return;
+    if (!j.taken) { hostBox.innerHTML = ''; return; }
+    if (j.is_self) {
+      hostBox.innerHTML = `<div class="nick-conflict self">
+        ✓ 이 방에 이미 '${escHtml(name)}' 로 참여한 기록이 있어요.
+        <button type="button" class="nick-conflict-cta" onclick="location.replace('/room/' + encodeURIComponent('${ROOM_CODE}'))">바로 이어가기 →</button>
+      </div>`;
+    } else {
+      hostBox.innerHTML = `<div class="nick-conflict taken">
+        ⚠️ 이 방에서 '${escHtml(name)}' 은 이미 사용 중이에요.
+        <button type="button" class="nick-conflict-cta" id="nickRecoverBtn">이전에 이 닉으로 참여했다면 이어받기</button>
+      </div>`;
+      document.getElementById('nickRecoverBtn')?.addEventListener('click', () => {
+        data.nickname = name;
+        if (typeof renderRecoverCta === 'function') renderRecoverCta(name);
+      });
+    }
+  } catch (_) {}
+}
+
 function bindStep(key) {
   if (key === 'nick') {
     const inp = document.getElementById('nicknameInput');
@@ -879,6 +944,14 @@ function bindStep(key) {
     inp.addEventListener('input', () => {
       data.nickname = inp.value.trim();
       btn.disabled = data.nickname.length === 0;
+      // 입력 중에는 conflict 메시지 초기화 (blur 때 재확인)
+      const hostBox = document.getElementById('nickConflict');
+      if (hostBox) hostBox.innerHTML = '';
+    });
+    inp.addEventListener('blur', () => {
+      clearTimeout(_nickCheckTimer);
+      const v = inp.value.trim();
+      _nickCheckTimer = setTimeout(() => runNicknameCheck(v), 300);
     });
     inp.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !btn.disabled) nextStep();

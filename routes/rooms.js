@@ -437,6 +437,29 @@ router.get('/rooms/:code/me', async (req, res) => {
   res.json({ joined: true, ...me.rows[0] });
 });
 
+// GET /api/rooms/:code/nickname-check?n=<nickname>&uuid=<uuid>
+// 실시간 중복 체크 (join wizard blur 훅). { taken, is_self } 반환.
+// is_self=true 면 동일 uuid 가 이미 같은 닉으로 room_members 에 있음 → 그대로 이어가기 가능.
+router.get('/rooms/:code/nickname-check', async (req, res) => {
+  const { code } = req.params;
+  const n = String(req.query.n || '').trim().slice(0, 20);
+  const uuid = String(req.query.uuid || '');
+  if (!n) return res.json({ taken: false, is_self: false });
+  try {
+    const room = await pool.query('SELECT id FROM rooms WHERE room_code = $1', [code]);
+    if (!room.rows.length) return res.status(404).json({ error: 'room not found' });
+    const r = await pool.query(
+      'SELECT uuid FROM room_members WHERE room_id = $1 AND nickname = $2',
+      [room.rows[0].id, n]
+    );
+    if (!r.rows.length) return res.json({ taken: false, is_self: false });
+    return res.json({ taken: true, is_self: r.rows[0].uuid === uuid });
+  } catch (err) {
+    console.error('nickname-check error:', err);
+    res.status(500).json({ error: 'db error' });
+  }
+});
+
 // POST /api/rooms/:code/join — 방 입장 시 nickname + profile 스냅샷 등록 (방별 익명)
 // body: { uuid, nickname, profile?: { gender, birth_year, region, industry, mbti, interest, instagram } }
 router.post('/rooms/:code/join', async (req, res) => {
