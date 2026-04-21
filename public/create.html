@@ -872,8 +872,32 @@
       //   },
       // },
       {
+        id: 'nights-stories', icon: '🌙', title: '나의 이야기 찾기',
+        desc: '조용한 대화·성찰 소모임',
+        seriesLabel: 'ntable Nights',
+        detailedDesc: '내면·관계·지나온 선택을 들여다보는 A/B 10문항 탐구 → 자유대화 → 오늘의 주인공 발표.',
+        features: [
+          'QR 자동 입장 · 익명 닉네임',
+          '참가자 카드 자동 표시',
+          '10문항 A/B 내면 탐구',
+          '자유대화 (타이머 20분 · 익명채팅 · 주제카드)',
+          '오늘의 주인공 투표',
+          '탐구 결과 공개',
+          'AI 성향 카드',
+        ],
+        defaults: {
+          question_count: 10,
+          display_fields: ['birth_year', 'interest'],
+          birth_year_format: 'decade_half',
+          host_role: 'participant', display_mode: 'mobile',
+          photo_enabled: true, region_detail: false,
+          free_chat_timer_minutes: 20, free_chat_chat_enabled: true, free_chat_topic_card_enabled: true,
+        },
+      },
+      {
         id: 'playlist-share', icon: '🎵', title: '나만의 플리 공유회',
         desc: '각자 플리 공유 · BEST 뽑기',
+        seriesLabel: 'ntable Plays',
         detailedDesc: '각자 15분 플리를 스피커로 공유하고, 익명 채팅으로 실시간 반응·BEST 플리 투표·인스타 교환까지.',
         features: [
           'QR 자동 입장 · 익명 닉네임',
@@ -924,8 +948,12 @@
       card.type = 'button';
       card.className = 'pack-card';
       card.dataset.packId = kit.id;
+      const seriesBadge = kit.seriesLabel
+        ? `<span style="display:inline-block;font-size:10px;letter-spacing:0.08em;color:var(--gold);background:rgba(212,168,67,0.1);border:1px solid var(--gold-border);padding:3px 8px;border-radius:999px;margin-bottom:6px;font-weight:600;">${escHtml(kit.seriesLabel)}</span>`
+        : '';
       card.innerHTML = `
         <span class="pack-cta" aria-hidden="true">→</span>
+        ${seriesBadge}
         <div class="pack-head">
           <span class="pack-icon">${escHtml(kit.icon)}</span>
           <span class="pack-title">${escHtml(kit.title)}</span>

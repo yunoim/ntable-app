@@ -257,6 +257,7 @@ const PACK_FLOW_DEFAULTS = {
   dating: ['mvp', 'match'],                   // 연애 — MVP + 작대기
   teambuilding: ['mvp', 'explore-result'],    // 팀빌딩 — MVP + 결과
   'playlist-share': ['mvp', 'explore-result'],// 플리 공유회 — BEST 플리 투표 + 탐구 결과
+  'nights-stories': ['mvp'],                  // 나의 이야기 찾기 — 오늘의 주인공만
 };
 
 function getPackFlow(packId) {
@@ -367,6 +368,24 @@ const PACK_DEFAULTS = {
     labels: {
       page2_card_title: '✨ 오늘 또 가까워진 사람',
       best_match_eyebrow: '오늘 다시 통한 사람',
+    },
+  },
+  // 나의 이야기 찾기 — 대화형 Nights 시리즈. 내면·관계·선택 테마 A/B 10문항 + 자유대화.
+  // icebreaker 와 유사한 구조 but 질문은 내면·성찰 톤. MVP(오늘의 주인공) 로 마무리.
+  'nights-stories': {
+    series: 'ntable-nights',
+    content_kind: 'conversation',
+    wizard_fields: ['nickname', 'emoji', 'gender', 'birth_year', 'mbti', 'interest'],
+    display_fields_default: ['birth_year', 'mbti', 'interest'],
+    result_sections: ['ai_personality', 'best_match', 'mvp', 'explore_result', 'summary'],
+    skip_free_chat: false,
+    insta_exchange_enabled: false,
+    best_match_enabled: true,
+    mvp_enabled: true,
+    match_pairs_enabled: false,
+    labels: {
+      page2_card_title: '🌙 비슷한 이야기를 가진 사람',
+      best_match_eyebrow: '나와 비슷한 이야기',
     },
   },
   // 나만의 플리 공유회 — 대회형 포맷. interest 필드를 플레이리스트 URL 로 재용도, instagram 은 본래 인스타 ID.
