@@ -1,7 +1,7 @@
 {
   "_comment": "ntable 카피 단일 소스. 하드코딩 방지용 참조 문서. 변경 시 docs/brand/ntable-brand-guide.md + Notion 원본도 동시 동기화.",
   "_version": "1.0.0",
-  "_updated_at": "2026-04-21",
+  "_updated_at": "2026-04-22",
   "_applies_to": "ntable-app (app.ntable.kr) + ntable-landing (ntable.kr)",
 
   "name": "ntable",
@@ -60,9 +60,19 @@
     "save_failed": "저장 실패 — 잠시 후 다시 시도해주세요.",
     "vote_save_failed": "투표 저장 실패 — 다시 선택해주세요",
     "nickname_taken": "이 모임에서 이미 사용 중인 닉네임이에요",
+    "nickname_taken_inline": "이 모임에서 '{nick}' 은 이미 사용 중이에요",
     "not_participant": "이 모임의 참가자만 선택할 수 있어요.",
     "opposite_gender_only": "이 모임은 이성 간에만 교환돼요."
   },
+
+  "ui_copy": {
+    "profile_lazy_prompt_title": "✨ 프로필 더 채우기",
+    "profile_lazy_prompt_duration": "2분",
+    "profile_saved_success": "✓ 프로필이 저장됐어요",
+    "nick_resume_cta": "이전에 이 닉으로 참여했다면 이어받기"
+  },
+
+  "_ui_copy_policy": "게스트 온보딩·진행 중 안내·성공 피드백 같은 UI 마이크로카피. error_copy 와 분리해 성격별 톤 관리. nickname_taken_inline 은 실시간 blur 경고용(게스트가 닉네임 입력 중 다른 필드 없이 인라인 노출), nickname_taken 은 서버 응답 실패 토스트용.",
 
   "usage_notes": {
     "1": "이 파일은 런타임 로드용이 아니라 소스 기준 참조 문서. 하드코딩 시 여기 값과 일치 확인.",

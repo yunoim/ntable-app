@@ -905,12 +905,12 @@ async function runNicknameCheck(name) {
     if (!j.taken) { hostBox.innerHTML = ''; return; }
     if (j.is_self) {
       hostBox.innerHTML = `<div class="nick-conflict self">
-        ✓ 이 방에 이미 '${escHtml(name)}' 로 참여한 기록이 있어요.
+        ✓ 이 모임에 이미 '${escHtml(name)}' 로 참여한 기록이 있어요.
         <button type="button" class="nick-conflict-cta" onclick="location.replace('/room/' + encodeURIComponent('${ROOM_CODE}'))">바로 이어가기 →</button>
       </div>`;
     } else {
       hostBox.innerHTML = `<div class="nick-conflict taken">
-        ⚠️ 이 방에서 '${escHtml(name)}' 은 이미 사용 중이에요.
+        ⚠️ 이 모임에서 '${escHtml(name)}' 은 이미 사용 중이에요.
         <button type="button" class="nick-conflict-cta" id="nickRecoverBtn">이전에 이 닉으로 참여했다면 이어받기</button>
       </div>`;
       document.getElementById('nickRecoverBtn')?.addEventListener('click', () => {
@@ -1221,9 +1221,9 @@ function renderRecoverCta(nickname) {
   if (!err) return;
   err.innerHTML = `
     <div style="padding:14px;border:1px solid rgba(212,168,67,0.45);border-radius:12px;background:rgba(212,168,67,0.08);text-align:left;">
-      <div style="font-weight:700;color:#f5f2ec;margin-bottom:6px;">"${escHtml(nickname)}" — 이 방에서 이미 사용 중이에요</div>
+      <div style="font-weight:700;color:#f5f2ec;margin-bottom:6px;">"${escHtml(nickname)}" — 이 모임에서 이미 사용 중이에요</div>
       <div style="font-size:12.5px;color:#c9cdd6;line-height:1.55;margin-bottom:10px;">같은 닉네임으로 전에 입장했던 기기라면 <strong>복구 요청</strong> 가능해요. 모임장이 승인하면 지금까지의 답안·투표가 이 기기로 이어져요.</div>
-      <button type="button" id="recoverBtn" style="width:100%;padding:10px;background:var(--gold);color:var(--navy);border:none;border-radius:8px;font-weight:700;font-family:inherit;font-size:13px;cursor:pointer;">이 방에서 쓰던 닉네임이에요 · 복구 요청</button>
+      <button type="button" id="recoverBtn" style="width:100%;padding:10px;background:var(--gold);color:var(--navy);border:none;border-radius:8px;font-weight:700;font-family:inherit;font-size:13px;cursor:pointer;">이 모임에서 쓰던 닉네임이에요 · 복구 요청</button>
     </div>`;
   const rb = document.getElementById('recoverBtn');
   if (rb) rb.onclick = () => requestRecover(nickname);
