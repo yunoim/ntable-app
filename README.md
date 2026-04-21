@@ -15,6 +15,8 @@ ntable 의 공식 태그라인·톤앤매너·표기 규칙은 [`docs/brand/ntab
 - 노션 진행 보고·릴리스 노트 작성 시 톤 기준
 - 신규 기능 마이크로카피 설계 시 예시 활용
 
+카피 상수는 [`docs/brand/brand.json`](docs/brand/brand.json) 에 구조화 저장 (tagline · cta · error_copy · series · tone). 런타임 로드용이 아니라 하드코딩 시 기준값 참조용.
+
 ## 프로젝트 문서
 
 - [`CLAUDE.md`](CLAUDE.md) — Claude Code 에이전트용 규칙·DB 스키마·WS 이벤트

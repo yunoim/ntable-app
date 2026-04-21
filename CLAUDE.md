@@ -11,9 +11,11 @@
 
 ### [R0] 브랜드 자산 참조 — 사용자 대면 텍스트 작성 시 필수
 - UI · 에러 메시지 · 온보딩 · 랜딩 카피 작성 시 반드시 [`docs/brand/ntable-brand-guide.md`](docs/brand/ntable-brand-guide.md) 참조.
+- 카피 상수는 [`docs/brand/brand.json`](docs/brand/brand.json) 에 구조화 저장 (tagline · cta · error_copy · series · tone). 하드코딩 시 이 파일 값과 일치시킬 것.
 - 태그라인·포지셔닝 문구는 단일 소스(위 파일)에서만 정의. 하드코딩 금지.
+- 공개 vs 내부 카피 분리 정책 (§2-1): 공개 랜딩·앱 hero·og = "처음이어도 유잼 모임장". 내부 스토리·세일즈 = "노잼 인간도 모임장". 메인 태그라인 "누구나 유잼 모임장이 되도록" 은 공통.
 - 노션 업데이트·보고서 작성 시에도 동일 톤 적용.
-- 변경 필요 시 Notion 원본(`ntable-brand-guide`) 먼저 수정 → 레포 사본 동기화 → 관련 코드·문서 반영 순서.
+- 변경 필요 시 Notion 원본(`ntable-brand-guide`) 먼저 수정 → `docs/brand/ntable-brand-guide.md` → `docs/brand/brand.json` → 관련 코드·문서 반영 순서.
 
 ### [R1] 작업 시작 전 — Notion 선행 조회
 1. Notion "Claude Code 작업 로그" DB에서 관련 작업 검색 (중복 방지)
