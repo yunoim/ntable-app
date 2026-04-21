@@ -128,6 +128,22 @@
 | 이모지 랜덤 선택 버튼 | "🎲 랜덤" | `ui_copy.emoji_random_btn` |
 | 이모지 풀 펼치기 토글 | "더보기 ▼" / "접기 ▲" | `ui_copy.emoji_more_expand` · `emoji_more_collapse` |
 
+### v1.2.0 확장 (Batch 4 준비, 2026-04-22)
+
+런타임 로더(`public/js/brand.js`) + 전면 카피 치환(T-18~T-23) 을 대비해 5개 블록 신설.
+
+| 블록 | 키 수 | 용도 | 정책 주석 |
+| --- | --- | --- | --- |
+| `buttons` | 9 | 앱 내부 action 버튼 (cta.* 는 랜딩 전용) | `_buttons_policy` — 결과지향 동사만, "확인/다음/제출" 금지 |
+| `wizard` | 7 필드 × 3 키 | 게스트 위저드 각 필드 q / helper / placeholder | `_wizard_policy` — q 는 대화체 질문, 명사 라벨 금지 |
+| `empty_states` | 5 | 참가자·채팅·투표·매칭·대기 빈 상태 카피 | — |
+| `toasts` | 8 | 환영·입장·저장·WS 재연결 등 단발 피드백 | `_toasts_policy` — `{nick}` 등 중괄호 템플릿 |
+| `series.*.examples` | 5종 × 3 | 각 시리즈별 실제 모임 예시 (create.html 카드) | — |
+
+**용어 금지 확장**: `tone.avoid` 에 `"똑똑한"`, `"AI가 알아서"` 추가. ntable 은 "도구" 포지셔닝이라 "AI 가 다 해줌" 뉘앙스 배제.
+
+**런타임 로더 도입**: `usage_notes[1]` 을 "런타임 로드용이 아니라 참조 문서" → "런타임 로드용 (`public/js/brand.js` 가 fetch). 하드코딩 대신 `t()` 로 참조" 로 변경 예정 (T-18 에서 구현).
+
 ### 용어 통일
 
 사용자 대면 텍스트에서 세션/공간을 가리킬 때는 **"모임"** 을 사용. "방"(room) 은 코드·DB 스키마 내부에서만 사용 (변수명 `room_code` 등). 톤을 따뜻하게 유지하기 위함.
@@ -146,3 +162,4 @@
 | 2026-04-21 | 초기 버전. 태그라인·톤·표기 규칙·시리즈 구조 정립. |
 | 2026-04-22 | §8 UI 마이크로카피 섹션 신설. `brand.json` 에 `ui_copy` 블록 + `error_copy.nickname_taken_inline` 추가. 공개 텍스트에서 "방"→"모임" 용어 통일 (`public/join.html` 4곳). |
 | 2026-04-22 | §8 에 Batch 3 항목 추가 (couples 바로 시작 뱃지, 이모지 quick row 라벨·랜덤 버튼·더보기 토글). `brand.json` 에 `couples_instant_badge`·`emoji_quick_label`·`emoji_random_btn`·`emoji_more_expand`·`emoji_more_collapse` 키 추가. 🎲 액션 시맨틱 등록. `_version` 1.0.0 → 1.1.0. |
+| 2026-04-22 | Batch 4 준비. `brand.json` 에 5개 블록 신설: `buttons`(9) · `wizard`(7필드×3) · `empty_states`(5) · `toasts`(8) · `series.*.examples`(5종×3). `tone.avoid` 에 "똑똑한"·"AI가 알아서" 추가. `usage_notes[1]` 을 런타임 로더 전제로 변경. `_version` 1.1.0 → 1.2.0. |

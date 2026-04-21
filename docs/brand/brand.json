@@ -1,6 +1,6 @@
 {
   "_comment": "ntable 카피 단일 소스. 하드코딩 방지용 참조 문서. 변경 시 docs/brand/ntable-brand-guide.md + Notion 원본도 동시 동기화.",
-  "_version": "1.1.0",
+  "_version": "1.2.0",
   "_updated_at": "2026-04-22",
   "_applies_to": "ntable-app (app.ntable.kr) + ntable-landing (ntable.kr)",
 
@@ -40,18 +40,37 @@
 
   "_cta_policy": "공개 CTA 는 기능적·간결 톤 (모임 열기 / 새 모임 만들기 / 지금 바로 시작하기). '유잼' 류 브랜드 표현은 내부 전용이라 CTA 에는 쓰지 않는다.",
 
+  "buttons": {
+    "open_room": "모임 열기",
+    "join_code": "입장하기",
+    "wizard_next": "다음으로",
+    "wizard_done": "모임에 들어가기",
+    "share_result": "결과 공유하기",
+    "save_image": "이미지로 저장",
+    "view_result": "결과 보기",
+    "retry": "다시 해볼게요",
+    "cancel_soft": "돌아가기"
+  },
+
+  "_buttons_policy": "앱 내부 action 버튼. 결과지향 동사 사용. '확인/다음/제출' 금지. cta.* 는 랜딩 hero·nav 전용, buttons.* 는 앱 내부 전용.",
+
   "series": {
-    "ntable-nights":  { "label": "ntable Nights",  "icon": "🌙", "tagline": "대화·창작 소모임",   "category": "conversation" },
-    "ntable-plays":   { "label": "ntable Plays",   "icon": "🎵", "tagline": "음악 공유·연주 대회", "category": "playlist" },
-    "ntable-draws":   { "label": "ntable Draws",   "icon": "🎨", "tagline": "시·그림 창작 대회",   "category": "creation" },
-    "ntable-pitches": { "label": "ntable Pitches", "icon": "💼", "tagline": "아이디어·포폴 대회", "category": "pitch" },
-    "ntable-games":   { "label": "ntable Games",   "icon": "💪", "tagline": "운동 기록 대회",     "category": "record" }
+    "ntable-nights":  { "label": "ntable Nights",  "icon": "🌙", "tagline": "대화·창작 소모임",   "category": "conversation",
+      "examples": ["와인 한 잔 하며 인생 얘기", "MBTI 밸런스게임 8명", "요즘 제일 즐거운 것 나누기"] },
+    "ntable-plays":   { "label": "ntable Plays",   "icon": "🎵", "tagline": "음악 공유·연주 대회", "category": "playlist",
+      "examples": ["최애 플레이리스트 3분 설명", "숨은 명곡 HIDDEN GEM 투표", "기타 한 곡 라이브"] },
+    "ntable-draws":   { "label": "ntable Draws",   "icon": "🎨", "tagline": "시·그림 창작 대회",   "category": "creation",
+      "examples": ["30분 시 쓰기 콘테스트", "주제 한 줄 그림 릴레이", "사진 보고 짧은 시 쓰기"] },
+    "ntable-pitches": { "label": "ntable Pitches", "icon": "💼", "tagline": "아이디어·포폴 대회", "category": "pitch",
+      "examples": ["3분 사이드 프로젝트 피치", "포트폴리오 한 장 리뷰", "아이디어 한 줄 평가받기"] },
+    "ntable-games":   { "label": "ntable Games",   "icon": "💪", "tagline": "운동 기록 대회",     "category": "record",
+      "examples": ["플랭크 1분 버티기", "줄넘기 30초 최다", "스쿼트 10개 속도전"] }
   },
 
   "tone": {
     "traits": ["친근", "캐주얼", "초대하는", "격려하는"],
     "prefer": ["~해요", "~보내요", "이모지 적극 활용", "'유잼' 일상어"],
-    "avoid": ["베타 테스트", "실험", "시범 운영", "혁신", "플랫폼", "솔루션", "퍼실리테이터", "과도한 존댓말"]
+    "avoid": ["베타 테스트", "실험", "시범 운영", "혁신", "플랫폼", "솔루션", "퍼실리테이터", "과도한 존댓말", "똑똑한", "AI가 알아서"]
   },
 
   "error_copy": {
@@ -79,8 +98,69 @@
 
   "_ui_copy_policy": "게스트 온보딩·진행 중 안내·성공 피드백 같은 UI 마이크로카피. error_copy 와 분리해 성격별 톤 관리. nickname_taken_inline 은 실시간 blur 경고용(게스트가 닉네임 입력 중 다른 필드 없이 인라인 노출), nickname_taken 은 서버 응답 실패 토스트용. 이모지 프리픽스 시맨틱: `✓` 성공 · `⚠️` 경고 · `✨` 초대 · `🎲` 액션(랜덤/재시도). 장식 남발 금지.",
 
+  "wizard": {
+    "nickname": {
+      "q": "뭐라고 불러드릴까요?",
+      "helper": "모임 내내 쓰는 이름이에요. 실명 안 써도 돼요.",
+      "placeholder": "예: 와인러버"
+    },
+    "birth_year": {
+      "q": "몇 년생이세요?",
+      "helper": "매칭에만 쓰이고 상대에겐 안 보여요.",
+      "placeholder": "예: 1995"
+    },
+    "industry": {
+      "q": "어떤 일 하세요?",
+      "helper": "대화 소재로 쓰여요. 비워둬도 돼요.",
+      "placeholder": "예: 디자인, 개발, 학생"
+    },
+    "mbti": {
+      "q": "MBTI 뭐예요?",
+      "helper": "아이스브레이커용이에요. 몰라도 괜찮아요.",
+      "placeholder": "예: ISTP"
+    },
+    "instagram": {
+      "q": "인스타 아이디 알려주실래요?",
+      "helper": "매칭된 상대에게만 공개돼요.",
+      "placeholder": "@your_id"
+    },
+    "interest": {
+      "q": "어떤 게 즐거워요?",
+      "helper": "취미·관심사 한두 가지면 충분해요.",
+      "placeholder": "예: 와인, 러닝, 재즈"
+    },
+    "region": {
+      "q": "어디 근처세요?",
+      "helper": "대략적인 동네만 알려주세요.",
+      "placeholder": "예: 성수, 이태원"
+    }
+  },
+
+  "_wizard_policy": "q 는 대화체 질문 (명사 라벨 '닉네임' 금지). helper 는 '왜 묻는지' 또는 '비워도 되는지'. placeholder 는 실제 입력 예시.",
+
+  "empty_states": {
+    "no_members": "QR을 스캔하면 참가자가 여기에 나타나요 ✨",
+    "no_messages": "아직 조용하네요. 첫 이야기를 꺼내볼까요?",
+    "no_votes": "누가 먼저 투표할지 궁금하네요 🗳️",
+    "no_matches": "라운드를 진행하면 매칭이 여기에 보여요",
+    "waiting_host": "모임장이 다음 순서를 준비 중이에요 ⏳"
+  },
+
+  "toasts": {
+    "welcome_guest": "{nick} 님, 환영해요 🎉",
+    "room_opened": "모임이 열렸어요! QR을 공유해보세요",
+    "member_joined": "{nick} 님이 들어왔어요",
+    "saved_auto": "✓ 자동 저장됐어요",
+    "image_saved": "✓ 이미지가 저장됐어요",
+    "image_preparing": "이미지 만드는 중... 🎨",
+    "ws_reconnecting": "연결 복구 중이에요",
+    "tv_loading": "화면 준비 중이에요"
+  },
+
+  "_toasts_policy": "짧고 능동. 성공 prefix ✓, 초대 ✨, 진행 … 또는 의미 이모지. 변수는 {nick} 등 중괄호 템플릿.",
+
   "usage_notes": {
-    "1": "이 파일은 런타임 로드용이 아니라 소스 기준 참조 문서. 하드코딩 시 여기 값과 일치 확인.",
+    "1": "이 파일은 런타임 로드용 (public/js/brand.js 가 fetch). 하드코딩 대신 t() 로 참조.",
     "2": "새 카피 추가 시 docs/brand/ntable-brand-guide.md 갱신 → 여기 반영 → Notion 원본 동기화 순서.",
     "3": "이모지는 의미 있게. 장식용 남발 금지 (시리즈 아이콘·상태 아이콘 OK).",
     "4": "태그라인·포지셔닝 단어는 검색·치환하기 쉽게 이 파일의 키로 관리."
