@@ -1839,7 +1839,13 @@ const STATE = {
 // 모바일 보호모드(화면 꺼짐) 복귀 시 WS 재연결
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
+  // MAX_RETRIES 소진됐더라도 사용자가 앱으로 돌아오면 재시도 가능하게 리셋
+  STATE.wsRetries = 0;
   if (!STATE.ws || STATE.ws.readyState > 1) { try { connectWS(); } catch (_) {} }
+  // 탐구 화면에 있으면 내 투표 상태 서버와 재동기화 (화면 꺼진 사이 다른 디바이스에서 투표했거나 POST 가 실패했을 가능성)
+  if (STATE.currentState === 'explore') {
+    loadExploreData().then(() => renderQuestion()).catch(() => {});
+  }
 });
 
 function showNicknameOverlay() {
@@ -2808,12 +2814,21 @@ function mouseEnd(e) {
 
 // ─── EXPLORE ──────────────────────────────────────
 async function loadExploreData() {
-  if (STATE.questions.length > 0) return;
+  // 질문 목록은 1회만 (방 열려 있는 동안 불변). 내 투표 상태는 매번 서버에서 재동기화 (재접속·화면 꺼짐 복귀 대비).
+  if (STATE.questions.length === 0) {
+    try {
+      const res = await fetch(`/api/rooms/${STATE.roomCode}/questions`);
+      if (res.ok) STATE.questions = await res.json();
+    } catch(_) {}
+  }
   try {
-    const res = await fetch(`/api/rooms/${STATE.roomCode}/questions`);
-    if (!res.ok) return;
-    STATE.questions = await res.json();
-  } catch(_) {}
+    const vr = await fetch(`/api/rooms/${STATE.roomCode}/my-votes?uuid=${encodeURIComponent(STATE.uuid)}`);
+    if (vr.ok) {
+      const { votes } = await vr.json();
+      STATE.myExploreVotes = votes || {};
+      STATE.votedQuestions = new Set(Object.keys(STATE.myExploreVotes).map(k => Number(k)).filter(n => Number.isFinite(n)));
+    }
+  } catch (_) {}
 }
 
 function renderQuestion() {
@@ -2858,16 +2873,36 @@ async function submitExploreVote(questionId, answer, q) {
     b.classList.toggle('selected', i === idx);
   });
 
+  // POST — 1회 재시도 + 실패 시 사용자에게 명시적 토스트 + 로컬 롤백
+  const send = () => fetch(`/api/rooms/${STATE.roomCode}/vote`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uuid: STATE.uuid, question_id: questionId, answer }),
+  });
+  let ok = false;
   try {
-    await fetch(`/api/rooms/${STATE.roomCode}/vote`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uuid: STATE.uuid, question_id: questionId, answer }),
-    });
-  } catch(_) {
-    // 실패 시 로컬 상태 롤백
+    const r = await send();
+    if (r.ok) ok = true;
+  } catch (_) {}
+  if (!ok) {
+    // 짧은 backoff 후 1회 재시도 (모바일 단파 네트워크 끊김 흡수)
+    await new Promise(r => setTimeout(r, 800));
+    try {
+      const r2 = await send();
+      if (r2.ok) ok = true;
+    } catch (_) {}
+  }
+  if (!ok) {
     if (prev) STATE.myExploreVotes[questionId] = prev;
     else delete STATE.myExploreVotes[questionId];
+    STATE.votedQuestions.delete(questionId);
+    if (typeof showMiniToast === 'function') showMiniToast('투표 저장 실패 — 다시 선택해주세요');
+    // 선택 시각 상태도 이전 값으로 되돌림
+    const btns2 = document.querySelectorAll('#choicesWrap .choice-btn');
+    btns2.forEach((b, i) => {
+      const label = i === 0 ? 'A' : 'B';
+      b.classList.toggle('selected', prev === label);
+    });
   }
 }
 
