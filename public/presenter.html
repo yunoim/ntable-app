@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="dark">
 <link rel="stylesheet" href="/theme-lock.css">
+<link rel="stylesheet" href="/styles/tokens-tv.css">
 <script src="/samsung-dark-warn.js" defer></script>
 <title>ntable Presenter</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -110,43 +111,51 @@
     margin-bottom: 24px;
   }
   .members-title strong { color: #e8b84b; }
+  /* T-10 (2026-04-22): TV 토큰 기반 — 4m 거리 가독성 + 참가자 수 자동 스케일 */
   .members-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(var(--member-col-min, 22vw), 1fr));
+    gap: clamp(16px, 1.4vw, 28px);
     overflow-y: auto;
     align-content: start;
   }
   .m-card {
     background: rgba(212,168,67,0.06);
     border: 1px solid rgba(212,168,67,0.35);
-    border-radius: 16px;
-    padding: 20px;
+    border-radius: clamp(14px, 1vw, 20px);
+    padding: clamp(14px, 1.4vw, 28px);
     text-align: center;
   }
   .m-avatar {
-    width: 100px; height: 100px;
-    margin: 0 auto 14px;
+    width: var(--avatar-member, 140px);
+    height: var(--avatar-member, 140px);
+    margin: 0 auto clamp(10px, 0.8vw, 18px);
     border-radius: 50%;
     background: rgba(212,168,67,0.18);
-    border: 2px solid rgba(212,168,67,0.4);
+    border: var(--avatar-ring, 4px solid var(--gold));
     display: flex; align-items: center; justify-content: center;
-    font-size: 44px;
+    font-size: clamp(32px, 3.2vw, 56px);
     overflow: hidden;
   }
-  .m-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .m-avatar img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: var(--avatar-crop, center 30%);
+    aspect-ratio: var(--avatar-aspect, 1 / 1);
+    display: block;
+  }
   .m-avatar.has-photo { font-size: 0; padding: 0; background: transparent; }
   .m-name {
     font-family: 'Cormorant Garamond', serif;
-    font-size: 22px;
+    font-size: var(--size-label, clamp(22px, 1.6vw, 34px));
     font-weight: 600;
     color: #ffffff;
     line-height: 1.2;
   }
   .m-meta {
-    font-size: 13px;
+    font-size: var(--size-caption, clamp(14px, 1.05vw, 20px));
     color: #c0c0c0;
-    margin-top: 4px;
+    margin-top: 6px;
   }
 
   /* Phase: explore */
@@ -587,6 +596,8 @@ async function loadMembers() {
     if (r.ok) {
       STATE.members = await r.json();
       document.getElementById('hMembers').textContent = STATE.members.length;
+      // T-10: 참가자 수에 따른 그리드 자동 조정 — tokens-tv.css 의 --member-col-min · --avatar-member 에 연동
+      document.body.dataset.participantCount = String(STATE.members.length);
     }
   } catch (_) {}
 }
