@@ -463,6 +463,93 @@
     0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
     40% { transform: scale(1); opacity: 1; }
   }
+  /* T-01 lazy prompt: 미입력 프로필 수집 카드 */
+  #lazyPromptCard {
+    margin: 14px 16px 10px;
+    padding: 14px 16px;
+    background: rgba(212,168,67,0.08);
+    border: 1px solid rgba(212,168,67,0.35);
+    border-radius: 14px;
+    animation: lazyPromptIn 0.32s cubic-bezier(0.4,0,0.2,1);
+  }
+  #lazyPromptCard[hidden] { display: none; }
+  @keyframes lazyPromptIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .lazy-prompt-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+    cursor: pointer;
+  }
+  .lazy-prompt-title {
+    font-size: 14px;
+    color: #f5e7b5;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+  .lazy-prompt-sub {
+    font-size: 11.5px;
+    color: rgba(245,231,181,0.72);
+    margin-top: 2px;
+    letter-spacing: 0.02em;
+  }
+  .lazy-prompt-chev { font-size: 14px; color: rgba(245,231,181,0.7); transition: transform 0.2s; }
+  #lazyPromptCard.open .lazy-prompt-chev { transform: rotate(180deg); }
+  .lazy-prompt-body {
+    display: none;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(212,168,67,0.2);
+    flex-direction: column;
+    gap: 12px;
+  }
+  #lazyPromptCard.open .lazy-prompt-body { display: flex; }
+  .lazy-field { display: flex; flex-direction: column; gap: 5px; }
+  .lazy-field-label {
+    font-size: 11.5px;
+    color: rgba(245,242,236,0.7);
+    letter-spacing: 0.04em;
+  }
+  .lazy-field-input,
+  .lazy-field select {
+    padding: 10px 12px;
+    background: rgba(10,15,30,0.55);
+    border: 1px solid rgba(212,168,67,0.28);
+    border-radius: 10px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+  }
+  .lazy-field-input:focus,
+  .lazy-field select:focus { outline: none; border-color: var(--gold); }
+  .lazy-prompt-actions {
+    display: flex; gap: 8px;
+    margin-top: 6px;
+  }
+  .lazy-prompt-save {
+    flex: 1;
+    background: linear-gradient(135deg, var(--gold), #a07828);
+    color: var(--navy);
+    border: none;
+    border-radius: 10px;
+    padding: 11px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+  }
+  .lazy-prompt-skip {
+    background: transparent;
+    color: rgba(245,242,236,0.55);
+    border: 1px solid rgba(245,242,236,0.18);
+    border-radius: 10px;
+    padding: 11px 14px;
+    font-family: inherit;
+    cursor: pointer;
+    font-size: 13px;
+  }
+
   .my-profile-card {
     background: var(--surface);
     border: 1px solid var(--gold-border);
@@ -1577,6 +1664,8 @@
     <span class="tab-indicator">👋 소개</span>
     <span class="room-tag" id="introRoomTag">—</span>
   </div>
+  <!-- T-01 lazy prompt: 미입력 필드가 있을 때만 렌더됨 (JS: renderLazyPrompt) -->
+  <div id="lazyPromptCard" hidden></div>
   <div class="carousel-wrapper" id="carouselWrapper"
        ontouchstart="touchStart(event)" ontouchend="touchEnd(event)"
        onmousedown="mouseStart(event)" onmouseup="mouseEnd(event)">
@@ -1971,6 +2060,11 @@ function switchScreen(state) {
 
   if (state === 'free') applyGuestFreeChatOptions();
   else stopGuestFreeTimer();
+
+  // T-01: intro 진입 시 lazy prompt 렌더 (미입력 필드 있을 때만)
+  if (state === 'intro' && typeof renderLazyPrompt === 'function') {
+    try { renderLazyPrompt(); } catch (_) {}
+  }
 }
 
 // 자유대화 옵션 적용 (모임 생성 시 결정된 free_chat_*) — 모임장 timer endsAt에 동기화
@@ -2503,6 +2597,139 @@ function showMiniToast(text) {
     t.classList.remove('show');
     setTimeout(() => t.remove(), 300);
   }, 2400);
+}
+
+// ─── T-01 lazy prompt (소개 탭 상단 프로필 더 채우기 카드) ─────────
+const LAZY_FIELD_DEFS = {
+  gender: {
+    label: '성별',
+    render: (val) => `<select class="lazy-field-input" data-k="gender">
+      <option value="">선택</option>
+      <option value="male"${val==='male'?' selected':''}>남성</option>
+      <option value="female"${val==='female'?' selected':''}>여성</option>
+      <option value="unspecified"${val==='unspecified'?' selected':''}>선택 안 함</option>
+    </select>`,
+  },
+  birth_year: {
+    label: '출생연도',
+    render: (val) => {
+      const cur = new Date().getFullYear();
+      let html = '<select class="lazy-field-input" data-k="birth_year"><option value="">선택</option>';
+      for (let y = cur - 10; y >= 1940; y--) {
+        html += `<option value="${y}"${String(val)===String(y)?' selected':''}>${y}년</option>`;
+      }
+      html += '</select>';
+      return html;
+    },
+  },
+  region: {
+    label: '주 활동 지역',
+    render: (val) => `<select class="lazy-field-input" data-k="region">
+      <option value="">선택</option>
+      ${['서울','경기','인천','부산','대구','대전','광주','울산','세종','강원','충북','충남','전북','전남','경북','경남','제주'].map(r => `<option value="${r}"${val===r?' selected':''}>${r}</option>`).join('')}
+    </select>`,
+  },
+  industry: {
+    label: '업종',
+    render: (val) => `<input type="text" class="lazy-field-input" data-k="industry" maxlength="30" placeholder="예: IT, 교육, 디자인" value="${escHtml(val || '')}">`,
+  },
+  mbti: {
+    label: 'MBTI',
+    render: (val) => `<select class="lazy-field-input" data-k="mbti">
+      <option value="">선택</option>
+      ${['INTJ','INTP','ENTJ','ENTP','INFJ','INFP','ENFJ','ENFP','ISTJ','ISFJ','ESTJ','ESFJ','ISTP','ISFP','ESTP','ESFP'].map(m => `<option value="${m}"${val===m?' selected':''}>${m}</option>`).join('')}
+    </select>`,
+  },
+  interest: {
+    label: '관심사',
+    render: (val) => `<input type="text" class="lazy-field-input" data-k="interest" maxlength="100" placeholder="예: 등산, 독서, 음악" value="${escHtml(val || '')}">`,
+  },
+  instagram: {
+    label: '인스타그램',
+    render: (val) => `<input type="text" class="lazy-field-input" data-k="instagram" maxlength="50" placeholder="@ 없이 아이디만" autocapitalize="off" autocorrect="off" value="${escHtml(val || '')}">`,
+  },
+};
+
+function renderLazyPrompt() {
+  const card = document.getElementById('lazyPromptCard');
+  if (!card) return;
+  const me = STATE.myProfile || {};
+  const pack = STATE.room && STATE.room.pack_defaults || {};
+  const prompts = Array.isArray(pack.wizard_prompt_after_join) ? pack.wizard_prompt_after_join : [];
+  // 이미 스킵한 경우 다시 안 뜸
+  const skipKey = `ntable_lazy_skip_${STATE.roomCode}`;
+  if (localStorage.getItem(skipKey) === 'true') { card.hidden = true; return; }
+  // 미입력 필드 추출
+  const missing = prompts.filter(k => {
+    if (k === 'instagram' && !(STATE.room && STATE.room.instagram_collect === true)) return false;
+    const v = me[k];
+    return v == null || v === '';
+  });
+  if (missing.length === 0) { card.hidden = true; return; }
+  card.hidden = false;
+  const bodyFields = missing.map(k => {
+    const def = LAZY_FIELD_DEFS[k];
+    if (!def) return '';
+    return `<div class="lazy-field"><span class="lazy-field-label">${def.label}</span>${def.render(me[k])}</div>`;
+  }).join('');
+  card.innerHTML = `
+    <div class="lazy-prompt-head" onclick="toggleLazyPrompt()">
+      <div>
+        <div class="lazy-prompt-title">✨ 프로필 더 채우기 <span style="opacity:0.6;font-size:11.5px;">(2분)</span></div>
+        <div class="lazy-prompt-sub">${missing.length}개 항목을 채우면 매칭 정확도가 올라가요.</div>
+      </div>
+      <span class="lazy-prompt-chev">▾</span>
+    </div>
+    <div class="lazy-prompt-body">
+      ${bodyFields}
+      <div class="lazy-prompt-actions">
+        <button type="button" class="lazy-prompt-skip" onclick="skipLazyPrompt()">나중에</button>
+        <button type="button" class="lazy-prompt-save" onclick="saveLazyPrompt()">저장</button>
+      </div>
+    </div>`;
+}
+
+function toggleLazyPrompt() {
+  document.getElementById('lazyPromptCard')?.classList.toggle('open');
+}
+
+function skipLazyPrompt() {
+  try { localStorage.setItem(`ntable_lazy_skip_${STATE.roomCode}`, 'true'); } catch (_) {}
+  const card = document.getElementById('lazyPromptCard');
+  if (card) card.hidden = true;
+}
+
+async function saveLazyPrompt() {
+  const card = document.getElementById('lazyPromptCard');
+  if (!card) return;
+  const payload = { uuid: STATE.uuid };
+  card.querySelectorAll('[data-k]').forEach(el => {
+    const k = el.dataset.k;
+    const v = (el.value || '').trim();
+    if (!v) return;
+    if (k === 'birth_year') payload[k] = parseInt(v, 10);
+    else payload[k] = v;
+  });
+  if (Object.keys(payload).length <= 1) {
+    skipLazyPrompt();
+    return;
+  }
+  try {
+    const r = await fetch(`/api/rooms/${STATE.roomCode}/me/profile`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error('save failed');
+    STATE.myProfile = { ...(STATE.myProfile || {}), ...payload };
+    if (typeof toast === 'function') toast('✓ 프로필이 저장됐어요');
+    // 저장된 필드 반영 후 재렌더 (남은 필드가 있으면 카드 유지)
+    renderLazyPrompt();
+    // 참가자 목록도 새 정보로 갱신
+    if (typeof loadIntroData === 'function') loadIntroData();
+  } catch (e) {
+    if (typeof toast === 'function') toast('⚠️ 저장 실패 — 잠시 후 다시 시도해주세요');
+  }
 }
 
 // ─── Profile edit modal ───

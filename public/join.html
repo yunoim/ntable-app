@@ -422,11 +422,14 @@ async function init() {
       }
     }
 
-    // 모임장 = 'display' step 추가 (display_fields/birth_year_format 결정 → server PATCH)
-    // couples는 성별·출생연도만 (지역/업종/MBTI/관심사 스킵)
     rebuildSteps();
 
     await prefillFromCache();
+    // T-01 (2026-04-21): 이모지 미설정 시 랜덤 기본값 배정 — 카드 허전함 방지 (lazy prompt 에서 재선택 가능)
+    if (!data.emoji) {
+      const pool = ['😀','😊','🥰','😎','🤔','🥳','🤗','🤓','🦊','🐻','🐯','🌸','🌙','🎵','🎨','🎮','⭐','✨','💎','🌟'];
+      data.emoji = pool[Math.floor(Math.random() * pool.length)];
+    }
     renderProgress();
     renderStep();
   } catch (e) {
@@ -435,36 +438,42 @@ async function init() {
 }
 
 function rebuildSteps() {
-  // pack_defaults.wizard_fields 기반으로 동적 구성 (Phase A).
-  // 없으면 legacy 경로로 fallback (couples vs 일반 이분).
-  const wf = ROOM.pack_defaults && Array.isArray(ROOM.pack_defaults.wizard_fields)
-    ? ROOM.pack_defaults.wizard_fields : null;
-  if (wf) {
+  // T-01 (2026-04-21): wizard_required 기준으로 최소 step 만 구성. 나머지는 guest.html 소개 탭 lazy prompt 에서 수집.
+  // - wizard_required 있으면: ['nickname', ...required] → STEPS
+  // - 없으면 legacy wizard_fields fallback (하위호환)
+  const pd = ROOM.pack_defaults || {};
+  const req = Array.isArray(pd.wizard_required) ? pd.wizard_required : null;
+  const isEdit = new URLSearchParams(location.search).get('edit') === '1';
+  // edit 모드에서는 기존 방식(전 필드 수정) 유지 — 내 정보 수정 deep link 호환
+  if (isEdit) {
+    const wf = Array.isArray(pd.wizard_fields) ? pd.wizard_fields : null;
+    if (wf) {
+      const steps = ['nick'];
+      const hasGender = wf.includes('gender');
+      const hasBirth = wf.includes('birth_year');
+      if (hasGender || hasBirth) steps.push('basic');
+      if (wf.includes('region')) steps.push('region');
+      if (wf.includes('industry')) steps.push('industry');
+      if (wf.includes('mbti')) steps.push('mbti');
+      if (wf.includes('interest')) steps.push('interest');
+      if (wf.includes('playlist')) steps.push('playlist');
+      if (wf.includes('instagram') && ROOM.instagram_collect === true) steps.push('instagram');
+      if (wf.includes('emoji')) steps.push('photo');
+      steps.push('confirm');
+      STEPS = steps;
+      return;
+    }
+  }
+  // 기본 입장 경로 — required 필드만
+  if (req) {
     const steps = ['nick'];
-    const hasGender = wf.includes('gender');
-    const hasBirth = wf.includes('birth_year');
-    if (hasGender || hasBirth) steps.push('basic'); // basic step 은 gender + birth_year 집합
-    if (wf.includes('region')) steps.push('region');
-    if (wf.includes('industry')) steps.push('industry');
-    if (wf.includes('mbti')) steps.push('mbti');
-    if (wf.includes('interest')) steps.push('interest');
-    if (wf.includes('playlist')) steps.push('playlist');
-    if (wf.includes('instagram') && ROOM.instagram_collect === true) steps.push('instagram');
-    if (wf.includes('emoji')) steps.push('photo'); // photo step = emoji/avatar 선택
-    steps.push('confirm');
+    if (req.includes('playlist')) steps.push('playlist');
+    if (req.includes('instagram') && ROOM.instagram_collect === true) steps.push('instagram');
     STEPS = steps;
     return;
   }
-  // legacy fallback — pack_defaults 미탑재 방 또는 서버 응답 누락 시
-  const isCouples = ROOM.pack_id === 'couples';
-  const collectInsta = ROOM.instagram_collect === true;
-  const steps = ['nick', 'basic'];
-  if (!isCouples) {
-    steps.push('region', 'industry', 'mbti', 'interest');
-    if (collectInsta) steps.push('instagram');
-  }
-  steps.push('photo', 'confirm');
-  STEPS = steps;
+  // legacy fallback — pack_defaults 미탑재 방
+  STEPS = ['nick'];
 }
 
 async function prefillFromCache() {
