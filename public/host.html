@@ -1082,6 +1082,37 @@
   }
   .panel { display: none; flex: 1; flex-direction: column; }
   .panel.active { display: flex; animation: stagefade 0.18s cubic-bezier(0.4,0,0.2,1); }
+
+  /* 상시 익명 채팅 패널 — intro · free 탭 공통 노출 (explore · ending 숨김) */
+  #persistentChatHost { display: none; flex-shrink: 0; margin-top: 18px; }
+  body.tab-intro #persistentChatHost,
+  body.tab-free #persistentChatHost { display: block; }
+  #host-chat-row { display: flex; gap: 8px; margin-top: 12px; }
+  #host-chat-input {
+    flex: 1;
+    padding: 10px 14px;
+    background: rgba(212,168,67,0.06);
+    border: 1px solid var(--gold-border);
+    border-radius: 10px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+  }
+  #host-chat-input:focus { outline: none; border-color: var(--gold); }
+  #host-chat-input::placeholder { color: rgba(245,242,236,0.45); }
+  #host-chat-send {
+    padding: 0 16px;
+    background: linear-gradient(135deg, var(--gold), #a07828);
+    color: var(--navy);
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  #host-chat-send:active { transform: scale(0.97); }
+  #chat-templates { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  #chat-templates[hidden] { display: none !important; }
   @keyframes stagefade {
     from { opacity: 0; transform: translateY(8px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -1815,7 +1846,7 @@
 <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
 </head>
-<body>
+<body class="tab-intro">
 
 <!-- SIDEBAR -->
 <aside id="sidebar">
@@ -1956,14 +1987,19 @@
         </div>
       </div>
 
+      <!-- #free-chat-card 는 #persistentChatHost 로 이동 — intro + free 탭 공통 노출 -->
+    </div>
+
+    <!-- 상시 익명 채팅 — intro · free 탭에서만 표시 (CSS: body.tab-intro / body.tab-free) -->
+    <div id="persistentChatHost">
       <div class="free-card" id="free-chat-card">
         <div class="card-head">💬 익명 채팅</div>
         <div id="chat-log"><div class="empty-msg">대화가 시작되면 여기 표시돼요</div></div>
-        <!-- 플리 공유회 전용 빠른 반응 템플릿 (pack_id=playlist-share 일 때만 JS 로 노출) -->
-        <div id="chat-templates" hidden style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;"></div>
-        <div style="display:flex;gap:8px;margin-top:12px;">
-          <input type="text" id="host-chat-input" maxlength="500" placeholder="익명으로 보내기 (Enter)" style="flex:1;padding:10px 14px;background:rgba(212,168,67,0.06);border:1px solid var(--gold-border);border-radius:10px;color:#fff;font-family:inherit;font-size:14px;">
-          <button type="button" id="host-chat-send" style="padding:0 16px;background:linear-gradient(135deg,var(--gold),#a07828);color:var(--navy);border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">보내기</button>
+        <!-- 플리 공유회 전용 빠른 반응 템플릿 -->
+        <div id="chat-templates" hidden></div>
+        <div id="host-chat-row">
+          <input type="text" id="host-chat-input" maxlength="500" placeholder="익명으로 보내기 (Enter)">
+          <button type="button" id="host-chat-send">보내기</button>
         </div>
       </div>
     </div>
@@ -3324,6 +3360,14 @@ function switchTab(tab) {
   state.activeTab = tab;
   const actionBar = document.getElementById('action-bar');
   if (actionBar) actionBar.dataset.tab = tab;
+  // 상시 채팅 표시 제어 — body.tab-${tab} 클래스 토글
+  const allTabs = ['intro','explore','free','ending'];
+  document.body.classList.remove(...allTabs.map(t => `tab-${t}`));
+  document.body.classList.add(`tab-${tab}`);
+  // explore/ending 진입 시 chat input blur (모바일 키보드 방지)
+  if (tab === 'explore' || tab === 'ending') {
+    try { document.getElementById('host-chat-input')?.blur(); } catch (_) {}
+  }
   document.querySelectorAll('.phase-step').forEach(btn => {
     const t = btn.dataset.tab;
     btn.classList.toggle('active', t === tab);
