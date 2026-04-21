@@ -538,43 +538,6 @@
     }
     .pack-card:hover .pack-cta { opacity: 1; transform: translateX(2px); }
 
-    /* ⚙️ 상세 설정 (파워유저용) */
-    .advanced-toggle {
-      margin-top: 18px;
-      text-align: center;
-    }
-    .advanced-toggle button {
-      background: transparent;
-      border: 1px dashed rgba(212,168,67,0.3);
-      color: var(--text-muted);
-      padding: 9px 18px;
-      border-radius: 999px;
-      font-size: 12px;
-      cursor: pointer;
-      font-family: inherit;
-      letter-spacing: 0.04em;
-      transition: color 0.2s, border-color 0.2s;
-    }
-    .advanced-toggle button:hover { color: var(--gold); border-color: var(--gold-border); }
-    .advanced-toggle button[aria-expanded="true"] .caret { transform: rotate(180deg); }
-    .advanced-toggle .caret { display: inline-block; transition: transform 0.2s; margin-left: 4px; }
-    .advanced-panel {
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border);
-    }
-    .advanced-panel[hidden] { display: none; }
-    .advanced-panel .field-group { margin-bottom: 20px; }
-    .advanced-dirty-hint {
-      font-size: 11px;
-      color: var(--gold-light);
-      text-align: center;
-      margin-top: 8px;
-      letter-spacing: 0.02em;
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-    .advanced-dirty-hint[data-dirty="true"] { opacity: 1; }
     .pack-loading {
       grid-column: 1 / -1;
       text-align: center;
@@ -729,15 +692,6 @@
         <div class="meeting-time-hint">QR·카카오 공유 메시지에 표시돼요. 비워두면 노출 안 됨.</div>
       </div>
 
-      <!-- ⚙ 상세 설정 — 전면 제거 (2026-04-19 spec)
-           - 카드 표시 정보·출생연도 표시·지역 세부·사진 업로드 → join wizard 2/8로 이동
-           - 탐구 문항 수·자유대화·모임장 역할·화면 형태 → 모임장 대시보드 차후 구현
-           - 현재는 5개 모임 카드별 default 그대로 사용 -->
-      <div class="advanced-toggle" hidden style="display:none !important;">
-        <button type="button" id="advancedBtn" aria-expanded="false">⚙</button>
-        <div class="advanced-dirty-hint" id="advancedDirtyHint" data-dirty="false"></div>
-      </div>
-
       <div class="confirm-actions">
         <button type="button" class="btn-primary" id="confirmCreateBtn">모임 열기</button>
       </div>
@@ -745,61 +699,6 @@
       <div style="text-align:center;margin-top:18px;">
         <button type="button" id="confirmBackBtn" style="background:none;border:none;color:var(--text-muted);font-size:12.5px;cursor:pointer;font-family:inherit;letter-spacing:0.02em;padding:6px 12px;">← 다른 모임 보기</button>
       </div>
-      <div class="advanced-panel" id="advancedPanel" hidden>
-        <div class="field-group">
-          <label>탐구 문항 수</label>
-          <div class="qcount-row">
-            <input type="range" id="adv_qcount" class="qcount-slider" min="1" max="15" step="1" value="5" />
-            <span class="qcount-value"><span id="adv_qcount_val">5</span>문항</span>
-          </div>
-          <div class="qcount-hint">짧은 아이스브레이크 1~3문항 · 본격 탐구 10~15문항</div>
-        </div>
-
-        <div class="field-group">
-          <label>자유대화 구성</label>
-          <div class="display-fields-row">
-            <label class="df-chip"><input type="checkbox" id="adv_fc_timer" checked> ⏱ 타이머</label>
-            <label class="df-chip"><input type="checkbox" id="adv_fc_chat"> 💬 익명채팅</label>
-            <label class="df-chip"><input type="checkbox" id="adv_fc_topic" checked> 🃏 주제카드</label>
-          </div>
-          <div class="qcount-hint">타이머 체크 시 15분 default · 미체크 시 자유대화 타이머 없음</div>
-        </div>
-
-        <!-- 카드 표시 정보·출생연도 표시 방식은 join wizard 'display' step으로 이동 (모임장 전용) -->
-
-        <div class="field-group">
-          <label>모임장 역할</label>
-          <div class="display-fields-row">
-            <label class="df-chip"><input type="radio" name="adv_hostRole" value="participant" checked> 🙋 참여자로 참가</label>
-            <label class="df-chip"><input type="radio" name="adv_hostRole" value="host_only"> 🎛️ 진행만</label>
-          </div>
-        </div>
-
-        <div class="field-group">
-          <label>모임장 화면 형태</label>
-          <div class="display-fields-row">
-            <label class="df-chip"><input type="radio" name="adv_displayMode" value="mobile" checked> 📱 모바일</label>
-            <label class="df-chip"><input type="radio" name="adv_displayMode" value="presenter"> 🖥 큰 화면</label>
-          </div>
-        </div>
-
-        <div class="field-group">
-          <label>참가자 사진 업로드</label>
-          <div class="display-fields-row">
-            <label class="df-chip"><input type="radio" name="adv_photo" value="true" checked> 📷 허용</label>
-            <label class="df-chip"><input type="radio" name="adv_photo" value="false"> 🚫 비허용</label>
-          </div>
-        </div>
-
-        <div class="field-group">
-          <label>지역 세부 표시</label>
-          <div class="display-fields-row">
-            <label class="df-chip"><input type="radio" name="adv_regionDetail" value="false" checked> 시·도만</label>
-            <label class="df-chip"><input type="radio" name="adv_regionDetail" value="true"> 서울은 구까지</label>
-          </div>
-        </div>
-      </div>
-
       <div class="error-msg" id="errorMsg"></div>
     </div>
   </div>
@@ -1056,10 +955,6 @@
       const tv = document.getElementById('tvEntry');
       if (tv) tv.hidden = false;
       _pendingKit = null;
-      const panel = document.getElementById('advancedPanel');
-      const btn = document.getElementById('advancedBtn');
-      if (panel) panel.hidden = true;
-      if (btn) btn.setAttribute('aria-expanded', 'false');
     }
     document.getElementById('confirmBackBtn').addEventListener('click', showSelectScreen);
     document.getElementById('confirmCreateBtn').addEventListener('click', () => {
@@ -1073,8 +968,7 @@
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const dd = String(d.getDate()).padStart(2, '0');
       const title = `${kit.title} · ${mm}.${dd}`;
-      // dirty tracking: 사용자가 ⚙ 상세 설정에서 변경한 옵션만 override
-      const merged = { ...kit.defaults, ...advancedOverrides };
+      const merged = { ...kit.defaults };
       // 모임 시각 (선택)
       const meetingAtInput = document.getElementById('meetingAtInput');
       const meeting_at = meetingAtInput && meetingAtInput.value ? new Date(meetingAtInput.value).toISOString() : null;
@@ -1091,65 +985,6 @@
         errMsg.textContent = e.message || '모임 생성 중 오류';
       }
     }
-
-    /* ⚙ 상세 설정 — dirty tracking */
-    const advancedOverrides = {};
-    const advancedDirtyHint = document.getElementById('advancedDirtyHint');
-    function markDirty(key, value) {
-      advancedOverrides[key] = value;
-      advancedDirtyHint.dataset.dirty = 'true';
-    }
-
-    document.getElementById('advancedBtn').addEventListener('click', () => {
-      const panel = document.getElementById('advancedPanel');
-      const btn = document.getElementById('advancedBtn');
-      const isHidden = panel.hidden;
-      panel.hidden = !isHidden;
-      btn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
-    });
-
-    // 슬라이더
-    const advQ = document.getElementById('adv_qcount');
-    const advQVal = document.getElementById('adv_qcount_val');
-    advQ.addEventListener('input', () => {
-      advQVal.textContent = advQ.value;
-      markDirty('question_count', parseInt(advQ.value, 10));
-    });
-
-    // 자유대화 구성 chip
-    const advFcTimer = document.getElementById('adv_fc_timer');
-    const advFcChat = document.getElementById('adv_fc_chat');
-    const advFcTopic = document.getElementById('adv_fc_topic');
-    advFcTimer.addEventListener('change', () => markDirty('free_chat_timer_minutes', advFcTimer.checked ? 15 : 0));
-    advFcChat.addEventListener('change', () => markDirty('free_chat_chat_enabled', advFcChat.checked));
-    advFcTopic.addEventListener('change', () => markDirty('free_chat_topic_card_enabled', advFcTopic.checked));
-
-    // 카드 표시 정보 (체크박스)
-    document.querySelectorAll('input[data-adv-field]').forEach(cb => {
-      cb.addEventListener('change', () => {
-        const fields = Array.from(document.querySelectorAll('input[data-adv-field]:checked')).map(el => el.dataset.advField);
-        markDirty('display_fields', fields);
-      });
-    });
-
-    // 라디오 그룹 매핑
-    const RADIO_MAP = {
-      adv_birthFmt: 'birth_year_format',
-      adv_hostRole: 'host_role',
-      adv_displayMode: 'display_mode',
-      adv_photo: 'photo_enabled',
-      adv_regionDetail: 'region_detail',
-    };
-    Object.entries(RADIO_MAP).forEach(([radioName, key]) => {
-      document.querySelectorAll(`input[name="${radioName}"]`).forEach(r => {
-        r.addEventListener('change', () => {
-          let v = r.value;
-          if (key === 'photo_enabled') v = (v === 'true');
-          else if (key === 'region_detail') v = (v === 'true');
-          markDirty(key, v);
-        });
-      });
-    });
 
     async function init() {
       uuid = localStorage.getItem('demo_uuid');
