@@ -1141,7 +1141,12 @@ async function submitJoin() {
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) {
-      err.textContent = j.message || (j.error === 'NICKNAME_TAKEN' ? '이 모임에서 이미 사용 중인 닉네임이에요' : (j.error || '입장 실패'));
+      if (j.error === 'NICKNAME_TAKEN') {
+        // 이전에 이 방에서 쓰던 닉네임일 가능성 — 복구 CTA 노출
+        renderRecoverCta(data.nickname);
+      } else {
+        err.textContent = j.message || j.error || '입장 실패';
+      }
       btn.disabled = false;
       btn.textContent = '입장하기';
       return;
@@ -1191,6 +1196,56 @@ async function submitJoin() {
 
 function renderErr(msg) {
   document.getElementById('main').innerHTML = `<div class="step-title" style="text-align:center;color:#ff8a8a;">⚠️ ${escHtml(msg)}</div>`;
+}
+
+// ── 닉네임 복구 플로우 ──────────────────────
+// 이 방에서 쓰던 닉네임이 이미 다른 uuid 로 등록됨 → 호스트 승인 하에 내 새 uuid 로 기존 답안 승계.
+function renderRecoverCta(nickname) {
+  const err = document.getElementById('errMsg');
+  if (!err) return;
+  err.innerHTML = `
+    <div style="padding:14px;border:1px solid rgba(212,168,67,0.45);border-radius:12px;background:rgba(212,168,67,0.08);text-align:left;">
+      <div style="font-weight:700;color:#f5f2ec;margin-bottom:6px;">"${escHtml(nickname)}" — 이 방에서 이미 사용 중이에요</div>
+      <div style="font-size:12.5px;color:#c9cdd6;line-height:1.55;margin-bottom:10px;">같은 닉네임으로 전에 입장했던 기기라면 <strong>복구 요청</strong> 가능해요. 호스트가 승인하면 지금까지의 답안·투표가 이 기기로 이어져요.</div>
+      <button type="button" id="recoverBtn" style="width:100%;padding:10px;background:var(--gold);color:var(--navy);border:none;border-radius:8px;font-weight:700;font-family:inherit;font-size:13px;cursor:pointer;">이 방에서 쓰던 닉네임이에요 · 복구 요청</button>
+    </div>`;
+  const rb = document.getElementById('recoverBtn');
+  if (rb) rb.onclick = () => requestRecover(nickname);
+}
+
+async function requestRecover(nickname) {
+  const err = document.getElementById('errMsg');
+  err.innerHTML = `<div style="padding:12px;color:#e8b84b;text-align:center;">호스트에게 복구 요청 보냈어요. 승인 대기 중…</div>`;
+  try {
+    const r = await fetch(`/api/rooms/${ROOM_CODE}/recover-request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nickname, new_uuid: UUID }),
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      err.innerHTML = `<div style="color:#ff8a8a;">복구 요청 실패 — ${escHtml(j.error || '잠시 후 다시 시도')}</div>`;
+      return;
+    }
+    // 60초간 2초 간격 폴링 — 호스트 승인 시 /me?uuid=new_uuid 가 joined:true
+    let tries = 0;
+    const timer = setInterval(async () => {
+      tries++;
+      if (tries > 30) { clearInterval(timer); err.innerHTML = `<div style="color:#ff8a8a;">승인 대기 시간이 지났어요. 호스트에게 다시 요청해주세요.</div>`; return; }
+      try {
+        const meR = await fetch(`/api/rooms/${ROOM_CODE}/me?uuid=${encodeURIComponent(UUID)}`);
+        if (!meR.ok) return;
+        const me = await meR.json();
+        if (me.joined) {
+          clearInterval(timer);
+          try { localStorage.setItem('preferred_nickname', nickname); } catch (_) {}
+          location.replace(`/room/${ROOM_CODE}`);
+        }
+      } catch (_) {}
+    }, 2000);
+  } catch (e) {
+    err.innerHTML = `<div style="color:#ff8a8a;">네트워크가 불안정해요. 잠시 후 다시 시도해주세요.</div>`;
+  }
 }
 
 init();

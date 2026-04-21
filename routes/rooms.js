@@ -1031,6 +1031,115 @@ router.patch('/rooms/:code/display', async (req, res) => {
   res.json({ ok: true });
 });
 
+// ── 닉네임 복구 (localStorage 유실·기기 교체 대응) ──────────────────
+// 같은 방에서 쓰던 닉네임이 이미 있고 내 uuid 와 다를 때, 호스트 승인 하에 uuid 를 새로 것으로 rebind.
+// 기존 답안(votes/match/fi_count/playlist_link/insta_select/connection) 전부 승계.
+// 보안: 호스트가 본인 emoji/닉네임 보고 육안 식별 후 승인 — 같은 물리 공간 이벤트 스코프에서 동작.
+
+const pendingRecoveries = new Map(); // key: `${room_id}:${new_uuid}` → { nickname, old_uuid, room_id, created_at }
+
+function cleanupExpiredRecoveries() {
+  const cutoff = Date.now() - 60 * 1000;
+  for (const [k, v] of pendingRecoveries) {
+    if (v.created_at < cutoff) pendingRecoveries.delete(k);
+  }
+}
+
+router.post('/rooms/:code/recover-request', async (req, res) => {
+  cleanupExpiredRecoveries();
+  const { code } = req.params;
+  const { nickname, new_uuid } = req.body || {};
+  if (!nickname || !new_uuid) return res.status(400).json({ error: 'nickname, new_uuid required' });
+  const nick = String(nickname).trim().slice(0, 20);
+  const room = await pool.query('SELECT id FROM rooms WHERE room_code = $1', [code]);
+  if (room.rows.length === 0) return res.status(404).json({ error: 'room not found' });
+  const room_id = room.rows[0].id;
+  const existing = await pool.query(
+    'SELECT uuid, emoji FROM room_members WHERE room_id = $1 AND nickname = $2',
+    [room_id, nick]
+  );
+  if (existing.rows.length === 0) return res.status(404).json({ error: 'nickname not found' });
+  const old_uuid = existing.rows[0].uuid;
+  if (old_uuid === new_uuid) return res.json({ ok: true, already_me: true });
+  const key = `${room_id}:${new_uuid}`;
+  pendingRecoveries.set(key, { nickname: nick, old_uuid, room_id, created_at: Date.now() });
+  try {
+    const wsModule = require('./ws');
+    wsModule.broadcastToRoom(code, {
+      type: 'recover_request',
+      nickname: nick,
+      new_uuid,
+      old_uuid,
+      emoji: existing.rows[0].emoji || null,
+    });
+  } catch (_) {}
+  res.json({ ok: true, pending: true });
+});
+
+router.post('/rooms/:code/recover-approve', async (req, res) => {
+  cleanupExpiredRecoveries();
+  const { code } = req.params;
+  const { host_uuid, nickname, new_uuid } = req.body || {};
+  if (!host_uuid || !nickname || !new_uuid) return res.status(400).json({ error: 'host_uuid, nickname, new_uuid required' });
+  const room = await pool.query('SELECT id, host_uuid FROM rooms WHERE room_code = $1', [code]);
+  if (room.rows.length === 0) return res.status(404).json({ error: 'room not found' });
+  if (room.rows[0].host_uuid !== host_uuid) return res.status(403).json({ error: 'not host' });
+  const room_id = room.rows[0].id;
+  const key = `${room_id}:${new_uuid}`;
+  const pending = pendingRecoveries.get(key);
+  if (!pending) return res.status(404).json({ error: 'no pending request (expired?)' });
+  if (pending.nickname !== String(nickname).trim().slice(0, 20)) return res.status(400).json({ error: 'nickname mismatch' });
+  const { old_uuid } = pending;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // new_uuid 로 이미 뭔가 쓴 적 있으면 정리 (정상 플로우에선 없음)
+    await client.query('DELETE FROM room_members WHERE room_id = $1 AND uuid = $2', [room_id, new_uuid]);
+    await client.query('DELETE FROM member_results WHERE room_id = $1 AND uuid = $2', [room_id, new_uuid]);
+    // uuid rebind — 방 범위 모든 테이블
+    await client.query('UPDATE room_members SET uuid = $1 WHERE room_id = $2 AND uuid = $3', [new_uuid, room_id, old_uuid]);
+    await client.query('UPDATE member_results SET uuid = $1 WHERE room_id = $2 AND uuid = $3', [new_uuid, room_id, old_uuid]);
+    await client.query('UPDATE room_connections SET from_uuid = $1 WHERE room_id = $2 AND from_uuid = $3', [new_uuid, room_id, old_uuid]);
+    await client.query('UPDATE room_connections SET to_uuid = $1 WHERE room_id = $2 AND to_uuid = $3', [new_uuid, room_id, old_uuid]);
+    await client.query('UPDATE insta_selects SET selector_uuid = $1 WHERE room_id = $2 AND selector_uuid = $3', [new_uuid, room_id, old_uuid]);
+    await client.query('UPDATE insta_selects SET target_uuid = $1 WHERE room_id = $2 AND target_uuid = $3', [new_uuid, room_id, old_uuid]);
+    await client.query('UPDATE playlist_links SET uuid = $1 WHERE room_id = $2 AND uuid = $3', [new_uuid, room_id, old_uuid]);
+    await client.query('UPDATE survey_responses SET uuid = $1 WHERE room_id = $2 AND uuid = $3', [new_uuid, room_id, old_uuid]);
+    // 방이 있다면 호스트 uuid 도 (호스트가 본인 복구한 경우 — 현재 UI 에선 불가능하지만 방어)
+    await client.query('UPDATE rooms SET host_uuid = $1 WHERE id = $2 AND host_uuid = $3', [new_uuid, room_id, old_uuid]);
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    client.release();
+    console.error('recover-approve error:', err);
+    return res.status(500).json({ error: 'db error' });
+  }
+  client.release();
+  pendingRecoveries.delete(key);
+  try {
+    const wsModule = require('./ws');
+    wsModule.broadcastToRoom(code, {
+      type: 'recover_approved',
+      new_uuid,
+      old_uuid,
+      nickname: pending.nickname,
+    });
+  } catch (_) {}
+  res.json({ ok: true });
+});
+
+router.post('/rooms/:code/recover-reject', async (req, res) => {
+  const { code } = req.params;
+  const { host_uuid, new_uuid } = req.body || {};
+  if (!host_uuid || !new_uuid) return res.status(400).json({ error: 'host_uuid, new_uuid required' });
+  const room = await pool.query('SELECT id, host_uuid FROM rooms WHERE room_code = $1', [code]);
+  if (room.rows.length === 0) return res.status(404).json({ error: 'room not found' });
+  if (room.rows[0].host_uuid !== host_uuid) return res.status(403).json({ error: 'not host' });
+  const key = `${room.rows[0].id}:${new_uuid}`;
+  pendingRecoveries.delete(key);
+  res.json({ ok: true });
+});
+
 // ── 플레이리스트 링크 (playlist-share 팩 전용) ──────────────────────
 // interest 필드 재활용 대신 방별 별도 테이블. upsert 허용(사용자가 오타 수정 가능).
 // 참고: 요청자 서명 검증은 방 참가자 쓰기 엔드포인트 전체 일괄 롤아웃 필요.

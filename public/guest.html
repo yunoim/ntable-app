@@ -2204,6 +2204,14 @@ async function handleWSMessage(msg) {
       try { if (STATE.ws) STATE.ws.close(); } catch (_) {}
       location.replace(`/survey?room=${STATE.roomCode}`);
       break;
+    case 'recover_approved':
+      // 나(=old_uuid) 였으면 이 세션은 더 이상 유효하지 않음 — 안내 후 홈으로
+      if (msg.old_uuid === STATE.uuid) {
+        try { if (STATE.ws) STATE.ws.close(); } catch (_) {}
+        alert('이 방의 "' + (msg.nickname || '내') + '" 자리는 다른 기기에서 이어받았어요.');
+        location.replace('/');
+      }
+      break;
 
     case 'photo_update':
       // 다른 참가자 사진 수신 (서버는 relay만 — 메모리 휘발)
