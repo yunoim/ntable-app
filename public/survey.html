@@ -715,7 +715,7 @@
       localStorage.removeItem('pending_survey');
       showDone(mutuals);
     } catch (err) {
-      alert(err.message || '네트워크가 불안정해요. 잠시 후 다시 시도해주세요.');
+      alert(err.message || (typeof t === 'function' ? t('error_copy.network_down') : '네트워크가 불안정해요. 잠시 후 다시 시도해주세요.'));
       btn.disabled = false;
       btn.textContent = '후기 제출하기';
     }

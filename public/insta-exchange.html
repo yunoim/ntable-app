@@ -490,7 +490,7 @@
       }
       await loadStatus();
     } catch (e) {
-      alert('네트워크가 불안정해요. 잠시 후 다시 시도해주세요.');
+      alert((typeof t === 'function' ? t('error_copy.network_down') : '네트워크가 불안정해요. 잠시 후 다시 시도해주세요.'));
     }
   }
 

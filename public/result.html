@@ -749,8 +749,8 @@
             <div class="share-card-footer">오늘의 모임 유형 · ntable.kr</div>
           </div>
           <div class="share-actions">
-            <button type="button" id="save-image-btn" class="share-btn" aria-label="이미지 저장">📷 이미지 저장</button>
-            <button type="button" id="insta-share-btn" class="share-btn outline" aria-label="공유하기">📸 공유하기</button>
+            <button type="button" id="save-image-btn" class="share-btn" aria-label="이미지 저장" data-copy="buttons.save_image">📷 이미지 저장</button>
+            <button type="button" id="insta-share-btn" class="share-btn outline" aria-label="공유하기" data-copy="buttons.share_result">📸 공유하기</button>
             <!-- T-09 (2026-04-22): Instagram Story 9:16 캡처 전용 off-screen 컨테이너. shareToInstagram 에서만 사용. -->
             <div id="storyCanvas" data-twe aria-hidden="true" style="position:fixed;left:-9999px;top:0;width:1080px;height:1920px;background:linear-gradient(180deg,#0a0f1e 0%,#141d35 100%);color:#f5f2ec;font-family: var(--font-heading);display:flex;flex-direction:column;justify-content:space-between;padding:120px 80px;box-sizing:border-box;"></div>
           </div>
@@ -948,6 +948,10 @@
     }
     btn.disabled = true;
     btn.textContent = '저장 중...';
+    // T-20 (2026-04-22): image_preparing 토스트
+    if (typeof t === 'function' && typeof toast === 'function') {
+      try { toast(t('toasts.image_preparing')); } catch (_) {}
+    }
     try {
       const canvas = await html2canvas(card, {
         backgroundColor: '#141d35',
@@ -960,6 +964,10 @@
       link.href = canvas.toDataURL('image/png');
       link.click();
       btn.textContent = '✓ 저장됨';
+      // T-20 (2026-04-22): image_saved 토스트
+      if (typeof t === 'function' && typeof toast === 'function') {
+        try { toast(t('toasts.image_saved')); } catch (_) {}
+      }
       setTimeout(() => { btn.textContent = '📷 이미지 저장'; btn.disabled = false; }, 1800);
     } catch (e) {
       btn.textContent = '❌ 저장 실패';
@@ -1067,6 +1075,12 @@
   document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('save-image-btn')?.addEventListener('click', saveShareImage);
     document.getElementById('insta-share-btn')?.addEventListener('click', shareToInstagram);
+    // T-23 (2026-04-22): brand.json 로드 후 버튼 data-copy 치환
+    if (typeof loadBrand === 'function') {
+      loadBrand().then(() => {
+        if (typeof applyCopyToDOM === 'function') applyCopyToDOM(document);
+      }).catch(() => {});
+    }
   });
 
   async function loadResult() {

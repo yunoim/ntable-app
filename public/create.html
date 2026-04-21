@@ -931,6 +931,8 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || '모임 생성 실패');
+        // T-20 (2026-04-22): 호스트 진입 시 room_opened 토스트 표시용 플래그
+        try { sessionStorage.setItem('nt_pending_toast', 'room_opened'); } catch (_) {}
         // T-02 (2026-04-21): 모임장은 join wizard 우회 — 호스트 화면으로 직행. 프로필 입력은 host.html '내 정보 수정' 모달에서.
         window.location.href = `/room/${data.room_code}/host`;
       } catch (e) {

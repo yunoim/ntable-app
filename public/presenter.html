@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="/styles/tokens-tv.css">
 <script src="/samsung-dark-warn.js" defer></script>
 <script src="/twemoji-brand.js" defer></script>
+<script src="/js/brand.js"></script>
 <title>ntable Presenter</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -613,7 +614,7 @@ async function init() {
     connectObserver();
     renderWaiting();
   } catch (e) {
-    renderError('서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.');
+    renderError((typeof t === 'function' ? t('error_copy.server_down') : '서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.'));
   }
 }
 

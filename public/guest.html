@@ -1961,7 +1961,7 @@ const STATE = {
     }
     connectWS();
   } catch (e) {
-    showError('서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.');
+    showError((typeof t === 'function' ? t('error_copy.server_down') : '서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.'));
   }
 })();
 
@@ -2037,7 +2037,7 @@ async function submitNickname() {
   } catch (e) {
     msg.textContent = (typeof t === 'function' ? t('error_copy.server_down') : '서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.');
     btn.disabled = false;
-    btn.textContent = '입장하기';
+    btn.textContent = (typeof t === 'function' ? t('buttons.join_code') : '입장하기');
   }
 }
 
@@ -2193,6 +2193,10 @@ function connectWS() {
     }
     updateConnDot('reconnecting');
     stopPing();
+    // T-20 (2026-04-22): ws_reconnecting 토스트 — 첫 재연결 시도 시에만 (반복 금지)
+    if (STATE.wsRetries === 0 && typeof toast === 'function' && typeof t === 'function') {
+      try { toast(t('toasts.ws_reconnecting')); } catch (_) {}
+    }
     if (STATE.wsRetries < STATE.MAX_RETRIES) {
       STATE.wsRetries++;
       setTimeout(connectWS, 3000);
@@ -2744,7 +2748,7 @@ async function saveLazyPrompt() {
     // 참가자 목록도 새 정보로 갱신
     if (typeof loadIntroData === 'function') loadIntroData();
   } catch (e) {
-    if (typeof toast === 'function') toast('⚠️ 저장 실패 — 잠시 후 다시 시도해주세요');
+    if (typeof toast === 'function') toast((typeof t === 'function' ? '⚠️ ' + t('error_copy.save_failed') : '⚠️ 저장 실패 — 잠시 후 다시 시도해주세요'));
   }
 }
 
@@ -3185,7 +3189,7 @@ async function submitExploreVote(questionId, answer, q) {
     if (prev) STATE.myExploreVotes[questionId] = prev;
     else delete STATE.myExploreVotes[questionId];
     STATE.votedQuestions.delete(questionId);
-    if (typeof showMiniToast === 'function') showMiniToast('투표 저장 실패 — 다시 선택해주세요');
+    if (typeof showMiniToast === 'function') showMiniToast((typeof t === 'function' ? t('error_copy.vote_save_failed') : '투표 저장 실패 — 다시 선택해주세요'));
     // 선택 시각 상태도 이전 값으로 되돌림
     const btns2 = document.querySelectorAll('#choicesWrap .choice-btn');
     btns2.forEach((b, i) => {
@@ -3340,7 +3344,7 @@ function openEmojiPicker() {
       if (typeof showMiniToast === 'function') showMiniToast('✓ 아바타 저장');
     } catch (e) {
       saveBtn.disabled = false;
-      saveBtn.textContent = '저장 실패 · 재시도';
+      saveBtn.textContent = (typeof t === 'function' ? '저장 실패 · ' + t('buttons.retry') : '저장 실패 · 재시도');
     }
   });
   setTimeout(() => inp.focus(), 80);

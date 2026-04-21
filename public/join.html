@@ -441,7 +441,7 @@ async function init() {
     renderProgress();
     renderStep();
   } catch (e) {
-    renderErr('서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.');
+    renderErr((typeof t === 'function' ? t('error_copy.server_down') : '서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.'));
   }
 }
 
@@ -1255,7 +1255,7 @@ async function submitJoin() {
     } catch (_) {}
     location.replace(`/room/${ROOM_CODE}`);
   } catch (e) {
-    err.textContent = '서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.';
+    err.textContent = (typeof t === 'function' ? t('error_copy.server_down') : '서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.');
     btn.disabled = false;
     btn.textContent = '입장하기';
   }
@@ -1311,7 +1311,7 @@ async function requestRecover(nickname) {
       } catch (_) {}
     }, 2000);
   } catch (e) {
-    err.innerHTML = `<div style="color:#ff8a8a;">네트워크가 불안정해요. 잠시 후 다시 시도해주세요.</div>`;
+    err.innerHTML = `<div style="color:#ff8a8a;">${(typeof t === 'function' ? t('error_copy.network_down') : '네트워크가 불안정해요. 잠시 후 다시 시도해주세요.')}</div>`;
   }
 }
 
