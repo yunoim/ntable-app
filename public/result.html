@@ -1150,7 +1150,7 @@
               </div>`;
             }).join('')}
           </div>` : '';
-        const bestLabel = data.pack_id === 'dating' ? '오늘의 인연' : '나와 가장 잘 맞았던 사람';
+        const bestLabel = (data.pack_defaults?.labels?.best_match_eyebrow) || (data.pack_id === 'dating' ? '오늘의 인연' : '나와 가장 잘 맞았던 사람');
         matchEl.innerHTML = mutualHtml + coupleBtnHtml + `
           <div class="match-frame">
             <div class="match-eyebrow">${bestLabel}</div>

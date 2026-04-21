@@ -286,6 +286,10 @@ const PACK_DEFAULTS = {
     best_match_enabled: false,
     mvp_enabled: false,
     match_pairs_enabled: false,
+    labels: {
+      page2_card_title: '💘 우리 연애 케미',
+      best_match_eyebrow: '우리만의 케미',
+    },
   },
   // 소개팅/연애 — 전체 필드, 매칭 + 인스타 교환 핵심.
   dating: {
@@ -297,6 +301,10 @@ const PACK_DEFAULTS = {
     best_match_enabled: true,
     mvp_enabled: true,
     match_pairs_enabled: true,
+    labels: {
+      page2_card_title: '💘 베스트 매칭',
+      best_match_eyebrow: '오늘의 인연',
+    },
   },
   // 처음 만나는 사이 — MVP 중심. 인스타·작대기 제외.
   icebreaker: {
@@ -308,6 +316,10 @@ const PACK_DEFAULTS = {
     best_match_enabled: true,
     mvp_enabled: true,
     match_pairs_enabled: false,
+    labels: {
+      page2_card_title: '🤝 베스트 매칭',
+      best_match_eyebrow: '나와 가장 잘 맞았던 사람',
+    },
   },
   // 오랜만 — 이미 아는 사이. 최소 필드 + 탐구 결과만.
   'friends-reunion': {
@@ -319,6 +331,10 @@ const PACK_DEFAULTS = {
     best_match_enabled: false,
     mvp_enabled: false,
     match_pairs_enabled: false,
+    labels: {
+      page2_card_title: '✨ 오늘 또 가까워진 사람',
+      best_match_eyebrow: '오늘 다시 통한 사람',
+    },
   },
   // 팀빌딩 — 업종·관심사 중심. MVP 만. 매칭·인스타 없음.
   teambuilding: {
@@ -330,6 +346,10 @@ const PACK_DEFAULTS = {
     best_match_enabled: false,
     mvp_enabled: true,
     match_pairs_enabled: false,
+    labels: {
+      page2_card_title: '🎯 오늘의 주인공',
+      best_match_eyebrow: '비슷한 답을 고른 동료',
+    },
   },
 };
 

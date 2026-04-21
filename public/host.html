@@ -3217,8 +3217,15 @@ function switchTab(tab) {
       const seq = state.closingSequence || ['closing-mvp', 'closing-mvp-result'];
       const first = seq[0];
       if (!first) {
-        // closing_steps == [] (드문 케이스)
-        closeRoom();
+        // closing_steps == [] (couples 등 skip 팩) — confirm 없이 자동 종료 + 후기 페이지 이동.
+        // closeRoom() 은 명시적 종료 confirm 이 있어 UX 가 뜯김.
+        (async () => {
+          try { await api(`/api/rooms/${state.roomCode}/close`, 'POST', { host_uuid: state.uuid }); } catch (_) {}
+          const isParticipantHost = state.hostRole === 'participant';
+          location.href = isParticipantHost
+            ? `/survey?room=${state.roomCode}`
+            : '/create';
+        })();
         return;
       }
       state.closingPhase = first;
