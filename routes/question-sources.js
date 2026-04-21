@@ -264,6 +264,29 @@ function getPackFlow(packId) {
   return ['mvp']; // 미정의 팩 기본값
 }
 
+// 시리즈 메타 (상위 브랜드 레이어) — ntable 컨텐츠 라인업
+// 각 pack 은 series 필드로 연결. status='skeleton' 은 create UI 에 '준비 중' 으로 노출.
+const SERIES = {
+  'ntable-nights':  { label: 'ntable Nights',  icon: '🌙', tagline: '대화·창작 소모임 (주 1회)',          max_people: 8, status: 'active' },
+  'ntable-plays':   { label: 'ntable Plays',   icon: '🎵', tagline: '음악 공유·연주 대회 (월 1회)',        max_people: 8, status: 'active' },
+  'ntable-draws':   { label: 'ntable Draws',   icon: '🎨', tagline: '시·그림 창작 대회 (월 1회)',          max_people: 8, status: 'skeleton' },
+  'ntable-pitches': { label: 'ntable Pitches', icon: '💼', tagline: '아이디어·포폴 대회 (월 1회)',         max_people: 8, status: 'skeleton' },
+  'ntable-games':   { label: 'ntable Games',   icon: '💪', tagline: '운동 기록 대회 (월 1회)',            max_people: 8, status: 'skeleton' },
+};
+
+function getSeries(id) { return SERIES[id] || null; }
+function listSeries() { return Object.entries(SERIES).map(([id, s]) => ({ id, ...s })); }
+
+// 컨텐츠 타입 enum (메인 컨텐츠 5단계 성격)
+const CONTENT_KIND = {
+  conversation: '대화·활동 (제출물 없음)',
+  playlist:     '플레이리스트 공유 (URL)',
+  performance:  '실연 (앱은 대기·반응만)',
+  creation:     '창작물 제출 (이미지·링크) [skeleton]',
+  pitch:        '발표 + 심사 점수 [skeleton]',
+  record:       '기록 측정 숫자 입력 [skeleton]',
+};
+
 // 팩별 UX 정책 (wizard 수집 · 카드 노출 · 결과 페이지 섹션 · 인스타 교환)
 // Read-time 에 /api/rooms/:code · /api/result 응답으로 내려줌 (스냅샷 저장 X).
 // 호스트가 display_fields 추가·hide_* 토글로 사용자별 override 가능.
@@ -279,6 +302,8 @@ const PACK_DEFAULTS = {
   // 커플/듀오 — 닉·이모지·MBTI·출생연도만. 자유대화 skip · 매칭·MVP·인스타 없음.
   // 결과: 개인 성향(ai_personality) + 연애 분석(couple_love: MBTI궁합 + 탐구답변 기반) + 커플 카드(couple_card) + 탐구결과 + 요약.
   couples: {
+    series: null, // 독립 카테고리 — 시리즈 밖의 2인 전용
+    content_kind: 'conversation',
     wizard_fields: ['nickname', 'emoji', 'gender', 'mbti', 'birth_year'],
     display_fields_default: ['birth_year', 'mbti'],
     result_sections: ['ai_personality', 'couple_love', 'couple_card', 'explore_result'],
@@ -294,6 +319,8 @@ const PACK_DEFAULTS = {
   },
   // 소개팅/연애 — 전체 필드, 매칭 + 인스타 교환 핵심.
   dating: {
+    series: 'ntable-nights',
+    content_kind: 'conversation',
     wizard_fields: ['nickname', 'emoji', 'gender', 'birth_year', 'region', 'industry', 'mbti', 'interest', 'instagram'],
     display_fields_default: ['birth_year', 'region', 'industry', 'interest'],
     result_sections: ['ai_personality', 'best_match', 'mutual_pairs', 'explore_result', 'summary'],
@@ -309,6 +336,8 @@ const PACK_DEFAULTS = {
   },
   // 처음 만나는 사이 — MVP 중심. 인스타·작대기 제외.
   icebreaker: {
+    series: 'ntable-nights',
+    content_kind: 'conversation',
     wizard_fields: ['nickname', 'emoji', 'gender', 'birth_year', 'region', 'industry', 'mbti', 'interest'],
     display_fields_default: ['birth_year', 'region', 'industry', 'interest'],
     result_sections: ['ai_personality', 'best_match', 'mvp', 'explore_result', 'summary'],
@@ -325,6 +354,8 @@ const PACK_DEFAULTS = {
   // 오랜만 — 이미 아는 사이. (2026-04-24 남산엔테이블 '나만의 플리 공유회' 를 위해 create 노출 일시 중단.
   //  코드는 유지 — create.html ROOM_KITS 주석만 처리해서 UI 에서만 제외.)
   'friends-reunion': {
+    series: 'ntable-nights',
+    content_kind: 'conversation',
     wizard_fields: ['nickname', 'emoji', 'birth_year', 'mbti'],
     display_fields_default: ['birth_year', 'mbti'],
     result_sections: ['ai_personality', 'explore_result', 'summary'],
@@ -341,6 +372,8 @@ const PACK_DEFAULTS = {
   // 나만의 플리 공유회 — 대회형 포맷. interest 필드를 플레이리스트 URL 로 재용도, instagram 은 본래 인스타 ID.
   // BEST 플리 투표(MVP 재활용) + 인스타 교환 + 음악 테마 5문항 탐구.
   'playlist-share': {
+    series: 'ntable-plays',
+    content_kind: 'playlist',
     wizard_fields: ['nickname', 'emoji', 'mbti', 'interest', 'instagram'],
     display_fields_default: ['mbti', 'interest'],
     result_sections: ['ai_personality', 'best_match', 'mvp', 'explore_result', 'summary'],
@@ -356,6 +389,8 @@ const PACK_DEFAULTS = {
   },
   // 팀빌딩 — 업종·관심사 중심. MVP 만. 매칭·인스타 없음.
   teambuilding: {
+    series: 'ntable-nights',
+    content_kind: 'conversation',
     wizard_fields: ['nickname', 'emoji', 'industry', 'mbti', 'interest'],
     display_fields_default: ['industry', 'mbti', 'interest'],
     result_sections: ['ai_personality', 'mvp', 'explore_result', 'summary'],
@@ -401,4 +436,8 @@ module.exports = {
   WIZARD_FIELDS_ALL,
   DISPLAY_FIELDS_ALL,
   RESULT_SECTIONS_ALL,
+  SERIES,
+  getSeries,
+  listSeries,
+  CONTENT_KIND,
 };
