@@ -1467,6 +1467,13 @@
     if (m) m.hidden = true;
   }
 
+  // Esc 키 모달 닫기 (a11y)
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const pm = document.getElementById('pickers-modal');
+    if (pm && !pm.hidden) { closePickersModal(); return; }
+  });
+
   // ── 커플 연애 분석(couple_love) DOM ───────────────
   function renderCoupleLove(d) {
     const esc = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');

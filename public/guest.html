@@ -2714,6 +2714,13 @@ function closeGuestMemberModal() {
   if (m) m.hidden = true;
 }
 
+// Esc 키 모달 닫기 (a11y)
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const gm = document.getElementById('guest-card-modal');
+  if (gm && !gm.hidden) { closeGuestMemberModal(); return; }
+});
+
 // 터치 스와이프 로직은 scroll-snap 가 자연 처리 — 레거시 touchStart/touchEnd 삭제 (no-op 유지)
 function touchStart() {}
 function touchEnd() {}

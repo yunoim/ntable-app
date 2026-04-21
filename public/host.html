@@ -2782,6 +2782,19 @@ function closeMpCard() {
   if (modal) modal.hidden = true;
 }
 
+// 공통 Esc 키로 열려있는 모달 닫기 (a11y)
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const mp = document.getElementById('mp-card-modal');
+  if (mp && !mp.hidden) { closeMpCard(); return; }
+  const mi = document.getElementById('my-info-modal');
+  if (mi && mi.style.display === 'flex') { if (typeof closeMyInfo === 'function') closeMyInfo(); return; }
+  const rs = document.getElementById('room-settings-modal');
+  if (rs && rs.style.display === 'flex') { if (typeof closeRoomSettings === 'function') closeRoomSettings(); return; }
+  const qr = document.getElementById('qr-modal');
+  if (qr && !qr.hidden) { if (typeof closeQRModal === 'function') closeQRModal(); return; }
+});
+
 function renderQuestion() {
   const q = state.questions[state.currentQIdx];
   if (!q) return;
