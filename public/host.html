@@ -1689,10 +1689,28 @@
       width: 100%; justify-content: space-between; order: -1;
       padding-bottom: 10px; border-bottom: 1px solid rgba(212,168,67,0.08);
     }
-    .phase-steps { gap: 0; justify-content: space-between; width: 100%; }
-    .phase-step { font-size: 10px; flex: 1; justify-content: center; padding: 4px 2px; gap: 6px; }
-    .phase-step .phase-label { display: none; }
+    /* T-08 (2026-04-22): progressive disclosure — active=풀 라벨(pill), 나머지=번호 dot. 48px 터치 영역 보장. */
+    .phase-steps { gap: 6px; justify-content: space-between; width: 100%; align-items: center; }
+    .phase-step {
+      font-size: 12px;
+      justify-content: center;
+      padding: 10px 8px;
+      gap: 6px;
+      min-height: 48px;
+      flex: 0 0 auto;
+      border-radius: 999px;
+    }
+    .phase-step.active {
+      flex: 1 1 auto;
+      padding: 10px 14px;
+      background: var(--gold-dim, rgba(212,168,67,0.18));
+      font-weight: 600;
+    }
+    .phase-step:not(.active) .phase-label { display: none; }
+    .phase-step.active .phase-label { display: inline; font-size: 13px; }
     .phase-num { width: 24px; height: 24px; font-size: 11px; }
+    /* 완료된 단계 dot 강조 */
+    .phase-step.done .phase-num { background: rgba(126,232,162,0.3); color: var(--white); }
 
     .stage-title { font-size: clamp(26px, 8vw, 38px); margin-bottom: 10px; }
     .stage-tag { font-size: 11px; margin-bottom: 14px; }
