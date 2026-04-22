@@ -99,6 +99,26 @@
 - **변경 SoT 순서**: Notion 브랜드 가이드 → `docs/brand/brand.json` → `public/styles/*.css` → HTML `<style>` → 인라인
 - **이전 정책 배경**: 초기 병렬 개발 + Claude 프롬프트 파일 단위 공유 편의. 현재는 해당 없음.
 
+## 방(Pack) 별 UI 분기 구조 (2026-04-22 — B 방식 전환 중)
+
+방 종류(`pack_id`)마다 대기실·탐구·자유대화·마무리 탭 UI 가 달라질 수 있도록 fragment partial 기반으로 전환 중. 현재 B 방식(partial fragment 로딩) 최소 hook 만 심어둔 상태.
+
+### 합의된 규약 (다음 PR 의 fragment 로더가 이 규약 전제로 구현)
+
+1. **URL**: `/pack/:id/:tab` — HTML fragment 반환 (e.g. `/pack/couples/intro`, `/pack/playlist-share/explore`)
+2. **Fragment 형태**: `<section class="pack-panel" id="panel-${tab}-pack-${id}">…</section>` 단일 root. `<html>/<head>/<body>` 없음.
+3. **ID prefix**: fragment 내부의 모든 element id 는 기존 host.html/guest.html 과 충돌 안 나도록 `${something}-pack-${id}` 로 suffix. 예: `panel-intro-pack-couples`.
+
+### 이미 심어둔 hook (이번 PR)
+
+- `document.body.classList.add('pack-${pack_id}')` — host.html (loadRoomInfo), guest.html (loadRoom). CSS 에서 `body.pack-couples .nt-lobby-topbar { ... }` 같은 pack-scoped 스타일 분기 가능.
+- `opt-in to hero` 원칙: 기본값 최소, pack 별로 명시 opt-in. 신규 pack 추가 시 "왜 이건 특이하지" 대신 "이 pack 은 hero 선언" 이 드러나게.
+
+### 아직 안 만든 것 (imaginary hook 금지 원칙)
+
+- `PACK_UI_OVERRIDES` manifest · `packUI(path, fallback)` helper — **fragment 로더와 함께 태어나야 함** (advisor 30분 검토 결과). 지금 behavior flag 쌓으면 B 철학에 역행.
+- Fragment 로더 JS · `/pack/:id/:tab` server route · 첫 intro POC — 다음 PR 에서 advisor 호출과 함께 설계.
+
 ## 파일 구조 (병렬 개발 — 담당 파일만 수정)
 
 ```

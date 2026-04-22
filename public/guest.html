@@ -1987,6 +1987,12 @@ const STATE = {
     if (!res.ok) { showError('모임 정보를 불러올 수 없어요. 새로고침하거나 잠시 후 다시 시도해주세요.'); return; }
     const room = await res.json();
     STATE.room = room;
+    // Pack 별 CSS hook — body.pack-${pack_id} (2026-04-22).
+    // 향후 fragment 로더(`/pack/:id/:tab` partial)도 이 클래스와 함께 쓸 예정.
+    if (room.pack_id) {
+      document.body.classList.forEach(c => { if (c.startsWith('pack-')) document.body.classList.remove(c); });
+      document.body.classList.add('pack-' + String(room.pack_id).replace(/[^a-z0-9-]/gi, ''));
+    }
     // T-B0-12 (2026-04-22): 모든 팩의 채팅 반응 chip 셋업 — pack_defaults.chat_reactions 없으면 내부에서 no-op
     setupChatTemplates();
 

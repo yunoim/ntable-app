@@ -2931,6 +2931,12 @@ async function loadRoomInfo() {
     }
     state.room = room;
     state.packDefaults = (room.pack_defaults && typeof room.pack_defaults === 'object') ? room.pack_defaults : {};
+    // Pack 별 CSS hook — body.pack-${pack_id} 클래스. 방마다 UI 커스터마이즈 구조의 첫 훅 (2026-04-22).
+    // 향후 fragment 로더는 이 클래스 대신(또는 더해서) `/pack/:id/:tab` HTML partial 로딩 예정.
+    if (room.pack_id) {
+      document.body.classList.forEach(c => { if (c.startsWith('pack-')) document.body.classList.remove(c); });
+      document.body.classList.add('pack-' + String(room.pack_id).replace(/[^a-z0-9-]/gi, ''));
+    }
     // T-B0-10 (2026-04-22): pack_id 확정 후 stat bar 로드 시도 (dating 외는 내부에서 조기 return)
     loadHostCumulativeStats();
     // T-B0-12 (2026-04-22): 모든 팩의 채팅 반응 chip 을 pack_defaults.chat_reactions 기반으로 셋업.
