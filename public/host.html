@@ -2412,8 +2412,22 @@ async function loadRoomInfo() {
     } catch {}
     // T-25 (2026-04-22): couples + participant + 본인 미가입 → 닉네임 모달 강제.
     // 호스트가 room_members 에 들어가야 survey/connections/couple-card 정상.
+    // T-25c: myMember 는 users fallback 도 200 반환해 부정확. /is-member 로 정확히 판별.
     if (state.room && state.room.pack_id === 'couples' && state.hostRole === 'participant') {
-      await ensureHostJoinedForCouples(myMember);
+      let hostIsRoomMember = false;
+      try {
+        const r = await fetch(`/api/rooms/${state.roomCode}/is-member/${encodeURIComponent(state.uuid)}`);
+        if (r.ok) {
+          const j = await r.json();
+          hostIsRoomMember = !!j.is_member;
+          if (hostIsRoomMember && j.nickname) {
+            state.nickname = j.nickname;
+            const nickEl = document.getElementById('user-nick');
+            if (nickEl) nickEl.textContent = j.nickname;
+          }
+        }
+      } catch (_) {}
+      if (!hostIsRoomMember) await ensureHostJoinedForCouples(null);
     }
   } catch {}
 }

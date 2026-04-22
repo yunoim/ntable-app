@@ -306,6 +306,19 @@ router.post('/rooms/:code/approve', async (req, res) => {
   res.json({ approved: [target_uuid] });
 });
 
+// GET /api/rooms/:code/is-member/:uuid — room_members 가입 여부만 정확히 반환 (users fallback 없음).
+// T-25c (2026-04-22): /members/:uuid 가 users fallback 으로 200 반환해 호스트 미가입 판별 깨짐 → 별도 엔드포인트.
+router.get('/rooms/:code/is-member/:uuid', async (req, res) => {
+  const { code, uuid } = req.params;
+  const room = await pool.query('SELECT id FROM rooms WHERE room_code = $1', [code]);
+  if (room.rows.length === 0) return res.status(404).json({ error: 'room not found' });
+  const m = await pool.query(
+    'SELECT nickname FROM room_members WHERE room_id = $1 AND uuid = $2',
+    [room.rows[0].id, uuid]
+  );
+  res.json({ is_member: m.rows.length > 0, nickname: m.rows[0]?.nickname || null });
+});
+
 // GET /api/rooms/:code/members/:uuid — 특정 멤버 프로필 조회 (방별 익명 — room_members 우선)
 // ?viewer=<uuid> 로 viewer ≠ target이면 hide_* 필드 마스킹. 모임장 viewer는 마스킹 X (운영 필요).
 router.get('/rooms/:code/members/:uuid', async (req, res) => {
