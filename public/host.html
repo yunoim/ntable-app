@@ -3097,8 +3097,8 @@ function renderHostStats() {
 
 async function loadHostCumulativeStats() {
   // 2026-04-22: 상단바 누적 실적 위젯 주석처리됨 — 네트워크 호출·DOM 갱신 스킵.
-  const bar = document.getElementById('host-stats');
-  if (bar) bar.hidden = true;
+  const _hostStatsBar = document.getElementById('host-stats');
+  if (_hostStatsBar) _hostStatsBar.hidden = true;
   return;
   // eslint-disable-next-line no-unreachable
   if (!state.uuid) return;
