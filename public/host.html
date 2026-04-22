@@ -1862,6 +1862,54 @@
     .panel { max-width: 1280px; }
     .profile-card { width: 340px; min-width: 340px; max-width: 340px; }
   }
+
+  /* T-26 (2026-04-22): 호스트 lazy prompt — 인스타 공유 이미지용 프로필 수집 카드. guest.html 패턴 복제. */
+  #lazyPromptCard {
+    margin: 14px 16px 10px;
+    padding: 14px 16px;
+    background: rgba(212,168,67,0.08);
+    border: 1px solid rgba(212,168,67,0.35);
+    border-radius: 14px;
+    animation: lazyPromptIn 0.32s cubic-bezier(0.4,0,0.2,1);
+  }
+  #lazyPromptCard[hidden] { display: none; }
+  @keyframes lazyPromptIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .lazy-prompt-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; cursor: pointer;
+  }
+  .lazy-prompt-title { font-size: 14px; color: #f5e7b5; font-weight: 600; letter-spacing: 0.01em; }
+  .lazy-prompt-sub { font-size: 11.5px; color: rgba(245,231,181,0.72); margin-top: 2px; letter-spacing: 0.02em; }
+  .lazy-prompt-chev { font-size: 14px; color: rgba(245,231,181,0.7); transition: transform 0.2s; }
+  #lazyPromptCard.open .lazy-prompt-chev { transform: rotate(180deg); }
+  .lazy-prompt-body {
+    display: none; margin-top: 12px; padding-top: 12px;
+    border-top: 1px solid rgba(212,168,67,0.2);
+    flex-direction: column; gap: 12px;
+  }
+  #lazyPromptCard.open .lazy-prompt-body { display: flex; }
+  .lazy-field { display: flex; flex-direction: column; gap: 5px; }
+  .lazy-field-label { font-size: 11.5px; color: rgba(245,242,236,0.7); letter-spacing: 0.04em; }
+  .lazy-field-input, .lazy-field select {
+    padding: 10px 12px; background: rgba(10,15,30,0.55);
+    border: 1px solid rgba(212,168,67,0.28); border-radius: 10px;
+    color: #fff; font-family: inherit; font-size: 14px;
+  }
+  .lazy-field-input:focus, .lazy-field select:focus { outline: none; border-color: var(--gold); }
+  .lazy-prompt-actions { display: flex; gap: 8px; margin-top: 6px; }
+  .lazy-prompt-save {
+    flex: 1; background: linear-gradient(135deg, var(--gold), #a07828);
+    color: var(--navy); border: none; border-radius: 10px; padding: 11px;
+    font-weight: 700; font-family: inherit; cursor: pointer; letter-spacing: 0.02em;
+  }
+  .lazy-prompt-skip {
+    background: transparent; color: rgba(245,242,236,0.55);
+    border: 1px solid rgba(245,242,236,0.18); border-radius: 10px;
+    padding: 11px 14px; font-family: inherit; cursor: pointer; font-size: 13px;
+  }
 </style>
 <script src="/sentry-init.js" data-page="host" defer></script>
 <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js" defer></script>
@@ -1958,6 +2006,8 @@
 
     <!-- INTRO -->
     <div class="panel active" id="panel-intro">
+      <!-- T-26 (2026-04-22): 호스트 lazy prompt — couples + participant + room_members 가입 후 미입력 프로필 수집. -->
+      <div id="lazyPromptCard" hidden></div>
       <div id="profile-carousel"></div>
       <!-- 모바일 전용 접이식 참가자 리스트 (PC 에서는 profile-carousel 사용) -->
       <div id="mp-list-wrap" data-open="true" hidden>
@@ -2428,6 +2478,8 @@ async function loadRoomInfo() {
         }
       } catch (_) {}
       if (!hostIsRoomMember) await ensureHostJoinedForCouples(null);
+      // T-26: couples 호스트 본인 프로필 fetch — lazy prompt 미입력 판별 위해 매 진입마다 갱신.
+      await loadHostMyProfile();
     }
   } catch {}
 }
@@ -2488,6 +2540,144 @@ async function ensureHostJoinedForCouples(myMember) {
       submit();
     };
   });
+}
+
+// T-26 (2026-04-22): 호스트 lazy prompt — couples 결과 페이지 인스타 공유 이미지에 호스트 프로필(gender/mbti/birth_year)
+// 노출 위해 미입력 필드 수집. guest.html 패턴 복제.
+async function loadHostMyProfile() {
+  try {
+    const r = await fetch(`/api/rooms/${state.roomCode}/members/${encodeURIComponent(state.uuid)}?viewer=${encodeURIComponent(state.uuid)}`);
+    if (r.ok) state.myProfile = await r.json();
+  } catch (_) {}
+  if (state.activeTab === 'intro') renderHostLazyPrompt();
+}
+
+const HOST_LAZY_FIELD_DEFS = {
+  gender: {
+    label: '성별',
+    render: (val) => `<select class="lazy-field-input" data-k="gender">
+      <option value="">선택</option>
+      <option value="male"${val==='male'?' selected':''}>남성</option>
+      <option value="female"${val==='female'?' selected':''}>여성</option>
+      <option value="unspecified"${val==='unspecified'?' selected':''}>선택 안 함</option>
+    </select>`,
+  },
+  birth_year: {
+    label: '출생연도',
+    render: (val) => {
+      const cur = new Date().getFullYear();
+      let html = '<select class="lazy-field-input" data-k="birth_year"><option value="">선택</option>';
+      for (let y = cur - 10; y >= 1940; y--) {
+        html += `<option value="${y}"${String(val)===String(y)?' selected':''}>${y}년</option>`;
+      }
+      html += '</select>';
+      return html;
+    },
+  },
+  mbti: {
+    label: 'MBTI',
+    render: (val) => `<select class="lazy-field-input" data-k="mbti">
+      <option value="">선택</option>
+      ${['INTJ','INTP','ENTJ','ENTP','INFJ','INFP','ENFJ','ENFP','ISTJ','ISFJ','ESTJ','ESFJ','ISTP','ISFP','ESTP','ESFP'].map(m => `<option value="${m}"${val===m?' selected':''}>${m}</option>`).join('')}
+    </select>`,
+  },
+  region: {
+    label: '주 활동 지역',
+    render: (val) => `<select class="lazy-field-input" data-k="region">
+      <option value="">선택</option>
+      ${['서울','경기','인천','부산','대구','대전','광주','울산','세종','강원','충북','충남','전북','전남','경북','경남','제주'].map(r => `<option value="${r}"${val===r?' selected':''}>${r}</option>`).join('')}
+    </select>`,
+  },
+  industry: {
+    label: '업종',
+    render: (val) => `<input type="text" class="lazy-field-input" data-k="industry" maxlength="30" placeholder="예: IT, 교육, 디자인" value="${escHtml(val || '')}">`,
+  },
+  interest: {
+    label: '관심사',
+    render: (val) => `<input type="text" class="lazy-field-input" data-k="interest" maxlength="100" placeholder="예: 등산, 독서, 음악" value="${escHtml(val || '')}">`,
+  },
+  instagram: {
+    label: '인스타그램',
+    render: (val) => `<input type="text" class="lazy-field-input" data-k="instagram" maxlength="50" placeholder="@ 없이 아이디만" autocapitalize="off" autocorrect="off" value="${escHtml(val || '')}">`,
+  },
+};
+
+function renderHostLazyPrompt() {
+  const card = document.getElementById('lazyPromptCard');
+  if (!card) return;
+  const pack = state.packDefaults || {};
+  // couples + participant 만 노출 (다른 팩은 후속 티켓)
+  if (!state.room || state.room.pack_id !== 'couples' || state.hostRole !== 'participant') {
+    card.hidden = true; return;
+  }
+  const me = state.myProfile || {};
+  const prompts = Array.isArray(pack.wizard_prompt_after_join) ? pack.wizard_prompt_after_join : [];
+  const skipKey = `ntable_lazy_skip_host_${state.roomCode}`;
+  if (localStorage.getItem(skipKey) === 'true') { card.hidden = true; return; }
+  const missing = prompts.filter(k => {
+    if (k === 'instagram' && !(state.room && state.room.instagram_collect === true)) return false;
+    const v = me[k];
+    return v == null || v === '';
+  });
+  if (missing.length === 0) { card.hidden = true; return; }
+  card.hidden = false;
+  const bodyFields = missing.map(k => {
+    const def = HOST_LAZY_FIELD_DEFS[k];
+    if (!def) return '';
+    return `<div class="lazy-field"><span class="lazy-field-label">${def.label}</span>${def.render(me[k])}</div>`;
+  }).join('');
+  card.innerHTML = `
+    <div class="lazy-prompt-head" onclick="toggleHostLazyPrompt()">
+      <div>
+        <div class="lazy-prompt-title">✨ 결과 카드용 프로필 채우기 <span style="opacity:0.6;font-size:11.5px;">(1분)</span></div>
+        <div class="lazy-prompt-sub">${missing.length}개 항목을 채우면 인스타 공유 이미지에 표시돼요.</div>
+      </div>
+      <span class="lazy-prompt-chev">▾</span>
+    </div>
+    <div class="lazy-prompt-body">
+      ${bodyFields}
+      <div class="lazy-prompt-actions">
+        <button type="button" class="lazy-prompt-skip" onclick="skipHostLazyPrompt()">나중에</button>
+        <button type="button" class="lazy-prompt-save" onclick="saveHostLazyPrompt()">저장</button>
+      </div>
+    </div>`;
+}
+
+function toggleHostLazyPrompt() {
+  document.getElementById('lazyPromptCard')?.classList.toggle('open');
+}
+
+function skipHostLazyPrompt() {
+  try { localStorage.setItem(`ntable_lazy_skip_host_${state.roomCode}`, 'true'); } catch (_) {}
+  const card = document.getElementById('lazyPromptCard');
+  if (card) card.hidden = true;
+}
+
+async function saveHostLazyPrompt() {
+  const card = document.getElementById('lazyPromptCard');
+  if (!card) return;
+  const payload = { uuid: state.uuid };
+  card.querySelectorAll('[data-k]').forEach(el => {
+    const k = el.dataset.k;
+    const v = (el.value || '').trim();
+    if (!v) return;
+    if (k === 'birth_year') payload[k] = parseInt(v, 10);
+    else payload[k] = v;
+  });
+  if (Object.keys(payload).length <= 1) { skipHostLazyPrompt(); return; }
+  try {
+    const r = await fetch(`/api/rooms/${state.roomCode}/me/profile`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error('save failed');
+    state.myProfile = { ...(state.myProfile || {}), ...payload };
+    if (typeof toast === 'function') toast('✓ 프로필이 저장됐어요');
+    renderHostLazyPrompt();
+  } catch (_) {
+    if (typeof toast === 'function') toast('⚠️ 저장 실패 — 잠시 후 다시 시도해주세요');
+  }
 }
 
 async function loadQR() {
@@ -3497,6 +3687,8 @@ function switchTab(tab) {
   state.activeTab = tab;
   const actionBar = document.getElementById('action-bar');
   if (actionBar) actionBar.dataset.tab = tab;
+  // T-26: intro 진입 시 호스트 lazy prompt 갱신 (couples + 가입 + 미입력 필드 있을 때만 노출)
+  if (tab === 'intro' && typeof renderHostLazyPrompt === 'function') renderHostLazyPrompt();
   // 상시 채팅 표시 제어 — body.tab-${tab} 클래스 토글
   const allTabs = ['intro','explore','free','ending'];
   document.body.classList.remove(...allTabs.map(t => `tab-${t}`));
