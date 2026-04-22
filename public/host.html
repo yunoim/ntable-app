@@ -4914,8 +4914,10 @@ async function openMyInfo() {
 function closeMyInfo() { document.getElementById('my-info-modal').style.display = 'none'; }
 
 async function renderMiAccount() {
-  const remember = (() => { try { return localStorage.getItem('login_remember') === 'true'; } catch (_) { return false; } })();
+  // 2026-04-22: OAuth/remember-me 비활성화 — 토글·계정 연동 섹션 HTML 주석처리됨. null 가드 후 조기 return.
   const toggle = document.getElementById('mi_login_remember');
+  if (!toggle) return;
+  const remember = (() => { try { return localStorage.getItem('login_remember') === 'true'; } catch (_) { return false; } })();
   toggle.checked = remember;
   paintMiSwitch(remember);
   // 현재 OAuth 세션 조회 (실패 무시)
