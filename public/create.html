@@ -367,12 +367,14 @@
       font-size: 13px;
     }
     .meeting-time-input::-webkit-calendar-picker-indicator {
-      /* 어두운 배경 위에 잘 보이도록 골드 톤으로 강조 + opacity 1 */
-      filter: invert(78%) sepia(31%) saturate(545%) hue-rotate(2deg) brightness(95%) contrast(91%);
-      opacity: 1;
+      /* T-B0-8 (2026-04-22): 네이티브 캘린더 아이콘은 숨김. 좌측 커스텀 📅 아이콘이 picker 트리거 담당.
+         absolute 로 input 전체 덮도록 키워서 input 어디를 눌러도 picker 가 열리게 유지. */
+      opacity: 0;
       cursor: pointer;
-      width: 22px; height: 22px;
-      padding: 0 4px;
+      position: absolute;
+      width: 100%; height: 100%;
+      left: 0; top: 0;
+      padding: 0; margin: 0;
     }
     .meeting-time-input { color-scheme: dark; }
     .meeting-time-hint {
@@ -392,6 +394,31 @@
     .confirm-features li::before {
       content: '✓'; position: absolute; left: 0;
       color: #7ee8a2; font-weight: 700;
+    }
+    /* T-B0-7 (2026-04-22): 3-stage 그룹 — STEP 01/02/03 블록 헤더 + 아이템 연속 번호 */
+    .confirm-stages { display: flex; flex-direction: column; gap: 14px; }
+    .confirm-stage-block + .confirm-stage-block {
+      padding-top: 14px;
+      border-top: 1px solid rgba(212,168,67,0.14);
+    }
+    .confirm-stage-head {
+      font-size: 11.5px; color: var(--gold); letter-spacing: 0.12em;
+      font-weight: 700; text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .confirm-stage-items {
+      list-style: none; padding: 0; margin: 0;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .confirm-stage-items li {
+      font-size: 13.5px; color: var(--text); line-height: 1.55;
+      padding-left: 30px; position: relative;
+    }
+    .confirm-stage-num {
+      position: absolute; left: 0; top: 0;
+      font-size: 11.5px; font-weight: 700;
+      color: var(--gold-light); letter-spacing: 0.04em;
+      font-variant-numeric: tabular-nums;
     }
     .confirm-actions {
       display: flex; gap: 10px; margin-top: 28px;
@@ -621,14 +648,15 @@
         <div class="confirm-desc" id="confirmDesc"></div>
       </div>
       <div class="confirm-section-head">이런 순서로 진행돼요</div>
-      <ul class="confirm-features" id="confirmFeatures"></ul>
+      <div class="confirm-stages" id="confirmFeatures"></div>
 
       <!-- 모임 시각 (선택) -->
       <div class="meeting-time-row">
         <label for="meetingAtInput" class="meeting-time-label">📅 모임 시각 <span class="opt-hint">선택</span></label>
         <div style="position:relative;">
           <input type="datetime-local" id="meetingAtInput" class="meeting-time-input" style="padding-right:44px;" />
-          <span aria-hidden="true" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:18px;color:#e8b84b;pointer-events:none;">📅</span>
+          <!-- T-B0-8 (2026-04-22): 커스텀 📅 아이콘이 showPicker 트리거. 네이티브 indicator 는 CSS 에서 투명화. -->
+          <button type="button" id="meetingAtIcon" aria-label="날짜·시간 선택 열기" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:18px;color:#e8b84b;background:none;border:none;padding:6px;cursor:pointer;font-family:inherit;">📅</button>
         </div>
         <div class="meeting-time-hint">QR·카카오 공유 메시지에 표시돼요. 비워두면 노출 안 됨.</div>
       </div>
@@ -678,13 +706,19 @@
         desc: '아이스브레이커 — 5분 안에 어색함을 해소',
         examples: ['5문항 자기소개 투표', '오늘의 MVP 선정', 'AI 성향 카드 받기'],
         detailedDesc: '간단한 5문항으로 어색함을 풀고, MVP 투표로 분위기를 마무리합니다.',
-        features: [
-          'QR 자동 입장 · 익명 닉네임',
-          '참가자 카드 자동 표시',
-          '5문항 A/B 투표 (답 변경 가능)',
-          '자유대화 (타이머 10분 · 주제카드)',
-          'MVP 투표',
-          'AI 성향 카드',
+        stages: [
+          { label: '입장', items: [
+            'QR 자동 입장 · 익명 닉네임',
+            '참가자 카드 자동 표시',
+          ] },
+          { label: '탐구·대화', items: [
+            '자기소개 A/B 5문항 (답 변경 가능)',
+            '자유대화 — 타이머 10분 · 주제카드',
+          ] },
+          { label: '마무리', items: [
+            '오늘의 MVP 투표',
+            'AI 성향 카드',
+          ] },
         ],
         defaults: {
           question_count: 5,
@@ -700,15 +734,21 @@
         desc: '밸런스 게임 + 상호 지명 매칭 + 인스타 상호 공개',
         examples: ['10문항 A/B 상호 탐구', '사랑의 작대기 매칭', '인스타 상호 공개'],
         detailedDesc: '10문항으로 서로를 탐구하고, 사랑의 작대기로 매칭. 양쪽 모두 입력하면 인스타가 공개됩니다.',
-        features: [
-          'QR 자동 입장 · 익명 닉네임',
-          '참가자 카드 자동 표시',
-          '10문항 A/B 투표 · 실시간 호환도',
-          '자유대화 (타이머 15분 · 익명채팅 · 주제카드)',
-          'MVP 투표',
-          '사랑의 작대기 매칭 (사진·공통답변)',
-          '인스타 상호 공개 (양쪽 모두 선택 시)',
-          'AI 성향 카드',
+        stages: [
+          { label: '입장', items: [
+            'QR 자동 입장 · 익명 닉네임',
+            '참가자 카드 자동 표시',
+          ] },
+          { label: '탐구·대화', items: [
+            '상호 탐구 A/B 10문항 · 실시간 호환도',
+            '자유대화 — 타이머 15분 · 익명채팅 · 주제카드',
+            '오늘의 MVP 투표',
+          ] },
+          { label: '마무리', items: [
+            '사랑의 작대기 매칭 (사진·공통답변)',
+            '인스타 상호 공개 — 양쪽 모두 선택 시',
+            'AI 성향 카드',
+          ] },
         ],
         defaults: {
           question_count: 10,
@@ -772,15 +812,21 @@
         seriesLabel: 'ntable Plays',
         examples: ['최애 플레이리스트 3분 설명', '숨은 명곡 HIDDEN GEM 투표', '익명 채팅 실시간 반응'],
         detailedDesc: '각자 15분 플리를 스피커로 공유하고, 익명 채팅으로 실시간 반응·BEST 플리 투표·인스타 교환까지.',
-        features: [
-          'QR 자동 입장 · 익명 닉네임',
-          '플레이리스트 URL 별도 수집 (playlist_links)',
-          '5문항 A/B 음악 취향 탐구',
-          '자유대화 (2시간 · 익명 채팅 · 반응 템플릿)',
-          'BEST 플리 투표 (MVP 방식)',
-          '탐구 결과 공개',
-          '인스타 상호 공개 (양쪽 모두 선택 시)',
-          'AI 성향 카드',
+        stages: [
+          { label: '입장', items: [
+            'QR 자동 입장 · 익명 닉네임',
+            '플레이리스트 링크 공유 (선택)',
+            '음악 취향 A/B 5문항',
+          ] },
+          { label: '탐구·대화', items: [
+            '자유대화 — 2시간 · 익명 채팅',
+            'BEST 플리 투표 — 모두가 한 표씩',
+            '탐구 결과 공개',
+          ] },
+          { label: '마무리', items: [
+            '인스타 상호 공개 — 양쪽 모두 선택 시',
+            'AI 성향 카드',
+          ] },
         ],
         defaults: {
           question_count: 5,
@@ -797,15 +843,21 @@
         desc: '팀빌딩 — 업무 스타일 탐구·신입 OT·워크숍',
         examples: ['업무 스타일 10문항', '페어·MVP 발표', '팀 성향 AI 카드'],
         detailedDesc: '업무 스타일 10문항으로 팀원의 성향을 파악하고, MVP·페어·결과 카드까지 한 번에.',
-        features: [
-          'QR 자동 입장 · 익명 닉네임',
-          '참가자 카드 자동 표시',
-          '10문항 A/B 투표',
-          '자유대화 (타이머 20분 · 주제카드)',
-          '매칭 페어 공개',
-          'MVP 투표',
-          '탐구 결과 공개',
-          'AI 성향 카드',
+        stages: [
+          { label: '입장', items: [
+            'QR 자동 입장 · 익명 닉네임',
+            '참가자 카드 자동 표시',
+          ] },
+          { label: '탐구·대화', items: [
+            '업무 스타일 A/B 10문항',
+            '자유대화 — 타이머 20분 · 주제카드',
+            '매칭 페어 공개',
+          ] },
+          { label: '마무리', items: [
+            '오늘의 MVP 투표',
+            '탐구 결과 공개',
+            'AI 성향 카드',
+          ] },
         ],
         defaults: {
           question_count: 10,
@@ -889,8 +941,27 @@
       document.getElementById('confirmTitle').textContent = kit.title;
       // 화면 2의 desc는 detailed 우선 (화면 1과 동어반복 방지)
       document.getElementById('confirmDesc').textContent = kit.detailedDesc || kit.desc;
-      const ul = document.getElementById('confirmFeatures');
-      ul.innerHTML = (kit.features || []).map(f => `<li>${escHtml(f)}</li>`).join('');
+      const featuresEl = document.getElementById('confirmFeatures');
+      // T-B0-7 (2026-04-22): stages 가 있으면 3-블록 그룹 렌더, 없으면 기존 flat features 폴백
+      if (Array.isArray(kit.stages) && kit.stages.length) {
+        featuresEl.className = 'confirm-stages';
+        let counter = 0;
+        featuresEl.innerHTML = kit.stages.map((stage, i) => {
+          const stageIdx = String(i + 1).padStart(2, '0');
+          const itemsHtml = (stage.items || []).map(it => {
+            counter += 1;
+            const n = String(counter).padStart(2, '0');
+            return `<li><span class="confirm-stage-num">${n}</span>${escHtml(it)}</li>`;
+          }).join('');
+          return `<div class="confirm-stage-block">
+            <div class="confirm-stage-head">STEP ${stageIdx} · ${escHtml(stage.label)}</div>
+            <ul class="confirm-stage-items">${itemsHtml}</ul>
+          </div>`;
+        }).join('');
+      } else {
+        featuresEl.className = 'confirm-features';
+        featuresEl.innerHTML = (kit.features || []).map(f => `<li>${escHtml(f)}</li>`).join('');
+      }
       document.getElementById('selectScreen').hidden = true;
       document.getElementById('confirmScreen').hidden = false;
       // welcome·TV 진입점은 화면 1 전용 — 화면 2에서는 숨김
@@ -951,6 +1022,30 @@
       }
       // 실명·이메일 노출 0 — welcome은 generic 유지. 헤더 토글이 로그인 상태 표현.
       loadPacks();
+      // T-B0-8 (2026-04-22): 커스텀 📅 아이콘 클릭 → 네이티브 datetime picker 열기
+      try {
+        const icon = document.getElementById('meetingAtIcon');
+        const dt = document.getElementById('meetingAtInput');
+        if (icon && dt) {
+          icon.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (typeof dt.showPicker === 'function') { try { dt.showPicker(); return; } catch (_) {} }
+            dt.focus();
+          });
+        }
+      } catch (_) {}
+      // T-B0-14 (2026-04-22): result.html 의 "다음 모임 열기" CTA 에서 넘어올 때 킷 자동 선택.
+      // ?pack=<id> 쿼리가 있으면 해당 킷의 확인 화면 진입 (couples 는 즉시 생성).
+      try {
+        const prePack = new URLSearchParams(location.search).get('pack');
+        if (prePack) {
+          const kit = ROOM_KITS.find(k => k.id === prePack);
+          if (kit) {
+            if (kit.id === 'couples') createRoomFromKit(kit);
+            else showConfirmScreen(kit);
+          }
+        }
+      } catch (_) {}
     }
 
     /* 로컬 헤더 토글·아코디언 로직 제거 (2026-04-20) — 공통 /auth-header.js 가 인증 pill 주입 */

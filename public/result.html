@@ -804,11 +804,14 @@
   </div>
 
   <div id="home-link-wrap" style="margin-top:20px;text-align:center;opacity:0;pointer-events:none;transition:opacity 0.3s;">
-    <div style="display:flex;gap:8px;justify-content:center;">
-      <button type="button" id="save-url-btn" onclick="saveResultUrl()" style="flex:1;padding:13px 14px;background:rgba(212,168,67,0.12);color:var(--gold-light);border:1px solid var(--gold-border);border-radius:10px;font-family:inherit;font-size:14px;font-weight:500;letter-spacing:0.02em;cursor:pointer;text-align:center;white-space:nowrap;">🔗 결과 URL 복사</button>
-      <a href="/" style="flex:1;padding:13px 14px;background:transparent;color:var(--gold-light);border:1px solid var(--gold-border);border-radius:10px;text-decoration:none;font-family:inherit;font-size:14px;font-weight:500;letter-spacing:0.02em;text-align:center;white-space:nowrap;">홈으로</a>
+    <!-- T-B0-14 (2026-04-22): 3-CTA 재구성 — primary(다음 모임 열기) / ghost(URL 복사) / text-only(홈으로).
+         primary 라벨은 pack 별 분기, 클릭 시 /create?pack=<id> 로 자동 킷 선택. -->
+    <div style="display:flex;flex-direction:column;gap:10px;align-items:stretch;">
+      <a id="next-room-cta" href="/create" style="padding:14px 16px;background:var(--gold);color:#0f1220;border-radius:12px;text-decoration:none;font-family:inherit;font-size:15px;font-weight:700;letter-spacing:0.02em;text-align:center;box-shadow:0 6px 18px rgba(212,168,67,0.24);">다음 모임 열기</a>
+      <button type="button" id="save-url-btn" onclick="saveResultUrl()" style="padding:12px 14px;background:transparent;color:var(--gold-light);border:1px solid var(--gold-border);border-radius:10px;font-family:inherit;font-size:13.5px;font-weight:500;letter-spacing:0.02em;cursor:pointer;text-align:center;">🔗 결과 URL 복사</button>
+      <a href="/" style="padding:8px 12px;background:none;color:var(--text-muted);border:none;text-decoration:none;font-family:inherit;font-size:12.5px;font-weight:500;letter-spacing:0.02em;text-align:center;">홈으로</a>
     </div>
-    <div style="margin-top:10px;font-size:11.5px;color:var(--text-muted);letter-spacing:0.02em;line-height:1.55;">URL 을 저장해두면 나중에도 다시 볼 수 있어요.<br>모임 종료 후 <strong style="color:var(--gold-light);">30일까지</strong> 확인 가능해요.</div>
+    <div style="margin-top:12px;font-size:11.5px;color:var(--text-muted);letter-spacing:0.02em;line-height:1.55;">👁 모임 종료 후 <strong style="color:var(--gold-light);">30일까지</strong> 볼 수 있어요.</div>
   </div>
 </div>
 
@@ -1090,6 +1093,22 @@
 
       // 팩별 UI 게이트 적용 (인스타 교환 카드 노출 등)
       if (typeof window._applyPackGates === 'function') window._applyPackGates(data.pack_defaults, data.pack_id);
+
+      // T-B0-14 (2026-04-22): 다음 모임 CTA pack 별 라벨·링크 분기
+      try {
+        const nextCta = document.getElementById('next-room-cta');
+        if (nextCta) {
+          const NEXT_BY_PACK = {
+            'playlist-share': '🎵 다음 플리 공유회 열기',
+            'couples':        '👫 다음 둘이서 열기',
+            'dating':         '💫 다음 소개팅 열기',
+            'teambuilding':   '💼 다음 팀빌딩 열기',
+            'icebreaker':     '🤝 다음 모임 열기',
+          };
+          nextCta.textContent = NEXT_BY_PACK[data.pack_id] || '✨ 다음 모임 열기';
+          nextCta.href = data.pack_id ? `/create?pack=${encodeURIComponent(data.pack_id)}` : '/create';
+        }
+      } catch (_) {}
 
       // share-card에도 매칭 한 줄 추가 (이미지 저장·인스타 공유 시 노출)
       if (typeof updateShareMatchLine === 'function') updateShareMatchLine(data);
@@ -1396,16 +1415,22 @@
           </div>`;
       }
 
+      // T-B0-13 (2026-04-22): playlist-share(myplay) 는 "관심 표시" 메트릭 숨김 — 매칭 없는 팩에서 의미 없음.
+      // match_pairs_enabled === false 면 fi_count stat-box 생략.
+      const _pd = data.pack_defaults || {};
+      const _hideInterest = _pd.match_pairs_enabled === false || data.pack_id === 'playlist-share';
+      const _interestBox = _hideInterest ? '' : `
+          <div class="stat-box">
+            <div class="stat-num">${data.fi_count || 0}</div>
+            <div class="stat-label">나에게 관심 표시</div>
+          </div>`;
       summEl.innerHTML = `
         <div class="stats-row">
           <div class="stat-box">
             <div class="stat-num">${data.participants}</div>
             <div class="stat-label">오늘 참가자</div>
           </div>
-          <div class="stat-box">
-            <div class="stat-num">${data.fi_count || 0}</div>
-            <div class="stat-label">나에게 관심 표시</div>
-          </div>
+          ${_interestBox}
         </div>
         ${hostAggHtml}
       `;

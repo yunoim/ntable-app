@@ -315,6 +315,7 @@ const PACK_DEFAULTS = {
     best_match_enabled: false,
     mvp_enabled: false,
     match_pairs_enabled: false,
+    chat_reactions: ['💫 케미 좋아요','🌙 분위기 있어요','💛 한 번 더 보고파','😊 편안해요','🙌 공감돼요'],
     labels: {
       page2_card_title: '💘 우리 연애 케미',
       best_match_eyebrow: '우리만의 케미',
@@ -335,6 +336,7 @@ const PACK_DEFAULTS = {
     best_match_enabled: true,
     mvp_enabled: true,
     match_pairs_enabled: true,
+    chat_reactions: ['💫 케미 좋아요','🌙 분위기 있어요','💛 한 번 더 보고파','😊 편안해요','🙌 공감돼요'],
     labels: {
       page2_card_title: '💘 베스트 매칭',
       best_match_eyebrow: '오늘의 인연',
@@ -354,6 +356,7 @@ const PACK_DEFAULTS = {
     best_match_enabled: true,
     mvp_enabled: true,
     match_pairs_enabled: false,
+    chat_reactions: ['😄 재밌어요','🤔 흥미로워요','👏 공감돼요','💡 인사이트','🙌 좋은 질문'],
     labels: {
       page2_card_title: '🤝 베스트 매칭',
       best_match_eyebrow: '나와 가장 잘 맞았던 사람',
@@ -374,6 +377,7 @@ const PACK_DEFAULTS = {
     best_match_enabled: false,
     mvp_enabled: false,
     match_pairs_enabled: false,
+    chat_reactions: ['😄 재밌어요','🤔 흥미로워요','👏 공감돼요','💡 인사이트','🙌 좋은 질문'],
     labels: {
       page2_card_title: '✨ 오늘 또 가까워진 사람',
       best_match_eyebrow: '오늘 다시 통한 사람',
@@ -394,6 +398,7 @@ const PACK_DEFAULTS = {
     best_match_enabled: true,
     mvp_enabled: true,
     match_pairs_enabled: false,
+    chat_reactions: ['🌙 분위기 있어요','💡 인사이트','👏 공감돼요','🤔 흥미로워요','💛 고마워요'],
     labels: {
       page2_card_title: '🌙 비슷한 이야기를 가진 사람',
       best_match_eyebrow: '나와 비슷한 이야기',
@@ -415,6 +420,7 @@ const PACK_DEFAULTS = {
     best_match_enabled: false, // myplay 는 MVP(베스트 플리)만 — "베스트 매칭" 섹션 비노출 (2026-04-22 QA)
     mvp_enabled: true,
     match_pairs_enabled: false, // 또 만나고 싶은 사람(작대기) 단계 없음 (2026-04-22 QA)
+    chat_reactions: ['🔥 이 곡 뭐죠?','🎧 플리 추가','💗 눈물 주의','🕺 춤추게 됨','😌 힐링됨'],
     labels: {
       page2_card_title: '🎵 오늘의 BEST 플리',
       best_match_eyebrow: '음악 취향이 비슷한 사람',
@@ -437,6 +443,7 @@ const PACK_DEFAULTS = {
     best_match_enabled: false,
     mvp_enabled: true,
     match_pairs_enabled: false,
+    chat_reactions: ['👍 좋은 의견','😄 재밌네요','📝 메모','❓ 질문 있음','✅ 동의'],
     labels: {
       page2_card_title: '🎯 오늘의 주인공',
       best_match_eyebrow: '비슷한 답을 고른 동료',
