@@ -82,10 +82,20 @@ function parsePack(filePath) {
       const qMatch = trimmed.match(/^Q(\d+)\.\s+(.+)/);
       if (qMatch) {
         if (currentQ) questions.push(currentQ);
+        // 인라인 태그 [반대] / [opposite] — 있으면 compat_rule='opposite' (반대 답이 호환).
+        // 기본은 'same' (같은 답이 호환) — 기존 커플 매칭 로직 그대로.
+        let qText = qMatch[2];
+        let compatRule = 'same';
+        const tagMatch = qText.match(/\s*\[(반대|opposite)\]\s*$/i);
+        if (tagMatch) {
+          compatRule = 'opposite';
+          qText = qText.slice(0, tagMatch.index).trim();
+        }
         currentQ = {
           id: questions.length + 1,
           tier: currentTier,
-          question: qMatch[2],
+          question: qText,
+          compat_rule: compatRule,
           options: [],
         };
         continue;

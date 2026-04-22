@@ -317,7 +317,10 @@ router.get('/rooms/:code/couple-love', async (req, res) => {
       const theirs = partnerVotes[qid] || null;
       if (!mine || !theirs) continue;
       total += 1;
-      const match = mine === theirs;
+      // compat_rule: 'opposite' (역대응 = 호환) 이면 반대 답일 때 match. 기본 'same' 은 같은 답일 때 match.
+      const rule = q.compat_rule === 'opposite' ? 'opposite' : 'same';
+      const sameAnswer = mine === theirs;
+      const match = rule === 'opposite' ? !sameAnswer : sameAnswer;
       if (match) matched += 1;
       const opts = q.options || [];
       details.push({
@@ -327,6 +330,7 @@ router.get('/rooms/:code/couple-love', async (req, res) => {
         my_text: String(opts[mine === 'A' ? 0 : 1] || '').replace(/^[AB]\.\s*/, ''),
         partner_text: String(opts[theirs === 'A' ? 0 : 1] || '').replace(/^[AB]\.\s*/, ''),
         match,
+        compat_rule: rule,
       });
     }
     const pct = total > 0 ? Math.round(matched / total * 100) : 0;

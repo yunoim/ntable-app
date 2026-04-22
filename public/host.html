@@ -2793,8 +2793,8 @@
         <button type="button" class="nt-sheet-opt" data-val="male">👨 남성</button>
         <button type="button" class="nt-sheet-opt" data-val="unspecified">🙈 선택 안 함</button>
       </div>
+      <!-- 2026-04-22: 건너뛰기 버튼 제거 — 세 옵션 중 '선택 안 함'이 스킵 역할. 계속 버튼 하나로 진행. -->
       <div class="nt-sheet-actions">
-        <button type="button" class="nt-sheet-btn nt-sheet-btn-ghost" id="nt-onb-skip-2" data-copy="onboarding.skip_btn">건너뛰기</button>
         <button type="button" class="nt-sheet-btn nt-sheet-btn-primary" id="nt-onb-continue-2" data-copy="onboarding.continue_btn">계속</button>
       </div>
     </section>
@@ -3241,7 +3241,8 @@ async function ensureHostJoinedForCouples(myMember) {
       data.gender = btn.dataset.val || '';
       genderOpts.querySelectorAll('.nt-sheet-opt').forEach(b => b.classList.toggle('active', b === btn));
     });
-    skip2.onclick = () => { data.gender = ''; showStep(3); };
+    // skip2 제거 (2026-04-22) — 건너뛰기 버튼 삭제됨. null 가드.
+    if (skip2) skip2.onclick = () => { data.gender = ''; showStep(3); };
     continue2.onclick = () => showStep(3);
 
     // Step 3
