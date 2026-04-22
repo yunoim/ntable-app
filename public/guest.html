@@ -506,6 +506,10 @@
     border-top: 1px solid rgba(212,168,67,0.2);
     flex-direction: column;
     gap: 12px;
+    /* 하단 고정 채팅 패널(44vh)이 MBTI 이하를 가리는 문제: 카드 body 자체에서 스크롤 허용 */
+    max-height: 42vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   #lazyPromptCard.open .lazy-prompt-body { display: flex; }
   .lazy-field { display: flex; flex-direction: column; gap: 5px; }
@@ -2192,8 +2196,13 @@ function connectWS() {
     console.log('[guest] ws.onclose', e.code, e.reason);
     // 서버가 모임 종료로 닫으면 곧장 설문으로 (room_closed broadcast 누락 fallback)
     if (e.code === 4005 || /closed/i.test(e.reason || '')) {
-      try { localStorage.setItem('pending_survey', STATE.roomCode); } catch (_) {}
-      location.replace(`/survey?room=${STATE.roomCode}`);
+      const isCouplesClose = STATE.room && STATE.room.pack_id === 'couples';
+      if (!isCouplesClose) {
+        try { localStorage.setItem('pending_survey', STATE.roomCode); } catch (_) {}
+      }
+      location.replace(isCouplesClose
+        ? `/result?room=${STATE.roomCode}&uuid=${encodeURIComponent(STATE.uuid)}`
+        : `/survey?room=${STATE.roomCode}`);
       return;
     }
     // 모임장이 강퇴
@@ -2359,14 +2368,19 @@ async function handleWSMessage(msg) {
         }
       }
       break;
-    case 'room_closed':
-      // 게스트가 중간에 이탈해도 다음 로그인 때 자동 유도되도록 저장
-      console.log('[guest] room_closed received → /survey');
-      try { localStorage.setItem('pending_survey', STATE.roomCode); } catch (_) {}
-      // overlay 등 떠있어도 즉시 redirect (browser navigation 우선)
+    case 'room_closed': {
+      // couples 팩은 후기·매칭 UI 없이 바로 결과로 (2026-04-22 사용자 요청)
+      const isCouplesClose = STATE.room && STATE.room.pack_id === 'couples';
+      console.log('[guest] room_closed received →', isCouplesClose ? '/result' : '/survey');
+      if (!isCouplesClose) {
+        try { localStorage.setItem('pending_survey', STATE.roomCode); } catch (_) {}
+      }
       try { if (STATE.ws) STATE.ws.close(); } catch (_) {}
-      location.replace(`/survey?room=${STATE.roomCode}`);
+      location.replace(isCouplesClose
+        ? `/result?room=${STATE.roomCode}&uuid=${encodeURIComponent(STATE.uuid)}`
+        : `/survey?room=${STATE.roomCode}`);
       break;
+    }
     case 'recover_approved':
       // 나(=old_uuid) 였으면 이 세션은 더 이상 유효하지 않음 — 안내 후 홈으로
       if (msg.old_uuid === STATE.uuid) {

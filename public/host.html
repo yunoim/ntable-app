@@ -3800,14 +3800,17 @@ function switchTab(tab) {
       const seq = state.closingSequence || ['closing-mvp', 'closing-mvp-result'];
       const first = seq[0];
       if (!first) {
-        // closing_steps == [] (couples 등 skip 팩) — confirm 없이 자동 종료 + 후기 페이지 이동.
-        // closeRoom() 은 명시적 종료 confirm 이 있어 UX 가 뜯김.
+        // closing_steps == [] (couples 등 skip 팩) — confirm 없이 자동 종료.
+        // 2026-04-22: couples 팩은 후기·매칭 UI 없이 바로 /result 로 직행 (사용자 요청).
+        // 다른 skip 팩이 추가되면 pack_id 분기 확장.
         (async () => {
           try { await api(`/api/rooms/${state.roomCode}/close`, 'POST', { host_uuid: state.uuid }); } catch (_) {}
           const isParticipantHost = state.hostRole === 'participant';
-          location.href = isParticipantHost
-            ? `/survey?room=${state.roomCode}`
-            : '/create';
+          if (!isParticipantHost) { location.href = '/create'; return; }
+          const isCouples = state.room && state.room.pack_id === 'couples';
+          location.href = isCouples
+            ? `/result?room=${state.roomCode}&uuid=${encodeURIComponent(state.uuid)}`
+            : `/survey?room=${state.roomCode}`;
         })();
         return;
       }

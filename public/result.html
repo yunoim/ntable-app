@@ -1178,24 +1178,12 @@
         }
         // 팩 정책상 매칭 섹션·mutuals 호출 없음 — 바로 다음 흐름으로.
       } else if (isCouplesPack) {
-        // 카드 타이틀 변경
-        const cardTitle = document.querySelector('section[data-page="1"] .card-title');
-        if (cardTitle) cardTitle.textContent = '💘 우리 연애 케미';
-        if (couplePartnerUuid) {
-          try {
-            const lr = await fetch(`/api/rooms/${room_code}/couple-love?uuid=${encodeURIComponent(uuid)}&partner_uuid=${encodeURIComponent(couplePartnerUuid)}`);
-            if (lr.ok) {
-              const cd = await lr.json();
-              matchEl.innerHTML = renderCoupleLove(cd) + coupleBtnHtml;
-            } else {
-              matchEl.innerHTML = '<div class="match-fallback-frame"><div class="match-fallback-text">연애 분석을 불러오지 못했어요.</div></div>' + coupleBtnHtml;
-            }
-          } catch (_) {
-            matchEl.innerHTML = '<div class="match-fallback-frame"><div class="match-fallback-text">연애 분석을 불러오지 못했어요.</div></div>' + coupleBtnHtml;
-          }
-        } else {
-          matchEl.innerHTML = '<div class="match-fallback-frame"><div class="match-fallback-text">파트너 정보가 없어요.</div></div>';
-        }
+        // 2026-04-22: couples 팩은 매칭 보기 UI(우리 연애 케미) 제거 — 사용자 요청.
+        // section[data-page="1"] + 해당 pager dot 제거. sync() 가 live 쿼리 기반이라 index 재매핑 자동.
+        const page1 = document.querySelector('section[data-page="1"]');
+        if (page1) page1.remove();
+        const dot1 = document.querySelector('#pager-dots .pager-dot[data-dot="1"]');
+        if (dot1) dot1.remove();
       } else {
       const mutualHtml = mutualPairs.length > 0 ? `
         <div class="match-frame" style="padding:22px;margin-bottom:18px;">
