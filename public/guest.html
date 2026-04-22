@@ -3018,8 +3018,28 @@ async function saveProfileEdit() {
     });
     if (!r.ok) throw new Error();
     STATE.myProfile = { ...STATE.myProfile, ...payload };
-    // 인스타 room_members 동기화 — /api/profile 는 users 테이블만 업데이트하므로
-    // room-scoped insta-status 가 프로필 값을 승계하도록 /me/instagram 도 호출 (2026-04-22 QA)
+    // 2026-04-22 (버그픽스): /api/profile 은 users 테이블만 업데이트하는데, 결과 페이지
+    // couple-love API (routes/ai.js) 는 room_members 테이블에서 mbti·gender·birth_year 를 읽음.
+    // 그래서 게스트가 MBTI 를 입력해도 room_members 에는 null 로 남아 "MBTI 정보가 부족해서
+    // 성격 축 비교는 생략" 문구가 떴음. 아래 PATCH 로 room_members 스냅샷 동기화.
+    try {
+      const rmPayload = { uuid: STATE.uuid };
+      if (payload.gender != null) rmPayload.gender = payload.gender;
+      if (payload.birth_year != null) rmPayload.birth_year = payload.birth_year;
+      if (payload.mbti != null) rmPayload.mbti = payload.mbti;
+      if ('region' in payload) rmPayload.region = payload.region;
+      if ('interest' in payload) rmPayload.interest = payload.interest;
+      if ('instagram' in payload) rmPayload.instagram = payload.instagram;
+      // uuid 외에 실제 업데이트할 필드가 하나라도 있으면 호출
+      if (Object.keys(rmPayload).length > 1) {
+        await fetch(`/api/rooms/${STATE.roomCode}/me/profile`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(rmPayload),
+        });
+      }
+    } catch (_) {}
+    // 인스타 room-scoped 상태 — 기존 endpoint 유지 (room_members 의 instagram 은 이미 위에서 함께 업데이트됨).
     if (payload.instagram) {
       try {
         await fetch(`/api/rooms/${STATE.roomCode}/me/instagram`, {
