@@ -3083,6 +3083,7 @@ function renderProfiles() {
   const showIndustry = df.includes('industry');
   const showInterest = df.includes('interest');
   const showPlaylist = df.includes('playlist');
+  const showMbti = df.includes('mbti'); // T-26d (2026-04-22): mbti 도 display_fields 따라 (이전엔 무조건 표시)
   const playlistByUuid = state.playlistByUuid || {};
 
   for (const u of state.approvedUsers) {
@@ -3111,7 +3112,7 @@ function renderProfiles() {
       <div class="name">${escHtml(u.nickname)}</div>
       <div class="meta">${meta}</div>
       <div class="tags">
-        ${u.mbti ? `<span class="tag-chip gold">${escHtml(u.mbti)}</span>` : ''}
+        ${showMbti && u.mbti ? `<span class="tag-chip gold">${escHtml(u.mbti)}</span>` : ''}
         ${showIndustry && u.industry ? `<span class="tag-chip">${escHtml(u.industry)}</span>` : ''}
         ${showInterest && u.interest ? u.interest.split(',').map(s => s.trim()).filter(Boolean).map(s => `<span class="tag-chip">${escHtml(s)}</span>`).join('') : ''}
         ${showPlaylist && playlistByUuid[u.uuid] ? `<a href="${escHtml(playlistByUuid[u.uuid])}" target="_blank" rel="noopener" class="tag-chip gold" style="text-decoration:none;">🎵 플리 열기</a>` : ''}
@@ -3153,7 +3154,10 @@ function renderMpList() {
     const genderLabel = (u.gender === 'M' || u.gender === 'male') ? '남'
                       : (u.gender === 'F' || u.gender === 'female') ? '여' : '';
     const byStr = u.birth_year ? formatBirthYear(u.birth_year, state.birthYearFormat || 'exact') : '';
-    const meta = [genderLabel, byStr, u.mbti].filter(Boolean).join(' · ');
+    // T-26d: mp-list 도 display_fields 따라 mbti 노출 결정.
+    const dfMp = state.displayFields || ['birth_year','region','industry','interest'];
+    const mbtiVal = dfMp.includes('mbti') ? u.mbti : '';
+    const meta = [genderLabel, byStr, mbtiVal].filter(Boolean).join(' · ');
     // 본인은 강퇴 비활성 → '나' 라벨, 그 외는 강퇴 버튼 (renderApprovedList 의 kickUser 재사용)
     const isSelf = u.uuid === state.uuid;
     const actionHtml = isSelf
