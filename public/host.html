@@ -1973,8 +1973,9 @@
         <div id="stat-login-hint" class="stat-login-hint" hidden>다른 기기에서도 누적 유지하려면 <a href="#" id="stat-login-link">로그인</a></div>
       </div>
       -->
-      <!-- 2026-04-22: 같은 자리에 소개(intro) 질문 결과 요약 위젯 준비 슬롯. JS 가 채울 때까지 숨김. -->
-      <div id="host-intro-summary" class="host-stats" hidden></div>
+      <!-- 2026-04-22: 호스트 누적 실적 있던 자리에 lazyPromptCard(프로필 채우기) 배치 — 사용자 요청.
+           기존 panel-intro 내부 위치는 제거하고 상단바 qr-side 로 이동. -->
+      <div id="lazyPromptCard" hidden></div>
     </div>
     <!-- 사이드바 액션 버튼들은 상단 [📋 모임장 도구] 드롭다운으로 이전됨. 코드 보존(hidden) — 호환·접근성. -->
     <button type="button" id="qr-expand-btn" onclick="openQRModal()" aria-label="QR 크게 보기" hidden>🔍 QR 크게 보기</button>
@@ -2038,8 +2039,7 @@
 
     <!-- INTRO -->
     <div class="panel active" id="panel-intro">
-      <!-- T-26 (2026-04-22): 호스트 lazy prompt — couples + participant + room_members 가입 후 미입력 프로필 수집. -->
-      <div id="lazyPromptCard" hidden></div>
+      <!-- 2026-04-22: lazyPromptCard 는 상단 qr-side 로 이동 (사용자 요청). 이 자리는 placeholder. -->
       <div id="profile-carousel"></div>
       <!-- 모바일 전용 접이식 참가자 리스트 (PC 에서는 profile-carousel 사용) -->
       <div id="mp-list-wrap" data-open="true" hidden>
