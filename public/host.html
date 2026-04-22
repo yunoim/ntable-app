@@ -2799,22 +2799,23 @@
       </div>
     </section>
 
-    <!-- Step 3: 출생연도 + MBTI -->
+    <!-- Step 3: 출생연도 + MBTI — 둘 다 선택 필드. 비워두면 null 저장, 버튼 하나로 진행. -->
     <section class="nt-sheet-step" data-step="3" hidden>
       <h2 class="nt-sheet-title" data-copy="onboarding.step3_title">마지막 한 가지만요</h2>
-      <p class="nt-sheet-subcopy" data-copy="onboarding.step3_subcopy">출생연도·MBTI는 아이스브레이커용이에요.</p>
+      <p class="nt-sheet-subcopy" data-copy="onboarding.step3_subcopy">출생연도·MBTI는 아이스브레이커용이에요. (선택)</p>
       <div class="nt-sheet-grid-2">
         <div>
-          <label for="nt-onb-birth">출생연도</label>
+          <label for="nt-onb-birth">출생연도 <span style="color:var(--text-dim);font-weight:400;">(선택)</span></label>
           <select id="nt-onb-birth"><option value="">선택</option></select>
         </div>
         <div>
-          <label for="nt-onb-mbti">MBTI</label>
+          <label for="nt-onb-mbti">MBTI <span style="color:var(--text-dim);font-weight:400;">(선택)</span></label>
           <select id="nt-onb-mbti"><option value="">선택</option></select>
         </div>
       </div>
+      <!-- 2026-04-23: 건너뛰기 버튼 제거 — 두 select 가 이미 '선택' 옵션 기본이라 비워둔 채로도 진행 가능.
+           '저장하고 시작' 하나로 통일. -->
       <div class="nt-sheet-actions">
-        <button type="button" class="nt-sheet-btn nt-sheet-btn-ghost" id="nt-onb-skip-3" data-copy="onboarding.skip_btn">건너뛰기</button>
         <button type="button" class="nt-sheet-btn nt-sheet-btn-primary" id="nt-onb-save-3" data-copy="onboarding.save_btn">저장하고 시작</button>
       </div>
     </section>
@@ -3245,8 +3246,8 @@ async function ensureHostJoinedForCouples(myMember) {
     if (skip2) skip2.onclick = () => { data.gender = ''; showStep(3); };
     continue2.onclick = () => showStep(3);
 
-    // Step 3
-    skip3.onclick = () => { data.birth_year = ''; data.mbti = ''; finish(); };
+    // Step 3 — skip3 제거 (2026-04-23). null 가드로 기존 호출부 호환.
+    if (skip3) skip3.onclick = () => { data.birth_year = ''; data.mbti = ''; finish(); };
     save3.onclick = () => {
       data.birth_year = birthSel.value || '';
       data.mbti = mbtiSel.value || '';
