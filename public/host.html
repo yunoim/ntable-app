@@ -3441,6 +3441,12 @@ const HOST_LAZY_FIELD_DEFS = {
 function renderHostLazyPrompt() {
   const card = document.getElementById('lazyPromptCard');
   const nudge = document.getElementById('nt-lobby-nudge');
+  // 2026-04-23 사용자 요청: 호스트 대기실의 '프로필 채우기' nudge·lazy 카드 완전 비노출.
+  //   대기실에서 프로필 수정은 ⋮ 더보기 → '내 정보 수정' 경로로만 접근.
+  if (card) card.hidden = true;
+  if (nudge) nudge.style.display = 'none';
+  return;
+  // ---- 기존 로직 (남겨둠) — 재활성화 시 위 early return 만 제거 ----
   if (!card) return;
   const pack = state.packDefaults || {};
   // T-26e (2026-04-22): couples 전용 → 모든 participant 호스트로 일반화.
@@ -5673,11 +5679,22 @@ async function openMyInfo() {
   const modal = document.getElementById('my-info-modal');
   modal.style.display = 'flex';
   _miEditMode = false;
-  document.getElementById('mi_edit_btn').textContent = '✎ 수정하기';
+  // 2026-04-23: 게스트 profileEditModal 과 동일 UX — 열자마자 편집 모드로 시작.
+  //  - 타이틀 '✎ 프로필 수정' + 부제 '나를 표현하는 정보를 편집해요'
+  //  - '✎ 수정하기' 토글 버튼 숨김 (편집 모드 고정)
+  //  - loadMiProfile 로 view HTML 렌더된 직후 toggleMiEdit() 자동 호출해 편집 필드 즉시 노출
+  const titleEl = document.getElementById('mi_modal_title');
+  const subEl = document.getElementById('mi_modal_sub');
+  const editBtnEl = document.getElementById('mi_edit_btn');
+  if (titleEl) titleEl.textContent = '✎ 프로필 수정';
+  if (subEl) subEl.textContent = '나를 표현하는 정보를 편집해요';
+  if (editBtnEl) editBtnEl.style.display = 'none';
   document.getElementById('mi_edit_status').textContent = '';
   // 계정 연동 영역 동기화
   await renderMiAccount();
   await loadMiProfile();
+  // 편집 모드 자동 진입 (이미 on 이면 skip)
+  if (!_miEditMode && typeof toggleMiEdit === 'function') toggleMiEdit();
 }
 function closeMyInfo() { document.getElementById('my-info-modal').style.display = 'none'; }
 
