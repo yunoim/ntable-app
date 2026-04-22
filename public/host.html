@@ -1973,29 +1973,7 @@
     margin-bottom: 14px;
   }
 
-  /* 공유 버튼 행 — 3개 균등 */
-  .nt-share-row {
-    display: none;
-    gap: 8px;
-    margin-top: 14px;
-  }
-  .nt-share-row .nt-share-btn {
-    flex: 1;
-    min-height: 44px;
-    display: inline-flex; align-items: center; justify-content: center;
-    gap: 6px;
-    background: var(--surface-base);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    color: var(--text);
-    font-family: inherit;
-    font-size: 12.5px;
-    font-weight: 500;
-    cursor: pointer;
-    padding: 10px 6px;
-    transition: border-color 0.18s, color 0.18s;
-  }
-  .nt-share-row .nt-share-btn:hover { border-color: var(--gold-border); color: var(--gold-light); }
+  /* .nt-share-row 폐기 (2026-04-22) — QR 탭 시 확대 모달에 동일 기능 있어 중복. DOM 도 삭제됨. */
 
   /* Sticky 하단 액션 바 - 대기실 전용 */
   .nt-sticky-bottom {
@@ -2304,12 +2282,6 @@
     body.tab-intro #room-code { display: none; }
     body.tab-intro #mobile-more-slot { display: none; }
 
-    /* 공유 버튼 행 활성화 */
-    body.tab-intro .nt-share-row {
-      display: flex;
-      padding: 0 16px 14px;
-    }
-
     /* Sticky 하단 — 대기실 (intro) 에서만 action-bar 를 fixed 로 승격 + nudge 를 위에 붙임 */
     body.tab-intro #action-bar {
       position: fixed;
@@ -2335,7 +2307,6 @@
   body:not(.tab-intro) .nt-lobby-eyebrow,
   body:not(.tab-intro) .nt-lobby-eyebrow-title,
   body:not(.tab-intro) .nt-lobby-topbar,
-  body:not(.tab-intro) .nt-share-row,
   body:not(.tab-intro) #nt-lobby-nudge,
   body:not(.tab-intro) .nt-sticky-bottom {
     display: none !important;
@@ -2345,7 +2316,6 @@
     .nt-lobby-topbar,
     .nt-lobby-eyebrow,
     .nt-lobby-eyebrow-title,
-    .nt-share-row,
     #nt-lobby-nudge {
       display: none !important;
     }
@@ -2425,12 +2395,8 @@
     <button type="button" id="sidebar-end-btn" class="sidebar-end-btn" onclick="closeRoom()" hidden>🛑 모임 종료</button>
   </div>
 
-  <!-- §4 대기실 공유 버튼 행 (모바일 · tab-intro 전용) -->
-  <div class="nt-share-row" data-intro-only>
-    <button type="button" class="nt-share-btn" onclick="copyRoomLinkToast()" aria-label="링크 복사">🔗 <span data-copy="lobby.copy_link">링크 복사</span></button>
-    <button type="button" class="nt-share-btn" onclick="kakaoShare()" aria-label="카카오톡 공유">💬 <span data-copy="lobby.share">공유</span></button>
-    <button type="button" class="nt-share-btn" onclick="openQRModal()" aria-label="QR 크게 보기">🔍 <span data-copy="lobby.zoom">크게</span></button>
-  </div>
+  <!-- §4 대기실 공유 버튼 행 제거 (2026-04-22 사용자 요청) — QR 이미지 탭 시 뜨는 확대 모달에
+       이미 동일 기능(링크 복사·카카오 공유) 있어 중복 UX. QR 자체가 primary 진입점. -->
   <div id="waiting-section" hidden>
     <!-- 자동 입장 (2026-04-19) — 승인 절차 폐지. 전체 섹션 hidden (2026-04-21) — 참가자 UI 는 intro panel 의 #mp-list-wrap / #profile-carousel 로 일원화. -->
     <div id="waiting-area" hidden>
