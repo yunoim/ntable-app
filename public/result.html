@@ -722,8 +722,11 @@
     .insta-reveal { font-size: 20px; }
   }
 
-  /* 2026-04-22: 인스타 공유·교환·이미지 저장 관련 UI 전체 비활성화 (사용자 요청 — 작동 안 함).
-     NOTE: #share-card 는 성향 분석 메인 카드라 제외. #couple-card-capture 는 오프스크린 캡처 타깃. */
+  /* 2026-04-22 · 2026-04-23 개정: 인스타 교환만 숨김.
+     각 결과 박스(성향분석·매칭·탐구)의 이미지 저장/공유 버튼은 노출 유지.
+     기존에 .share-actions / #save-image-btn / #insta-share-btn 까지 숨겼던 이유는
+     "작동 안 함" 이었으나, 2026-04-23 saveElementAsImage/shareElementAsImage 가
+     각 카드별로 작동하므로 표시 규칙 복귀. */
   #insta-exchange-card,
   #insta-exchange-btn,
   #insta-btn,
@@ -731,10 +734,7 @@
   #insta-result,
   .insta-btn,
   .insta-reveal,
-  #save-image-btn,
-  #insta-share-btn,
   #couple-card-share-btn,
-  .share-actions,
   #couple-card-capture {
     display: none !important;
   }
@@ -990,23 +990,22 @@
             // 후기 연결 투표 상호 지명 — 내가 pair 에 포함되면 섹션 재조회
             const involved = (msg.a && msg.a.uuid === uuid) || (msg.b && msg.b.uuid === uuid);
             if (involved) refreshConnectionMutuals();
-          } else if (msg.type === 'next_room_pending') {
-            // 2026-04-23: couples '한번 또하기' 양쪽 동의 — 상대가 먼저 눌렀을 때.
-            // requesters 안에 내 uuid 있으면 양쪽 다 대기 중(새 방 생성 진행) — 아니면 partner-waiting.
+          }
+          /* 2026-04-23 비활성 — couples '한번 또하기' 양쪽 동의 WS 흐름. '다른 모임 열기' 로 대체.
+          else if (msg.type === 'next_room_pending') {
             const rqs = Array.isArray(msg.requesters) ? msg.requesters : [];
             if (!rqs.includes(uuid)) {
               setNextRoomBtn('partner-waiting');
             }
           } else if (msg.type === 'next_room_ready') {
-            // 새 방 생성 완료 — 자동 redirect.
             if (msg.new_room_code) {
               setNextRoomBtn('ready');
-              // host 이면 /room/CODE/host, 게스트이면 /room/CODE
               const isHost = window._isHostView === true;
               const path = isHost ? `/room/${msg.new_room_code}/host` : `/room/${msg.new_room_code}`;
               setTimeout(() => { location.href = path; }, 400);
             }
           }
+          */
         } catch (_) {}
       };
       _ws.onclose = () => { setTimeout(connectResultWs, 5000); };
@@ -1242,20 +1241,35 @@
       window._isHostView = !!(data.host_uuid && data.host_uuid === uuid);
 
       // T-B0-14 (2026-04-22): 다음 모임 CTA pack 별 라벨·링크 분기
+      // 2026-04-23 (v2): couples '한번 또하기' 양쪽 동의 흐름이 실사용에서 작동 안 하던 이슈 — 주석 처리.
+      //   해당 자리는 '다른 모임 열기'(fresh /create, 팩 미지정)로 대체.
+      //   requestNextRoom / setNextRoomBtn 함수 정의는 유지(향후 재설계 시 재사용).
       try {
         const nextCta = document.getElementById('next-room-cta');
         if (nextCta) {
           const NEXT_BY_PACK = {
             'playlist-share': '🎵 다음 플리 공유회 열기',
-            'couples':        '🔁 한번 또하기',
+            // 'couples':        '🔁 한번 또하기',  // 2026-04-23 비활성 — 아래 '다른 모임 열기' 로 대체
             'dating':         '💫 다음 소개팅 열기',
             'teambuilding':   '💼 다음 팀빌딩 열기',
             'icebreaker':     '🤝 다음 모임 열기',
           };
-          nextCta.textContent = NEXT_BY_PACK[data.pack_id] || '✨ 다음 모임 열기';
-          // 2026-04-23: couples 는 '한번 또하기' 양쪽 동의 흐름 — href 대신 JS 클릭 핸들러로 처리.
-          //   href='javascript:void(0)' 은 CSP/브라우저마다 blocked 되는 케이스 있음 → '#' + preventDefault 로.
-          //   onclick 할당은 재호출 시 중복 핸들러 방지 (loadResult 가 여러 번 호출돼도 안전).
+          if (data.pack_id === 'couples') {
+            nextCta.textContent = '다른 모임 열기';
+            nextCta.href = '/create';
+            // onclick 이전 할당분 제거 (loadResult 재호출 대비)
+            nextCta.onclick = null;
+            nextCta.removeAttribute('role');
+            // 아래 보조 링크 '다른 모임 열기'(home-link-wrap 하단) 는 couples 에서 중복이라 숨김
+            try {
+              const dup = document.querySelector('#home-link-wrap a[href="/create"]:not(#next-room-cta)');
+              if (dup) dup.style.display = 'none';
+            } catch (_) {}
+          } else {
+            nextCta.textContent = NEXT_BY_PACK[data.pack_id] || '✨ 다음 모임 열기';
+            nextCta.href = data.pack_id ? `/create?pack=${encodeURIComponent(data.pack_id)}` : '/create';
+          }
+          /* 2026-04-23 비활성 — couples 양쪽 동의 흐름
           if (data.pack_id === 'couples') {
             nextCta.setAttribute('role', 'button');
             nextCta.href = '#';
@@ -1265,9 +1279,8 @@
               if (typeof requestNextRoom === 'function') requestNextRoom();
               return false;
             };
-          } else {
-            nextCta.href = data.pack_id ? `/create?pack=${encodeURIComponent(data.pack_id)}` : '/create';
           }
+          */
         }
       } catch (_) {}
 
