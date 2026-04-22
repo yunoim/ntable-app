@@ -1287,12 +1287,10 @@
       if (!couplePartnerUuid && isCouplesPack && data.couple_partner_uuid) {
         couplePartnerUuid = data.couple_partner_uuid;
       }
-      const coupleBtnHtml = couplePartnerUuid ? `
-        <div class="share-actions" style="margin-top:16px;">
-          <button type="button" class="share-btn" onclick="generateCoupleCard('save')" aria-label="커플 카드 이미지 저장">📷 이미지 저장</button>
-          <button type="button" class="share-btn outline" onclick="generateCoupleCard('share')" aria-label="커플 카드 공유하기">📸 공유하기</button>
-        </div>
-      ` : '';
+      // 2026-04-23: couples partner 유무와 무관하게 match-content 박스 하단에 이미지 저장·공유
+      //   제공. generateCoupleCard 는 partner 있을 때만 off-screen 전용 카드 생성이라 무반응.
+      //   이제 일반 saveElementAsImage/shareElementAsImage 로 현재 match-content 전체 캡처.
+      const coupleBtnHtml = '';
 
       // 페이지 2 카드 타이틀 팩별 오버라이드 (pack_defaults.labels.page2_card_title)
       const p2Title = data.pack_defaults && data.pack_defaults.labels && data.pack_defaults.labels.page2_card_title;
@@ -1372,6 +1370,21 @@
               <div class="match-fallback-title">상대를 찾을 수 없어요</div>
               <div class="match-fallback-text">함께한 상대 정보가 아직 등록되지 않았어요.</div>
             </div>`;
+        }
+        // 2026-04-23: couples match-content 하단 공유 버튼 — partner 유무와 무관하게 항상 노출.
+        //   html2canvas 로 match-content 전체 캡처해 이미지 저장/공유.
+        if (matchEl) {
+          const mShare = document.createElement('div');
+          mShare.className = 'share-actions';
+          mShare.style.cssText = 'display:flex;gap:8px;margin-top:16px;';
+          mShare.innerHTML = `
+            <button type="button" class="share-btn" aria-label="이미지 저장" style="flex:1;padding:12px;background:var(--gold);color:var(--navy);border:none;border-radius:10px;font-family:inherit;font-weight:700;cursor:pointer;">📷 이미지 저장</button>
+            <button type="button" class="share-btn outline" aria-label="공유하기" style="flex:1;padding:12px;background:transparent;color:var(--gold-light);border:1px solid var(--gold-border);border-radius:10px;font-family:inherit;font-weight:600;cursor:pointer;">📸 공유하기</button>
+          `;
+          matchEl.appendChild(mShare);
+          const [mSave, mShareBtn] = mShare.querySelectorAll('button');
+          mSave.addEventListener('click', () => saveElementAsImage('match-content', '커플-케미'));
+          mShareBtn.addEventListener('click', () => shareElementAsImage('match-content', '커플-케미'));
         }
       } else {
       const mutualHtml = mutualPairs.length > 0 ? `

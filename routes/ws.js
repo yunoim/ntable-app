@@ -121,7 +121,11 @@ function init(server) {
         ws.close(4001, 'Room not found');
         return;
       }
-      if (roomResult.rows[0].status === 'closed') {
+      // 2026-04-23: closed 방도 WS 허용 — 결과 페이지에서 '한번 또하기' 양쪽 동의
+      //   broadcast(next_room_pending/ready) 및 insta/connection mutual 이벤트 수신 필요.
+      //   closed 방은 vote/state 같은 진행 이벤트 자체가 발생 안 하므로 보안상 무해.
+      //   user uuid 는 아래에서 room_members 기준으로 별도 검증 (User not found).
+      if (false && roomResult.rows[0].status === 'closed') {
         ws.close(4005, 'Room closed');
         return;
       }
