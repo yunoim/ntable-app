@@ -32,12 +32,12 @@
     text-wrap: pretty;
   }
 
-  /* Header — 44px 고정, 로고 + 로그인 pill */
+  /* Header — 로고만 (44px 고정) */
   .nt-top {
     height: 44px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     flex-shrink: 0;
   }
   .nt-top .brand {
@@ -49,20 +49,8 @@
     letter-spacing: 0.04em;
     text-decoration: none;
   }
-  .nt-top .login-pill {
-    font-size: 12px;
-    font-family: var(--font-body);
-    color: var(--text-muted);
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-pill);
-    padding: 6px 12px;
-    cursor: pointer;
-    text-decoration: none;
-  }
-  .nt-top .login-pill:hover { color: var(--gold-light); border-color: var(--gold-border); }
 
-  /* Main container */
+  /* Shell */
   .nt-shell {
     flex: 1;
     display: flex;
@@ -70,157 +58,65 @@
     width: 100%;
     max-width: 420px;
     margin: 0 auto;
-    padding-top: 36px;
+    padding-top: 40px;
   }
 
   /* Hero */
-  .nt-eyebrow {
+  .nt-hero-title {
     font-family: var(--font-body);
-    font-weight: 700;
-    font-size: 13px;
-    color: var(--gold);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-bottom: 16px;
-  }
-  .nt-title {
-    font-family: var(--font-body);
-    font-weight: 700;
-    font-size: 34px;
-    line-height: 1.12;
-    letter-spacing: -0.03em;
+    font-weight: 800;
+    font-size: 30px;
+    line-height: 1.18;
+    letter-spacing: -0.02em;
     color: var(--white);
     text-wrap: balance;
   }
-  .nt-title em {
-    font-family: var(--font-heading);
-    font-style: italic;
-    color: var(--gold);
-    font-weight: 600;
-    /* 세리프·이탤릭 강조. 앞뒤 공간 살짝 */
-    margin: 0 0.04em;
-  }
-  .nt-desc {
-    margin-top: 18px;
-    font-size: 14px;
+  .nt-hero-sub {
+    margin-top: 14px;
+    font-size: 13px;
     color: var(--text-muted);
-    line-height: 1.55;
+    line-height: 1.6;
   }
-
-  /* Spacer between hero & CTA */
-  .nt-spacer { flex: 1; min-height: 28px; }
-
-  /* Primary CTA */
-  .nt-cta {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    width: 100%;
-    min-height: 54px;
-    padding: 16px 20px;
-    background: linear-gradient(135deg, var(--gold), #a07828);
-    color: var(--navy);
-    border: none;
-    border-radius: 14px;
-    font-family: var(--font-body);
-    font-size: 16px;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-    cursor: pointer;
-    box-shadow: 0 8px 22px rgba(212,168,67,0.28);
-    transition: transform 0.15s, box-shadow 0.2s;
-    text-decoration: none;
-  }
-  .nt-cta:hover { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(212,168,67,0.38); }
-  .nt-cta:active { transform: scale(0.98); }
-  .nt-cta .chev { font-size: 16px; line-height: 1; margin-top: 1px; }
-
-  /* Divider with label */
-  .nt-divider {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 18px 0 12px;
-  }
-  .nt-divider::before,
-  .nt-divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
-  .nt-divider span {
-    font-size: 11px;
-    color: var(--text-dim);
-    letter-spacing: 0.04em;
-  }
-
-  /* Join code row (no card wrapper) */
-  .nt-join-row {
-    display: flex;
-    gap: 8px;
-    align-items: stretch;
-  }
-  .nt-join-input {
-    flex: 1;
-    min-width: 0;
-    padding: 14px 16px;
-    background: var(--surface-2, #1a2442);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    color: var(--white);
-    font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-    font-size: 18px;
-    font-weight: 600;
-    letter-spacing: 0.28em;
-    text-align: center;
-    text-transform: uppercase;
-    outline: none;
-    transition: border-color 0.18s;
-  }
-  .nt-join-input:focus { border: 1.5px solid var(--gold); padding: 13.5px 15.5px; }
-  .nt-join-input::placeholder { color: var(--text-dim); letter-spacing: 0.28em; }
-  .nt-join-btn {
-    flex-shrink: 0;
-    padding: 0 20px;
-    min-height: 52px;
-    background: transparent;
-    border: 1px solid var(--gold-border);
-    border-radius: 12px;
-    color: var(--gold-light);
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.18s, border-color 0.18s, color 0.18s, box-shadow 0.18s;
-  }
-  .nt-join-btn:disabled { opacity: 0.55; cursor: not-allowed; }
-  .nt-join-btn:not(:disabled).ready {
-    background: linear-gradient(135deg, var(--gold), #a07828);
-    color: var(--navy);
-    border-color: transparent;
-    box-shadow: 0 6px 18px rgba(212,168,67,0.28);
-    font-weight: 700;
-  }
+  .nt-role-section { margin-top: 30px; }
 
   /* Footer */
   .nt-foot {
-    margin-top: 26px;
+    margin-top: auto;
+    padding-top: 26px;
     text-align: center;
     font-size: 11px;
     color: var(--text-dim);
     line-height: 1.6;
-    padding-bottom: 6px;
   }
   .nt-foot a { color: inherit; text-decoration: none; }
   .nt-foot a:hover { color: var(--text-muted); }
 
+  /* Join code modal — 기존 modal primitive 재사용 위에 input 스타일 추가 */
+  .jc-input {
+    width: 100%;
+    padding: 16px 18px;
+    background: var(--surface-sunk);
+    border: 1px solid var(--input-border);
+    border-radius: 12px;
+    color: var(--white);
+    font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.3em;
+    text-align: center;
+    text-transform: uppercase;
+    outline: none;
+    transition: border-color 0.18s, background 0.18s;
+  }
+  .jc-input:focus { border-color: var(--gold); background: var(--surface-base); }
+  .jc-input::placeholder { color: var(--text-dim); letter-spacing: 0.3em; }
+  .jc-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+  .jc-actions .btn { min-width: 84px; }
+
   @media (max-width: 360px) {
-    .nt-title { font-size: 30px; }
+    .nt-hero-title { font-size: 26px; }
   }
 
-  /* Focus visible */
   button:focus-visible, input:focus-visible, a:focus-visible {
     outline: 2px solid var(--gold);
     outline-offset: 2px;
@@ -232,46 +128,43 @@
 
 <header class="nt-top">
   <a href="/" class="brand" aria-label="ntable 홈">ntable</a>
-  <!-- 로그인 pill 은 OAuth 비활성화로 숨김(2026-04-22). 레이아웃 균형용 자리만 남겨둠. -->
-  <span aria-hidden="true" style="visibility:hidden;font-size:12px;">&nbsp;</span>
 </header>
 
 <main class="nt-shell">
   <section class="nt-hero" data-twe>
-    <div class="nt-eyebrow" data-copy="home.eyebrow">QR 하나로 시작</div>
-    <h1 class="nt-title">
-      <span data-copy="home.hero_line1">어색함 없이</span><br>
-      <em data-copy="home.hero_line2_emph">빠르게</em><span data-copy="home.hero_line2_suffix"> 친해지는 자리</span>
+    <h1 class="nt-hero-title">
+      <span data-copy="home.role_title_line1">오늘은 어떤</span><br>
+      <span data-copy="home.role_title_line2">역할인가요?</span>
     </h1>
-    <p class="nt-desc">
-      <span data-copy="home.hero_desc_line1">모임장은 새 자리를 열고,</span><br>
-      <span data-copy="home.hero_desc_line2">참가자는 QR이나 코드로 들어와요.</span>
+    <p class="nt-hero-sub">
+      <span data-copy="home.role_sub_line1">먼저 골라주시면 딱 필요한 것만</span><br>
+      <span data-copy="home.role_sub_line2">보여드려요.</span>
     </p>
   </section>
 
-  <div class="nt-spacer"></div>
+  <section class="nt-role-section" aria-label="역할 선택">
+    <button type="button" class="role-card role-card-host" id="roleHostBtn" aria-label="모임을 열고 싶어요">
+      <div class="role-card-row">
+        <span class="role-card-icon" aria-hidden="true" data-copy="home.role_host_icon">✨</span>
+        <div class="role-card-body">
+          <div class="role-card-title" data-copy="home.role_host_label">모임을 열고 싶어요</div>
+          <div class="role-card-desc" data-copy="home.role_host_desc">템플릿 고르고 QR 공유 · 진행은 앱이 대신</div>
+        </div>
+        <span class="role-card-chev" aria-hidden="true">›</span>
+      </div>
+    </button>
 
-  <button type="button" class="nt-cta" id="openRoomBtn" aria-label="새 모임 열기">
-    <span data-copy="home.cta_primary">새 모임 열기</span>
-    <span class="chev" aria-hidden="true">›</span>
-  </button>
-
-  <div class="nt-divider"><span data-copy="home.divider_label">참여 코드를 받았다면</span></div>
-
-  <div class="nt-join-row" id="guestSection">
-    <input
-      type="text"
-      id="joinCodeInput"
-      class="nt-join-input"
-      maxlength="6"
-      placeholder="ABC123"
-      autocapitalize="characters"
-      autocomplete="off"
-      aria-label="참여 코드 6자리"
-      inputmode="latin"
-    />
-    <button type="button" id="joinCodeBtn" class="nt-join-btn" disabled data-copy="home.join_code_btn">입장</button>
-  </div>
+    <button type="button" class="role-card role-card-guest" id="roleGuestBtn" aria-label="초대받아 들어가요">
+      <div class="role-card-row">
+        <span class="role-card-icon" aria-hidden="true" data-copy="home.role_guest_icon">🎫</span>
+        <div class="role-card-body">
+          <div class="role-card-title" data-copy="home.role_guest_label">초대받아 들어가요</div>
+          <div class="role-card-desc" data-copy="home.role_guest_desc">QR 스캔 또는 6자리 코드 입력</div>
+        </div>
+        <span class="role-card-chev" aria-hidden="true">›</span>
+      </div>
+    </button>
+  </section>
 
   <div class="nt-foot">
     <a href="https://ntable.kr/privacy.html">개인정보처리방침</a>
@@ -281,6 +174,30 @@
     © 2026 ntable
   </div>
 </main>
+
+<!-- 참여 코드 입력 모달 — role-card-guest 탭 시 활성 -->
+<div id="joinModal" hidden aria-hidden="true">
+  <div class="modal-backdrop" data-close-join></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="jcTitle">
+    <div class="cd-title" id="jcTitle" data-copy="home.role_modal_title">참여 코드 입력</div>
+    <div class="cd-body" data-copy="home.role_modal_sub">초대받은 6자리 코드를 넣어주세요.</div>
+    <input
+      type="text"
+      id="joinCodeInput"
+      class="jc-input"
+      maxlength="6"
+      placeholder="ABC123"
+      autocapitalize="characters"
+      autocomplete="off"
+      aria-label="참여 코드 6자리"
+      inputmode="latin"
+    />
+    <div class="jc-actions">
+      <button type="button" class="btn btn-ghost" data-close-join data-copy="home.role_modal_cancel">닫기</button>
+      <button type="button" class="btn btn-primary" id="joinCodeBtn" disabled data-copy="home.join_code_btn">입장</button>
+    </div>
+  </div>
+</div>
 
 <script>
 function ensureUuid() {
@@ -293,18 +210,7 @@ function ensureUuid() {
   }
   return uuid;
 }
-
 ensureUuid();
-
-document.getElementById('openRoomBtn').addEventListener('click', () => {
-  ensureUuid();
-  const next = new URLSearchParams(location.search).get('next');
-  if (next && /^\/room\/[A-Z0-9]{6}/.test(next)) {
-    location.href = next;
-  } else {
-    location.href = '/create';
-  }
-});
 
 // brand.json 로드 후 data-copy 치환
 if (typeof loadBrand === 'function') {
@@ -321,23 +227,47 @@ if (typeof loadBrand === 'function') {
   }
 })();
 
-// ?role=guest 로 진입하면 입력 포커스
-(() => {
-  try {
-    if (new URLSearchParams(location.search).get('role') !== 'guest') return;
-    const input = document.getElementById('joinCodeInput');
-    if (input) setTimeout(() => input.focus(), 300);
-  } catch (_) {}
-})();
+// ─── Host 카드 ────────────────────────────────────
+document.getElementById('roleHostBtn').addEventListener('click', () => {
+  ensureUuid();
+  // ?next=/room/CODE 가 있으면 해당 방으로 (기존 OAuth redirect 호환)
+  const next = new URLSearchParams(location.search).get('next');
+  if (next && /^\/room\/[A-Z0-9]{6}/.test(next)) {
+    location.href = next;
+  } else {
+    location.href = '/create';
+  }
+});
 
-// 참여 코드 입력: 6자리 되면 primary 골드로 승격
+// ─── Guest 모달 ───────────────────────────────────
+const joinModal = document.getElementById('joinModal');
 const joinInput = document.getElementById('joinCodeInput');
 const joinBtn = document.getElementById('joinCodeBtn');
+
+function openJoinModal() {
+  joinModal.hidden = false;
+  joinModal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => joinInput.focus(), 60);
+}
+function closeJoinModal() {
+  joinModal.hidden = true;
+  joinModal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('roleGuestBtn').addEventListener('click', openJoinModal);
+joinModal.querySelectorAll('[data-close-join]').forEach(el => {
+  el.addEventListener('click', closeJoinModal);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !joinModal.hidden) closeJoinModal();
+});
+
 joinInput.addEventListener('input', () => {
   joinInput.value = joinInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
   const ready = joinInput.value.length === 6;
   joinBtn.disabled = !ready;
-  joinBtn.classList.toggle('ready', ready);
 });
 joinBtn.addEventListener('click', () => {
   const code = joinInput.value.trim().toUpperCase();
@@ -348,6 +278,21 @@ joinBtn.addEventListener('click', () => {
 joinInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !joinBtn.disabled) joinBtn.click();
 });
+
+// ?role=guest 또는 ?code=XXXXXX 로 진입하면 자동으로 모달 오픈
+(() => {
+  try {
+    const qs = new URLSearchParams(location.search);
+    if (qs.get('role') === 'guest' || qs.get('code')) {
+      openJoinModal();
+      const preset = (qs.get('code') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+      if (preset) {
+        joinInput.value = preset;
+        joinInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+  } catch (_) {}
+})();
 </script>
 </body>
 </html>

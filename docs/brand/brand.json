@@ -1,7 +1,7 @@
 {
   "_comment": "ntable 카피 단일 소스. 하드코딩 방지용 참조 문서. 변경 시 docs/brand/ntable-brand-guide.md + Notion 원본도 동시 동기화.",
-  "_version": "1.2.0",
-  "_updated_at": "2026-04-22",
+  "_version": "1.3.0",
+  "_updated_at": "2026-04-23",
   "_applies_to": "ntable-app (app.ntable.kr) + ntable-landing (ntable.kr)",
 
   "name": "ntable",
@@ -111,8 +111,57 @@
     "cta_primary": "새 모임 열기",
     "divider_label": "참여 코드를 받았다면",
     "join_code_placeholder": "ABC123",
-    "join_code_btn": "입장"
+    "join_code_btn": "입장",
+
+    "role_title_line1": "오늘은 어떤",
+    "role_title_line2": "역할인가요?",
+    "role_sub_line1": "먼저 골라주시면 딱 필요한 것만",
+    "role_sub_line2": "보여드려요.",
+    "role_host_icon": "✨",
+    "role_host_label": "모임을 열고 싶어요",
+    "role_host_desc": "템플릿 고르고 QR 공유 · 진행은 앱이 대신",
+    "role_guest_icon": "🎫",
+    "role_guest_label": "초대받아 들어가요",
+    "role_guest_desc": "QR 스캔 또는 6자리 코드 입력",
+    "role_modal_title": "참여 코드 입력",
+    "role_modal_sub": "초대받은 6자리 코드를 넣어주세요.",
+    "role_modal_cancel": "닫기"
   },
+
+  "_home_role_policy": "role_* 키는 2026-04-23 홈 역할 분기 개편용 (login.html). 기존 eyebrow·hero_*·cta_primary·divider_label·join_code_* 는 하위 호환 및 transition 용으로 유지하되 신규 렌더링에서 사용 금지.",
+
+  "onboarding_guest_slim": {
+    "badge_time": "⚡ 10초",
+    "title_prefix": "어떤 ",
+    "title_emph": "얼굴",
+    "title_suffix": "로",
+    "title_line2": "들어갈까요?",
+    "sub_line1": "닉네임과 아이콘만 있으면 준비 끝.",
+    "sub_line2": "나머지는 대화하면서 천천히.",
+    "avatar_label": "아이콘 선택",
+    "nick_label": "닉네임",
+    "nick_placeholder": "예: 별빛, lemon, J",
+    "nick_hint": "2–8자 · 한글·영문 가능",
+    "privacy_row": "🔒 익명  ·  ⏱ 모임 후 30일 자동삭제",
+    "cta": "들어가기"
+  },
+
+  "_onboarding_slim_policy": "2026-04-23 게스트 온보딩 슬림 개편용. 닉네임+아바타 2필드만. 나머지(성별·출생연도·지역·MBTI·관심사·플리·인스타)는 guest.html 프로필 풍성도 prompt 로 점진 수집. onboarding.* 은 기존 다단계 위저드 전용 (edit 모드·legacy wizard_fields).",
+
+  "confirm": {
+    "kick_title": "{nick} 님을 내보낼까요?",
+    "kick_body": "다시 초대 전까진 입장할 수 없어요.",
+    "kick_confirm": "내보내기",
+    "leave_title": "모임에서 나갈까요?",
+    "leave_body": "다시 QR 스캔하면 재입장할 수 있어요.",
+    "leave_confirm": "나가기",
+    "end_title": "모임을 종료할까요?",
+    "end_body": "참가자들의 결과는 30일간 남고, 진행 중인 질문은 종료돼요.",
+    "end_confirm": "모임 종료",
+    "generic_cancel": "취소"
+  },
+
+  "_confirm_policy": "파괴적 액션(강퇴·나가기·종료) 2단계 다이얼로그 카피. title·body·confirm·cancel 4-key 세트. 템플릿 변수는 {nick} 등 중괄호. tone: 결과(되돌릴 수 없는 것) 먼저 분명히 알리고 실행어는 동사 원형.",
 
   "create": {
     "eyebrow": "새 모임",
