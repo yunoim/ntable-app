@@ -8,9 +8,11 @@
 <link rel="stylesheet" href="/styles/tokens.css">
 <link rel="stylesheet" href="/styles/components.css">
 <script src="/samsung-dark-warn.js" defer></script>
+<!-- 2026-04-22: OAuth/remember-me 비활성화 (사용자 요청 — admin 제외).
 <script src="/oauth-redirect.js"></script>
 <script src="/auth-header.js" defer></script>
 <script src="/remember-toggle.js" defer></script>
+-->
 <script src="/js/brand.js"></script>
 <title>ntable — 모임장 프레젠테이션</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2180,7 +2182,7 @@
     <h3 id="mi_modal_title" style="margin:0 0 4px;font-family: var(--font-heading);font-size:22px;color:var(--white);">👤 내 정보</h3>
     <div id="mi_modal_sub" style="font-size:12.5px;color:var(--text-muted);margin-bottom:18px;">현재 모임에 저장된 내 카드 정보입니다.</div>
 
-    <!-- 1. 계정 연동 -->
+    <!-- 2026-04-22: 계정 연동(OAuth·remember-me) 섹션 주석처리 (사용자 요청 — admin 제외).
     <div class="mi-section" style="margin-bottom:20px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
         <div style="font-size:11.5px;color:var(--gold);letter-spacing:0.1em;font-weight:700;">🔗 계정 연동</div>
@@ -2192,6 +2194,9 @@
       </div>
       <div id="mi_account_body" style="margin-top:8px;"></div>
     </div>
+    -->
+    <!-- host-stats 슬롯도 상단바에서 주석처리됨 — 아래 remember-slot 도 주석. -->
+    <style>#host-remember-slot { display: none !important; }</style>
 
     <!-- 2. 프로필 -->
     <div class="mi-section" style="margin-bottom:20px;padding-top:14px;border-top:1px dashed rgba(212,168,67,0.18);">

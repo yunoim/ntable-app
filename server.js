@@ -94,18 +94,19 @@ app.use('/api', surveyRouter);
 app.use('/api', aiRouter);
 app.use('/api', panelRouter);
 app.use('/api', adminAuthRouter);
-app.use('/api', userAuthRouter);
+// 2026-04-22: 사용자 OAuth(Kakao/Google) 라우트 비활성화 (사용자 요청 — admin OAuth 만 유지).
+// app.use('/api', userAuthRouter);
 
 // Page routes
-// OAuth 콜백 호환 wrapper — 카카오/Google 콘솔에 등록된 짧은 URI(/auth/...) 를 /api/auth/... 로 forward
-app.get('/auth/kakao/callback', (req, res) => {
-  const qs = new URLSearchParams(req.query).toString();
-  res.redirect('/api/auth/kakao/callback' + (qs ? '?' + qs : ''));
-});
-app.get('/auth/google/callback', (req, res) => {
-  const qs = new URLSearchParams(req.query).toString();
-  res.redirect('/api/auth/google/callback' + (qs ? '?' + qs : ''));
-});
+// 2026-04-22: 사용자 OAuth 콜백 호환 wrapper 도 비활성화.
+// app.get('/auth/kakao/callback', (req, res) => {
+//   const qs = new URLSearchParams(req.query).toString();
+//   res.redirect('/api/auth/kakao/callback' + (qs ? '?' + qs : ''));
+// });
+// app.get('/auth/google/callback', (req, res) => {
+//   const qs = new URLSearchParams(req.query).toString();
+//   res.redirect('/api/auth/google/callback' + (qs ? '?' + qs : ''));
+// });
 
 app.get('/room/:code/host', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'host.html'));
@@ -169,7 +170,8 @@ const server = http.createServer(app);
 wsRouter.init(server);
 adminRouter.init(require('./db').pool, wsRouter);
 adminAuthRouter.init(require('./db').pool);
-userAuthRouter.init(require('./db').pool);
+// 2026-04-22: 사용자 OAuth 비활성화.
+// userAuthRouter.init(require('./db').pool);
 
 const PORT = process.env.PORT || 8080;
 
