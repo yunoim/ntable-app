@@ -880,6 +880,17 @@
     max-height: calc(100vh - 48px);
     overflow-y: auto;
   }
+  /* 2026-04-23: couples 팩 프로필 수정 모달에서 관심사·플리링크·인스타그램 필드 완전 숨김.
+     JS 의 hidden 토글과 이중 방어 — body.pack-* CSS hook 활용 (CLAUDE.md 규약). */
+  body.pack-couples #editInterestLabel,
+  body.pack-couples #editInterest,
+  body.pack-couples #editPlaylistLabel,
+  body.pack-couples #editPlaylist,
+  body.pack-couples #editPlaylistHint,
+  body.pack-couples #editInstagramLabel,
+  body.pack-couples #editInstagram {
+    display: none !important;
+  }
   .profile-edit-card h3 {
     font-family: var(--font-heading);
     font-size: 22px;
