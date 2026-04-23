@@ -3927,7 +3927,10 @@ async function renderGuestExploreResult() {
       <h2 style="font-family: var(--font-heading);font-size:24px;color:#fff;text-align:center;margin-bottom:18px;">오늘의 질문 — 모아 보기</h2>
       <div id="guest-explore-list" style="font-size:13px;line-height:1.6;color:var(--text);">불러오는 중…</div>
     </div>
-    <button type="button" onclick="saveGuestExploreImage()" style="display:block;width:100%;margin-top:14px;padding:13px;background:transparent;color:#e8b84b;border:1px solid rgba(212,168,67,0.5);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">📷 사진으로 저장</button>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button type="button" onclick="saveGuestExploreImage()" style="flex:1;padding:13px;background:var(--gold,#e8b84b);color:#0a0f1e;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">📷 이미지 저장</button>
+      <button type="button" onclick="shareGuestExploreImage()" style="flex:1;padding:13px;background:transparent;color:#e8b84b;border:1px solid rgba(212,168,67,0.5);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">📸 공유하기</button>
+    </div>
   `;
   try {
     const r = await fetch(`/api/rooms/${STATE.roomCode}/explore-result`);
@@ -4001,6 +4004,30 @@ async function saveGuestExploreImage() {
   } catch (e) {
     console.error('save image fail', e);
     if (typeof toast === 'function') toast('이미지 저장 실패');
+  }
+}
+
+async function shareGuestExploreImage() {
+  if (typeof html2canvas === 'undefined') { if (typeof toast === 'function') toast('이미지 라이브러리 로딩 중…'); return; }
+  const card = document.getElementById('guest-explore-card');
+  if (!card) return;
+  try {
+    const canvas = await html2canvas(card, { backgroundColor: '#0e1628', scale: 2, logging: false });
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    const file = new File([blob], `ntable-오늘의-질문-${Date.now()}.png`, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: 'ntable', text: '오늘의 질문' }); } catch (_) { /* 사용자 취소 */ }
+    } else {
+      // Web Share API 미지원 → 이미지 저장 폴백
+      const link = document.createElement('a');
+      link.download = file.name;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      if (typeof toast === 'function') toast('공유 미지원 — 이미지로 저장했어요');
+    }
+  } catch (e) {
+    console.error('share image fail', e);
+    if (typeof toast === 'function') toast('공유 실패');
   }
 }
 

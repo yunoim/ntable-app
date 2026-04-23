@@ -4844,6 +4844,33 @@ async function saveExploreResultImage(targetSelector) {
   }
 }
 
+// 결과 카드 공유 (Web Share API, 폴백 저장)
+async function shareExploreResultImage(targetSelector) {
+  const card = document.querySelector(targetSelector);
+  if (!card) return;
+  if (typeof html2canvas === 'undefined') {
+    if (typeof toast === 'function') toast('이미지 라이브러리 로딩 중…');
+    return;
+  }
+  try {
+    const canvas = await html2canvas(card, { backgroundColor: '#0e1628', scale: 2, logging: false });
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    const file = new File([blob], `ntable-오늘의-질문-${Date.now()}.png`, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: 'ntable', text: '오늘의 질문' }); } catch (_) { /* 취소 */ }
+    } else {
+      const link = document.createElement('a');
+      link.download = file.name;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      if (typeof toast === 'function') toast('공유 미지원 — 이미지로 저장했어요');
+    }
+  } catch (e) {
+    console.error('share image fail', e);
+    if (typeof toast === 'function') toast('공유 실패');
+  }
+}
+
 function normGender(g) {
   if (!g) return null;
   const s = String(g).toLowerCase();
@@ -5014,7 +5041,8 @@ function renderClosingSubsteps(current) {
           <div id="explore-result-list" style="margin-top:12px;font-size:13px;color:var(--text);line-height:1.7;">불러오는 중…</div>
         </div>
         <div style="display:flex;gap:10px;margin-top:14px;">
-          <button type="button" class="csub-next-btn" style="flex:1;background:transparent;color:#e8b84b;border:1px solid rgba(212,168,67,0.5);" onclick="saveExploreResultImage('#explore-result-card')">📷 사진으로 저장</button>
+          <button type="button" class="csub-next-btn" style="flex:1;background:var(--gold,#e8b84b);color:#0a0f1e;border:none;font-weight:700;" onclick="saveExploreResultImage('#explore-result-card')">📷 이미지 저장</button>
+          <button type="button" class="csub-next-btn" style="flex:1;background:transparent;color:#e8b84b;border:1px solid rgba(212,168,67,0.5);" onclick="shareExploreResultImage('#explore-result-card')">📸 공유하기</button>
         </div>`;
       if (typeof loadAndRenderExploreResult === 'function') loadAndRenderExploreResult();
     }
