@@ -5943,6 +5943,17 @@ async function saveMiEdit() {
     status.textContent = '✓ 저장됐어요';
     status.style.color = 'var(--success)';
     _miEditMode = false;
+    // 2026-04-23 사용자 요청: 호스트가 닉네임·이모지 등 프로필 저장 완료 후 QR 확대 모달 자동 유도.
+    //   couples(2인 전용) 팩은 제외. 저장 피드백(0.9s) 보여주고 내 정보 모달 닫은 뒤 QR 모달 오픈.
+    try {
+      const packId = state.room && state.room.pack_id;
+      if (packId !== 'couples' && typeof openQRModal === 'function') {
+        setTimeout(() => {
+          try { closeMyInfo(); } catch (_) {}
+          setTimeout(() => openQRModal(), 150);
+        }, 900);
+      }
+    } catch (_) {}
     // T-B0-15: 저장 성공 시 요약 모드로 자동 복귀 + 제목·부제·버튼 라벨 동기화
     if (typeof _applyMiEditModeChrome === 'function') _applyMiEditModeChrome();
     else document.getElementById('mi_edit_btn').textContent = '✎ 수정하기';
