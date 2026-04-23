@@ -1586,11 +1586,11 @@
 <div id="mvpOverlay" hidden>
   <div class="mvp-card">
     <button type="button" class="mvp-close" onclick="closeMVPOverlay()" aria-label="닫기">✕</button>
-    <div class="mvp-label">🏆 오늘의 주인공</div>
+    <div class="mvp-label" id="mvpLabel">🏆 오늘의 주인공</div>
     <div class="mvp-photo" id="mvpPhoto"></div>
     <div class="mvp-name" id="mvpName"></div>
     <div class="mvp-sub" id="mvpSub"></div>
-    <button type="button" class="mvp-next-btn" onclick="closeMVPOverlay()">매칭 결과 보기 →</button>
+    <button type="button" class="mvp-next-btn" id="mvpNextBtn" onclick="closeMVPOverlay()">결과 보기 →</button>
   </div>
 </div>
 
@@ -2659,15 +2659,21 @@ function showMVPOverlay(mvp) {
   const photo = document.getElementById('mvpPhoto');
   const name = document.getElementById('mvpName');
   const sub = document.getElementById('mvpSub');
+  const labelEl = document.getElementById('mvpLabel');
+  const nextBtn = document.getElementById('mvpNextBtn');
   if (!overlay) return;
   const mvpUuid = mvp.uuid;
   const isMe = mvpUuid && mvpUuid === STATE.uuid;
   const photoData = mvpUuid && STATE.photos[mvpUuid];
-  photo.innerHTML = photoData ? `<img src="${escHtml(photoData)}" alt="">` : '🏆';
+  // playlist-share(베스트 플리) 팩: MVP 라벨·sub 문구 override. 다른 팩은 기본 "오늘의 주인공".
+  const isPlaylistPack = STATE.room && STATE.room.pack_id === 'playlist-share';
+  if (labelEl) labelEl.textContent = isPlaylistPack ? '🎵 오늘의 베스트 플리' : '🏆 오늘의 주인공';
+  // playlist-share 는 이후 매칭 단계가 없어 버튼을 "결과 보기"로 고정. 다른 팩은 best_match 단계로 이어짐.
+  if (nextBtn) nextBtn.textContent = isPlaylistPack ? '결과 보기 →' : '매칭 결과 보기 →';
+  photo.innerHTML = photoData ? `<img src="${escHtml(photoData)}" alt="">` : (isPlaylistPack ? '🎵' : '🏆');
   name.textContent = mvp.nickname + (isMe ? ' (나)' : '');
-  sub.textContent = (mvp.fi_count != null)
-    ? `투표 ${mvp.fi_count}표 — 오늘 가장 인상적인 사람`
-    : '오늘 가장 인상적인 사람';
+  const subTail = isPlaylistPack ? '오늘의 베스트 플리' : '오늘 가장 인상적인 사람';
+  sub.textContent = (mvp.fi_count != null) ? `투표 ${mvp.fi_count}표 — ${subTail}` : subTail;
   overlay.hidden = false;
 }
 
