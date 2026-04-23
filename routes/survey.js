@@ -461,7 +461,38 @@ router.get('/result', async (req, res) => {
       }
     } catch (_) {}
 
-    res.json({ match_nickname, match_uuid, match_emoji, fi_count, match_common, match_total_answered, match_common_picks, top_matches, participants, question_highlights, host_summary, mutual_pairs, pack_id, pack_defaults, couple_partner_uuid, mvp, host_uuid });
+    // playlist-share 팩: 전체 참여자 플리 목록 (result 카드 하이라이트용).
+    // object shape 유지 — Task 5(곡·아티스트 메타) 재개 시 title·author 컬럼만 확장하면 됨.
+    let playlists = null;
+    if (pack_id === 'playlist-share') {
+      try {
+        const plRows = await pool.query(
+          `SELECT rm.uuid,
+                  COALESCE(rm.nickname, u.nickname) AS nickname,
+                  COALESCE(rm.emoji, u.emoji) AS emoji,
+                  pl.url
+             FROM room_members rm
+             LEFT JOIN users u ON u.uuid = rm.uuid
+             LEFT JOIN playlist_links pl ON pl.room_id = rm.room_id AND pl.uuid = rm.uuid
+            WHERE rm.room_id = $1 AND pl.url IS NOT NULL`,
+          [room_id]
+        );
+        playlists = plRows.rows.map(r => {
+          let service = null;
+          try {
+            const host = new URL(r.url).hostname.toLowerCase();
+            if (/spotify\.com$/.test(host)) service = 'spotify';
+            else if (/music\.apple\.com$/.test(host)) service = 'apple';
+            else if (/music\.youtube\.com$/.test(host)) service = 'youtube_music';
+            else if (/(^|\.)youtube\.com$/.test(host) || /(^|\.)youtu\.be$/.test(host)) service = 'youtube';
+            else service = 'other';
+          } catch (_) { service = 'other'; }
+          return { uuid: r.uuid, nickname: r.nickname || '익명', emoji: r.emoji || null, url: r.url, service };
+        });
+      } catch (_) { playlists = []; }
+    }
+
+    res.json({ match_nickname, match_uuid, match_emoji, fi_count, match_common, match_total_answered, match_common_picks, top_matches, participants, question_highlights, host_summary, mutual_pairs, pack_id, pack_defaults, couple_partner_uuid, mvp, host_uuid, playlists });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'db error' });

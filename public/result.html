@@ -1312,41 +1312,24 @@
         if (t) t.textContent = p2Title;
       }
 
-      // playlist-share 팩: page 2 = 오늘의 베스트 플리 카드 (MVP 1위 + playlist_url CTA)
-      // (2026-04-22 QA: myplay 결과 페이지 상단 카드 교체)
+      // playlist-share 팩: page 2 = 오늘의 베스트 플리 카드 (MVP 1위) + 선곡표 + 모두의 플리 + 요약.
+      // couples renderCoupleLove 와 동형 구조 (match-frame + eyebrow + metric + highlights + summary)로
+      // 플리 공유회 컨셉에 맞춰 리네이밍 (2026-04-23).
       const isPlaylistPack = data.pack_id === 'playlist-share';
       if (isPlaylistPack) {
-        const mvp = data.mvp || null;
-        const urlRaw = mvp && mvp.playlist_url ? String(mvp.playlist_url) : '';
-        let host = '';
-        try { host = urlRaw ? new URL(urlRaw).hostname.toLowerCase() : ''; } catch (_) {}
-        const isSpotify = /spotify\.com$/.test(host) || /(^|\.)spotify\./.test(host);
-        const isApple = /music\.apple\.com$/.test(host);
-        const isYtMusic = /music\.youtube\.com$/.test(host);
-        const isYt = /(^|\.)youtube\.com$/.test(host) || /(^|\.)youtu\.be$/.test(host);
-        const svcLabel = isSpotify ? 'Spotify' : isApple ? 'Apple Music' : isYtMusic ? 'YouTube Music' : isYt ? 'YouTube' : '플리';
-        const svcIcon = isSpotify ? '🟢' : isApple ? '🍎' : (isYtMusic || isYt) ? '▶︎' : '🎵';
-        const urlEsc = escMatch(urlRaw);
-        const ctaHtml = urlRaw
-          ? `<a href="${urlEsc}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:12px 20px;background:linear-gradient(135deg,var(--gold),#a07828);color:var(--navy);border-radius:10px;font-family:inherit;font-weight:700;text-decoration:none;font-size:14px;">${svcIcon} ${escMatch(svcLabel)}에서 듣기 →</a>`
-          : `<div style="margin-top:14px;font-size:12px;color:var(--text-muted);">플리 링크가 아직 없어요</div>`;
-        if (mvp) {
-          const mvpEmoji = mvp.emoji ? escMatch(mvp.emoji) : '🎵';
-          matchEl.innerHTML = `
-            <div class="match-frame" style="padding:26px 22px;text-align:center;">
-              <div class="match-eyebrow">오늘 가장 많이 뽑힌 플리</div>
-              <div style="width:88px;height:88px;margin:14px auto 10px;border-radius:50%;background:rgba(212,168,67,0.1);border:1px solid var(--gold-border);display:flex;align-items:center;justify-content:center;font-size:44px;">${mvpEmoji}</div>
-              <div class="match-name">${escMatch(mvp.nickname || '익명')}</div>
-              <div class="match-sub">${mvp.fi_count || 0}표 득표</div>
-              ${ctaHtml}
-            </div>`;
-        } else {
-          matchEl.innerHTML = `
-            <div class="match-fallback-frame">
-              <div class="match-fallback-icon">🎵</div>
-              <div class="match-fallback-title">아직 집계되지 않았어요</div>
-              <div class="match-fallback-text">모임장이 베스트 플리 발표 단계로 진행하면<br>여기에 1위 플리가 표시돼요.</div>
-            </div>`;
+        matchEl.innerHTML = renderPlaylistShare(data);
+        // match-content 하단 공유 버튼 — couples 와 동일 패턴
+        if (matchEl) {
+          const pShare = document.createElement('div');
+          pShare.className = 'share-actions';
+          pShare.style.cssText = 'display:flex;gap:8px;margin-top:16px;';
+          pShare.innerHTML = `
+            <button type="button" class="share-btn" aria-label="이미지 저장" style="flex:1;padding:12px;background:var(--gold);color:var(--navy);border:none;border-radius:10px;font-family:inherit;font-weight:700;cursor:pointer;">📷 이미지 저장</button>
+            <button type="button" class="share-btn outline" aria-label="공유하기" style="flex:1;padding:12px;background:transparent;color:var(--gold-light);border:1px solid var(--gold-border);border-radius:10px;font-family:inherit;font-weight:600;cursor:pointer;">📸 공유하기</button>`;
+          matchEl.appendChild(pShare);
+          const [pSave, pShareBtn] = pShare.querySelectorAll('button');
+          pSave.addEventListener('click', () => saveElementAsImage('match-content', '플리공유회'));
+          pShareBtn.addEventListener('click', () => shareElementAsImage('match-content', '플리공유회'));
         }
         // 팩 정책상 매칭 섹션·mutuals 호출 없음 — 바로 다음 흐름으로.
       } else if (isCouplesPack) {
@@ -1862,6 +1845,103 @@
   });
 
   // ── 커플 연애 분석(couple_love) DOM ───────────────
+  // playlist-share(플리 공유회) 결과 카드 — couples renderCoupleLove 와 동형 구조 (2026-04-23).
+  //   blocks: Hero(MVP) · Selection(서비스 선곡표 분포) · All Playlists(모두의 플리) · Summary
+  //   Task 5(곡·아티스트 메타) 보류 상태 — playlist 객체에 title/author 추가되면 이 함수에서만 소비 확장.
+  function renderPlaylistShare(d) {
+    const esc = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const svcLabels = { spotify: 'Spotify', apple: 'Apple Music', youtube_music: 'YouTube Music', youtube: 'YouTube', other: '기타' };
+    const svcIcons = { spotify: '🟢', apple: '🍎', youtube_music: '▶︎', youtube: '▶︎', other: '🎵' };
+    function detectService(url) {
+      try {
+        const host = url ? new URL(url).hostname.toLowerCase() : '';
+        if (/spotify\.com$/.test(host)) return 'spotify';
+        if (/music\.apple\.com$/.test(host)) return 'apple';
+        if (/music\.youtube\.com$/.test(host)) return 'youtube_music';
+        if (/(^|\.)youtube\.com$/.test(host) || /(^|\.)youtu\.be$/.test(host)) return 'youtube';
+      } catch (_) {}
+      return 'other';
+    }
+
+    const mvp = d.mvp || null;
+    const playlists = Array.isArray(d.playlists) ? d.playlists : [];
+    const others = mvp ? playlists.filter(p => p.uuid !== mvp.uuid) : playlists.slice();
+
+    // ── Hero block — MVP(베스트 플리 주인공) ──
+    let heroHtml;
+    if (mvp) {
+      const mvpEmoji = esc(mvp.emoji || '🎵');
+      const mvpUrl = mvp.playlist_url || '';
+      const mvpSvc = detectService(mvpUrl);
+      const ctaHtml = mvpUrl
+        ? `<a href="${esc(mvpUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:12px 20px;background:linear-gradient(135deg,var(--gold),#a07828);color:var(--navy);border-radius:10px;font-family:inherit;font-weight:700;text-decoration:none;font-size:14px;">${svcIcons[mvpSvc]} ${esc(svcLabels[mvpSvc])}에서 듣기 →</a>`
+        : `<div style="margin-top:14px;font-size:12px;color:var(--text-muted);">플리 링크가 아직 없어요</div>`;
+      heroHtml = `
+        <div class="match-frame" style="padding:26px 22px;text-align:center;margin-bottom:16px;">
+          <div class="match-eyebrow">오늘의 베스트 플리</div>
+          <div style="width:88px;height:88px;margin:14px auto 10px;border-radius:50%;background:rgba(212,168,67,0.1);border:1px solid var(--gold-border);display:flex;align-items:center;justify-content:center;font-size:44px;">${mvpEmoji}</div>
+          <div class="match-name">${esc(mvp.nickname || '익명')}</div>
+          <div class="match-sub">🏆 ${mvp.fi_count || 0}표 득표</div>
+          ${ctaHtml}
+        </div>`;
+    } else {
+      heroHtml = `
+        <div class="match-fallback-frame">
+          <div class="match-fallback-icon">🎵</div>
+          <div class="match-fallback-title">아직 집계되지 않았어요</div>
+          <div class="match-fallback-text">모임장이 베스트 플리 발표 단계로 진행하면<br>여기에 1위 플리가 표시돼요.</div>
+        </div>`;
+    }
+
+    // ── Selection block — 서비스별 분포 chip ──
+    let selectionHtml = '';
+    if (playlists.length > 0) {
+      const svcCounts = {};
+      for (const p of playlists) { svcCounts[p.service] = (svcCounts[p.service] || 0) + 1; }
+      const serviceDistinct = Object.keys(svcCounts).length;
+      const chips = Object.entries(svcCounts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([svc, n]) =>
+          `<div style="padding:5px 10px;border-radius:999px;background:rgba(212,168,67,0.18);border:1px solid var(--gold);color:var(--gold-light);font-size:11.5px;letter-spacing:0.04em;">
+             ${svcIcons[svc] || '🎵'} ${esc(svcLabels[svc] || svc)} ${n}
+           </div>`
+        ).join('');
+      selectionHtml = `
+        <div style="padding:16px;background:rgba(212,168,67,0.06);border:1px solid var(--gold-border);border-radius:12px;margin-bottom:14px;text-align:center;">
+          <div style="font-size:11px;letter-spacing:0.18em;color:var(--gold);margin-bottom:8px;">오늘의 플리 선곡표</div>
+          <div style="font-family: var(--font-heading);font-size:22px;color:var(--white);margin-bottom:10px;">${playlists.length}개 플리 · ${serviceDistinct}개 서비스</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;">${chips}</div>
+        </div>`;
+    }
+
+    // ── All Playlists block — MVP 제외 참여자 플리 (couples highlights 대응) ──
+    let listHtml = '';
+    if (others.length > 0) {
+      listHtml = `
+        <div style="font-size:11px;letter-spacing:0.12em;color:var(--gold);margin:6px 0 10px;">모두의 플리</div>
+        ${others.map(p => {
+          const svc = p.service || detectService(p.url);
+          const emoji = esc(p.emoji || '🎵');
+          return `
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:8px;border:1px solid var(--gold-border);border-radius:10px;background:rgba(245,242,236,0.03);">
+              <span style="font-size:26px;line-height:1;flex-shrink:0;">${emoji}</span>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13.5px;color:var(--white);font-weight:600;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(p.nickname || '익명')}</div>
+                <div style="font-size:11px;color:var(--text-muted);letter-spacing:0.04em;">${svcIcons[svc] || '🎵'} ${esc(svcLabels[svc] || svc)}</div>
+              </div>
+              <a href="${esc(p.url || '#')}" target="_blank" rel="noopener noreferrer" style="padding:8px 13px;background:transparent;color:var(--gold-light);border:1px solid var(--gold-border);border-radius:8px;font-size:11.5px;font-weight:600;text-decoration:none;white-space:nowrap;flex-shrink:0;">▶ 듣기</a>
+            </div>`;
+        }).join('')}`;
+    }
+
+    // ── Summary — host_summary 있을 때만 (자동 템플릿 생성 금지) ──
+    const summaryHtml = d.host_summary
+      ? `<div style="font-size:13px;color:var(--text);line-height:1.7;padding:14px;background:rgba(212,168,67,0.04);border-left:2px solid var(--gold);border-radius:4px;margin-top:12px;">${esc(d.host_summary)}</div>`
+      : '';
+
+    return heroHtml + selectionHtml + listHtml + summaryHtml;
+  }
+
   function renderCoupleLove(d) {
     const esc = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     const meName = esc(d.me?.nickname || '나');
