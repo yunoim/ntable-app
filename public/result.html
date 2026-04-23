@@ -768,8 +768,8 @@
             <div class="share-card-footer">오늘의 모임 유형 · ntable.kr</div>
           </div>
           <div class="share-actions">
-            <button type="button" id="save-image-btn" class="share-btn" aria-label="이미지 저장" data-copy="buttons.save_image">📷 이미지 저장</button>
-            <button type="button" id="insta-share-btn" class="share-btn outline" aria-label="공유하기" data-copy="buttons.share_result">📸 공유하기</button>
+            <button type="button" id="save-image-btn" class="share-btn" aria-label="이미지 저장" data-copy="buttons.save_image">이미지 저장</button>
+            <button type="button" id="insta-share-btn" class="share-btn outline" aria-label="공유하기" data-copy="buttons.share_result">공유하기</button>
             <!-- T-09 (2026-04-22): Instagram Story 9:16 캡처 전용 off-screen 컨테이너. shareToInstagram 에서만 사용. -->
             <div id="storyCanvas" data-twe aria-hidden="true" style="position:fixed;left:-9999px;top:0;width:1080px;height:1920px;background:linear-gradient(180deg,#0a0f1e 0%,#141d35 100%);color:#f5f2ec;font-family: var(--font-heading);display:flex;flex-direction:column;justify-content:space-between;padding:120px 80px;box-sizing:border-box;"></div>
           </div>
@@ -1115,10 +1115,10 @@
       if (typeof t === 'function' && typeof toast === 'function') {
         try { toast(t('toasts.image_saved')); } catch (_) {}
       }
-      setTimeout(() => { btn.textContent = '📷 이미지 저장'; btn.disabled = false; }, 1800);
+      setTimeout(() => { btn.textContent = '이미지 저장'; btn.disabled = false; }, 1800);
     } catch (e) {
       btn.textContent = '❌ 저장 실패';
-      setTimeout(() => { btn.textContent = '📷 이미지 저장'; btn.disabled = false; }, 1800);
+      setTimeout(() => { btn.textContent = '이미지 저장'; btn.disabled = false; }, 1800);
     }
   }
 
@@ -1324,8 +1324,8 @@
           pShare.className = 'share-actions';
           pShare.style.cssText = 'display:flex;gap:8px;margin-top:16px;';
           pShare.innerHTML = `
-            <button type="button" class="share-btn" aria-label="이미지 저장" style="flex:1;padding:12px;background:var(--gold);color:var(--navy);border:none;border-radius:10px;font-family:inherit;font-weight:700;cursor:pointer;">📷 이미지 저장</button>
-            <button type="button" class="share-btn outline" aria-label="공유하기" style="flex:1;padding:12px;background:transparent;color:var(--gold-light);border:1px solid var(--gold-border);border-radius:10px;font-family:inherit;font-weight:600;cursor:pointer;">📸 공유하기</button>`;
+            <button type="button" class="share-btn" aria-label="이미지 저장" style="flex:1;padding:12px;background:var(--gold);color:var(--navy);border:none;border-radius:10px;font-family:inherit;font-weight:700;cursor:pointer;">이미지 저장</button>
+            <button type="button" class="share-btn outline" aria-label="공유하기" style="flex:1;padding:12px;background:transparent;color:var(--gold-light);border:1px solid var(--gold-border);border-radius:10px;font-family:inherit;font-weight:600;cursor:pointer;">공유하기</button>`;
           matchEl.appendChild(pShare);
           const [pSave, pShareBtn] = pShare.querySelectorAll('button');
           pSave.addEventListener('click', () => saveElementAsImage('match-content', '플리공유회'));
@@ -1374,8 +1374,8 @@
           mShare.className = 'share-actions';
           mShare.style.cssText = 'display:flex;gap:8px;margin-top:16px;';
           mShare.innerHTML = `
-            <button type="button" class="share-btn" aria-label="이미지 저장" style="flex:1;padding:12px;background:var(--gold);color:var(--navy);border:none;border-radius:10px;font-family:inherit;font-weight:700;cursor:pointer;">📷 이미지 저장</button>
-            <button type="button" class="share-btn outline" aria-label="공유하기" style="flex:1;padding:12px;background:transparent;color:var(--gold-light);border:1px solid var(--gold-border);border-radius:10px;font-family:inherit;font-weight:600;cursor:pointer;">📸 공유하기</button>
+            <button type="button" class="share-btn" aria-label="이미지 저장" style="flex:1;padding:12px;background:var(--gold);color:var(--navy);border:none;border-radius:10px;font-family:inherit;font-weight:700;cursor:pointer;">이미지 저장</button>
+            <button type="button" class="share-btn outline" aria-label="공유하기" style="flex:1;padding:12px;background:transparent;color:var(--gold-light);border:1px solid var(--gold-border);border-radius:10px;font-family:inherit;font-weight:600;cursor:pointer;">공유하기</button>
           `;
           matchEl.appendChild(mShare);
           const [mSave, mShareBtn] = mShare.querySelectorAll('button');
@@ -1636,8 +1636,8 @@
         shareBar.className = 'share-actions';
         shareBar.style.cssText = 'display:flex;gap:8px;margin-top:18px;';
         shareBar.innerHTML = `
-          <button type="button" class="share-btn" data-cap="explore-content" data-cap-label="오늘의 질문" aria-label="이미지 저장" style="flex:1;padding:12px;background:var(--gold);color:var(--navy);border:none;border-radius:10px;font-family:inherit;font-weight:700;cursor:pointer;">📷 이미지 저장</button>
-          <button type="button" class="share-btn outline" data-cap-share="explore-content" data-cap-label="오늘의 질문" aria-label="공유하기" style="flex:1;padding:12px;background:transparent;color:var(--gold-light);border:1px solid var(--gold-border);border-radius:10px;font-family:inherit;font-weight:600;cursor:pointer;">📸 공유하기</button>
+          <button type="button" class="share-btn" data-cap="explore-content" data-cap-label="오늘의 질문" aria-label="이미지 저장" style="flex:1;padding:12px;background:var(--gold);color:var(--navy);border:none;border-radius:10px;font-family:inherit;font-weight:700;cursor:pointer;">이미지 저장</button>
+          <button type="button" class="share-btn outline" data-cap-share="explore-content" data-cap-label="오늘의 질문" aria-label="공유하기" style="flex:1;padding:12px;background:transparent;color:var(--gold-light);border:1px solid var(--gold-border);border-radius:10px;font-family:inherit;font-weight:600;cursor:pointer;">공유하기</button>
         `;
         exploreEl.appendChild(shareBar);
         const [saveBtn, shareBtn] = shareBar.querySelectorAll('button');
