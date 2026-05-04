@@ -206,9 +206,48 @@ async function cleanExpiredRooms() {
   }
 }
 
+// 부트 시 critical env 누락 즉시 가시화 — Railway 배포 누락·로컬 미설정 빠른 인지.
+// required: 없으면 기능 깨짐. optional: 없으면 silent fallback 동작.
+function logEnvStatus() {
+  const has = (k) => !!(process.env[k] && String(process.env[k]).trim());
+  const required = {
+    DATABASE_URL: 'PG 연결',
+    GOOGLE_CLIENT_ID: '관리자 OAuth',
+    GOOGLE_CLIENT_SECRET: '관리자 OAuth',
+    ADMIN_OAUTH_REDIRECT_URI: '관리자 OAuth callback',
+  };
+  const optional = {
+    SENTRY_DSN_SERVER: '서버 에러 트래킹',
+    SENTRY_DSN_CLIENT: '클라이언트 에러 트래킹',
+    SMTP_HOST: '이메일 알림 (mutual reveal)',
+    SMTP_USER: '이메일 알림',
+    SMTP_PASS: '이메일 알림',
+    KAKAO_JS_KEY: '카카오 공유',
+    PUBLIC_ORIGIN: '절대 URL 생성',
+  };
+  const missingRequired = [];
+  const missingOptional = [];
+  for (const [k, desc] of Object.entries(required)) {
+    if (!has(k)) missingRequired.push(`${k} (${desc})`);
+  }
+  for (const [k, desc] of Object.entries(optional)) {
+    if (!has(k)) missingOptional.push(`${k} (${desc})`);
+  }
+  if (missingRequired.length) {
+    console.error('[env] ❌ MISSING REQUIRED:', missingRequired.join(', '));
+  }
+  if (missingOptional.length) {
+    console.warn('[env] ⚠️ missing optional:', missingOptional.join(', '));
+  }
+  if (!missingRequired.length && !missingOptional.length) {
+    console.log('[env] ✓ all critical envs set');
+  }
+}
+
 // Init DB then start server
 initDB()
   .then(() => {
+    logEnvStatus();
     server.listen(PORT, () => {
       console.log(`[server] Running on http://localhost:${PORT}`);
       if (RETENTION_ENABLED) {
