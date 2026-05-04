@@ -2168,10 +2168,26 @@ const STATE = {
 
     // CC-97 (2026-04-25): closed 방 재진입 시 — 기존 참여자는 survey/result 로 자동 redirect.
     // 종료된 모임 코드를 다시 입력해도 후기/결과 페이지에 도달 가능. 외부인은 closed 화면 유지.
+    // CC-B1 (2026-05-04): 후기 이미 제출했으면 /result 로 직행 — 사후 다시보기 동선.
+    // eligibility fetch 실패하면 fallback 으로 /survey — survey.html 도 ALREADY_SUBMITTED 상태 표시 가능.
     if (room.status === 'closed') {
       if (me.joined) {
         const isCouplesClose = room.pack_id === 'couples';
-        location.replace(isCouplesClose
+        let alreadySubmitted = false;
+        if (!isCouplesClose) {
+          try {
+            const opts = ('AbortSignal' in window && AbortSignal.timeout)
+              ? { signal: AbortSignal.timeout(2000) }
+              : undefined;
+            const er = await fetch(`/api/survey/eligibility?room=${encodeURIComponent(STATE.roomCode)}&uuid=${encodeURIComponent(STATE.uuid)}`, opts);
+            if (er.ok) {
+              const ed = await er.json();
+              alreadySubmitted = ed && ed.reason === 'ALREADY_SUBMITTED';
+            }
+          } catch (_) { /* fallback: /survey 가 자체적으로 상태 표시 */ }
+        }
+        const goResult = isCouplesClose || alreadySubmitted;
+        location.replace(goResult
           ? `/result?room=${STATE.roomCode}&uuid=${encodeURIComponent(STATE.uuid)}`
           : `/survey?room=${STATE.roomCode}`);
         return;
