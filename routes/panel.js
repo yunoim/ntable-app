@@ -6,6 +6,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
 const adminAuth = require('./admin-auth');
+const { logDbError, captureDbError } = require('./_db-errors');
 
 // 관리자 뷰/통계에서 "유효한 방"으로 간주할 조건
 // 제외: (closed AND 참가 ≤ 1) · (waiting AND 24h 초과 AND 참가 ≤ 1)
@@ -64,8 +65,7 @@ router.get('/panel/stats', requireAdmin, async (req, res) => {
       member_results: memberResults.rows[0].cnt,
     });
   } catch (err) {
-    console.error('[panel] stats error:', err);
-    res.status(500).json({ error: err.message });
+    logDbError(res, 'GET /api/panel/stats', err, {});
   }
 });
 
@@ -90,8 +90,7 @@ router.get('/panel/rooms', requireAdmin, async (req, res) => {
     const { rows } = await pool.query(sql, args);
     res.json(rows);
   } catch (err) {
-    console.error('[panel] rooms error:', err);
-    res.status(500).json({ error: err.message });
+    logDbError(res, 'GET /api/panel/rooms', err, {});
   }
 });
 
@@ -137,8 +136,7 @@ router.get('/panel/rooms/:code', requireAdmin, async (req, res) => {
       surveys: surveys.rows,
     });
   } catch (err) {
-    console.error('[panel] room detail error:', err);
-    res.status(500).json({ error: err.message });
+    logDbError(res, 'GET /api/panel/rooms/:code', err, { code: req.params.code });
   }
 });
 
@@ -156,8 +154,7 @@ router.post('/panel/rooms/:code/close', requireAdmin, async (req, res) => {
     try { wsModule.broadcastToRoom(code, { type: 'room_closed' }); } catch {}
     res.json({ status: 'closed' });
   } catch (err) {
-    console.error('[panel] close room error:', err);
-    res.status(500).json({ error: err.message });
+    logDbError(res, 'POST /api/panel/rooms/:code/close', err, { code: req.params.code });
   }
 });
 
@@ -181,8 +178,7 @@ router.delete('/panel/rooms/:code', requireAdmin, async (req, res) => {
     res.json({ deleted: true });
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('[panel] delete room error:', err);
-    res.status(500).json({ error: err.message });
+    logDbError(res, 'DELETE /api/panel/rooms/:code', err, { code: req.params.code });
   } finally {
     client.release();
   }
@@ -220,7 +216,7 @@ router.post('/panel/rooms/bulk-delete', requireAdmin, async (req, res) => {
       deleted.push(code);
     } catch (err) {
       await client.query('ROLLBACK');
-      console.error('[panel] bulk-delete error for', code, err);
+      captureDbError('POST /api/panel/rooms/bulk-delete (per-room)', err, { code });
       failed.push({ code, error: err.message });
     } finally {
       client.release();
@@ -256,8 +252,7 @@ router.get('/panel/users', requireAdmin, async (req, res) => {
     const { rows } = await pool.query(sql, args);
     res.json(rows);
   } catch (err) {
-    console.error('[panel] users error:', err);
-    res.status(500).json({ error: err.message });
+    logDbError(res, 'GET /api/panel/users', err, {});
   }
 });
 
@@ -279,8 +274,7 @@ router.delete('/panel/users/:uuid', requireAdmin, async (req, res) => {
     res.json({ deleted: true });
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('[panel] delete user error:', err);
-    res.status(500).json({ error: err.message });
+    logDbError(res, 'DELETE /api/panel/users/:uuid', err, { uuid: req.params.uuid });
   } finally {
     client.release();
   }
@@ -304,8 +298,7 @@ router.get('/panel/surveys', requireAdmin, async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error('[panel] surveys error:', err);
-    res.status(500).json({ error: err.message });
+    logDbError(res, 'GET /api/panel/surveys', err, {});
   }
 });
 
@@ -321,8 +314,7 @@ router.delete('/panel/surveys/:id', requireAdmin, async (req, res) => {
     if (!rows.length) return res.status(404).json({ error: 'survey not found' });
     res.json({ deleted: true });
   } catch (err) {
-    console.error('[panel] delete survey error:', err);
-    res.status(500).json({ error: err.message });
+    logDbError(res, 'DELETE /api/panel/surveys/:id', err, { id: req.params.id });
   }
 });
 
@@ -350,8 +342,7 @@ router.get('/panel/live-snapshot', requireAdmin, async (req, res) => {
       updated_at: new Date().toISOString(),
     });
   } catch (err) {
-    console.error('[panel] live-snapshot error:', err);
-    res.status(500).json({ error: err.message });
+    logDbError(res, 'GET /api/panel/live-snapshot', err, {});
   }
 });
 
@@ -370,8 +361,7 @@ router.get('/panel/packs-usage', requireAdmin, async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error('[panel] packs-usage error:', err);
-    res.status(500).json({ error: err.message });
+    logDbError(res, 'GET /api/panel/packs-usage', err, {});
   }
 });
 
@@ -397,8 +387,7 @@ router.get('/panel/nps-trend', requireAdmin, async (req, res) => {
       revisit_rate: r.responses ? Number((r.revisit_yes / r.responses).toFixed(2)) : null,
     })));
   } catch (err) {
-    console.error('[panel] nps-trend error:', err);
-    res.status(500).json({ error: err.message });
+    logDbError(res, 'GET /api/panel/nps-trend', err, {});
   }
 });
 
@@ -430,8 +419,7 @@ router.get('/panel/hosts-leaderboard', requireAdmin, async (req, res) => {
       avg_host_rating: r.avg_host_rating != null ? Number(r.avg_host_rating.toFixed(2)) : null,
     })));
   } catch (err) {
-    console.error('[panel] hosts-leaderboard error:', err);
-    res.status(500).json({ error: err.message });
+    logDbError(res, 'GET /api/panel/hosts-leaderboard', err, {});
   }
 });
 
@@ -467,8 +455,7 @@ router.get('/panel/match-success', requireAdmin, async (req, res) => {
       },
     });
   } catch (err) {
-    console.error('[panel] match-success error:', err);
-    res.status(500).json({ error: err.message });
+    logDbError(res, 'GET /api/panel/match-success', err, {});
   }
 });
 
@@ -516,8 +503,7 @@ router.get('/panel/growth', requireAdmin, async (req, res) => {
       })),
     });
   } catch (err) {
-    console.error('[panel] growth error:', err);
-    res.status(500).json({ error: err.message });
+    logDbError(res, 'GET /api/panel/growth', err, {});
   }
 });
 

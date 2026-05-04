@@ -14,6 +14,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
+const { captureDbError } = require('./_db-errors');
 
 let pool;
 
@@ -140,7 +141,7 @@ router.get('/admin/auth/google/callback', async (req, res) => {
     // admin.html 이 URL 해시로 토큰 받아서 localStorage 저장하도록
     res.redirect(`/admin#token=${token}`);
   } catch (err) {
-    console.error('[admin-auth] callback error:', err);
+    captureDbError('GET /api/admin/auth/google/callback', err, {});
     res.redirect('/admin?error=server');
   }
 });
@@ -171,7 +172,7 @@ router.get('/admin/me', async (req, res) => {
     if (r.rows.length === 0) return res.status(401).json({ error: 'invalid_session' });
     res.json(r.rows[0]);
   } catch (err) {
-    console.error('[admin-auth] me error:', err);
+    captureDbError('GET /api/admin/me', err, {});
     res.status(500).json({ error: 'db_error' });
   }
 });
