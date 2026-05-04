@@ -13,11 +13,15 @@ const path = require('path');
 const PACKS_DIR = path.join(__dirname, '../questions/packs');
 
 // 헤더 텍스트에서 tier / topic group 식별
+// 4-tier 구조 (2026-05-04 확장): final = 모임 마지막 고정 문항 (단일).
+// 팩 md 에 `## 탐구 질문 - Final` (또는 `- 마지막`, `- 고정`) 섹션 추가하면 풀의 첫 항목이 항상 마지막에 배치.
+// 미사용 팩(섹션 없음)은 기존 surface→preference→deep 흐름 그대로 (zero regression).
 function detectQuestionTier(header) {
   const h = header.toLowerCase();
   if (h.includes('warm') || h.includes('surface') || h.includes('워밍')) return 'surface';
   if (h.includes('preference') || h.includes('선호')) return 'preference';
   if (h.includes('deep') || h.includes('깊은') || h.includes('심화')) return 'deep';
+  if (h.includes('final') || h.includes('마지막') || h.includes('고정')) return 'final';
   return null;
 }
 function detectTopicGroup(header) {
@@ -121,6 +125,7 @@ function parsePack(filePath) {
     surface: questions.filter(q => q.tier === 'surface'),
     preference: questions.filter(q => q.tier === 'preference'),
     deep: questions.filter(q => q.tier === 'deep'),
+    final: questions.filter(q => q.tier === 'final'),
   };
   const topicsByGroup = {
     ask: topics.filter(t => t.group === 'ask'),
@@ -193,7 +198,9 @@ function distributeTiers(count) {
 
 // 팩 + question_count 로 실제 방에 심을 질문 배열 생성
 // 반환: 풀 전체 (각 tier 내 셔플) + 앞에서부터 enabled 분배 (dist 만큼 true, 나머지 false)
-// tier 순서: surface → preference → deep (tier 간 순서는 유지 — arc 보존)
+// tier 순서: surface → preference → deep → final (tier 간 순서는 유지 — arc 보존)
+// final tier (2026-05-04): 풀의 첫 항목이 항상 enabled=true 로 마지막에 배치 (셔플 안 됨, 고정).
+//   final 풀 비어있으면 모든 동작 기존과 동일 (regression 없음).
 function buildRoomQuestions(pack, count) {
   if (!pack || !pack.questionsByTier) {
     // 하위호환: tier 풀 없으면 전체 배열을 count 만큼 앞부분 enabled
@@ -206,7 +213,11 @@ function buildRoomQuestions(pack, count) {
       enabled: i < count,
     }));
   }
-  const dist = distributeTiers(count);
+  const finalPool = pack.questionsByTier.final || [];
+  const hasFinal = finalPool.length > 0;
+  // final 1개를 고정 슬롯으로 예약 — 나머지 tier 분배는 count-1 기준
+  const otherCount = hasFinal ? Math.max(0, count - 1) : count;
+  const dist = distributeTiers(otherCount);
   const out = [];
   let nextId = 1;
   for (const tier of ['surface', 'preference', 'deep']) {
@@ -217,8 +228,21 @@ function buildRoomQuestions(pack, count) {
         tier,
         question: q.question,
         options: q.options,
+        compat_rule: q.compat_rule || 'same',
         enabled: idx < dist[tier],
       });
+    });
+  }
+  if (hasFinal) {
+    // 첫 항목 고정 (셔플 X) — 콘텐츠 의도대로 마지막 자리에 일관 배치
+    const f = finalPool[0];
+    out.push({
+      id: nextId++,
+      tier: 'final',
+      question: f.question,
+      options: f.options,
+      compat_rule: f.compat_rule || 'same',
+      enabled: true,
     });
   }
   return out;
