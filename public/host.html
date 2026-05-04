@@ -1310,6 +1310,18 @@
     letter-spacing: -0.005em;
   }
 
+  .vote-progress {
+    display: inline-block;
+    margin: 0 0 18px;
+    padding: 6px 12px;
+    font-size: 12.5px;
+    color: var(--gold-light);
+    background: rgba(212,168,67,0.08);
+    border: 1px solid var(--gold-border);
+    border-radius: 999px;
+    font-variant-numeric: tabular-nums;
+  }
+  .vote-progress strong { color: var(--white); font-weight: 700; }
   .vote-bars { display: flex; flex-direction: column; gap: 24px; margin-bottom: 36px; }
   .vote-bar-wrap { display: flex; flex-direction: column; gap: 10px; }
   .vote-label {
@@ -2543,6 +2555,7 @@
       <div class="stage-tag" hidden>Step 02 · 탐구</div>
       <div class="q-number" id="q-number">Q1 / 13</div>
       <div class="q-text" id="q-text">문항 로딩 중...</div>
+      <div class="vote-progress" id="vote-progress" hidden></div>
       <div class="vote-bars" id="vote-bars"></div>
       <div id="host-vote-btns"></div>
     </div>
@@ -4656,9 +4669,25 @@ function renderQuestion() {
   updatePrimaryButton();
 }
 
+// CC-A2.5 (2026-05-04): 현재 보여지는 문항이면 "투표 완료 N/M" 인디케이터 갱신.
+// approvedUsers 는 host_role 에 따라 호스트 포함/제외 자동 처리 (participant=포함, host_only=제외).
+// N > M 인 케이스(투표 후 강퇴)는 raw 표기 — "3/2" 자체가 호스트에게 시그널 ("이탈 후 투표 잔존").
+function updateVoteProgress(question_id, counts) {
+  const el = document.getElementById('vote-progress');
+  if (!el) return;
+  const curQ = state.questions[state.currentQIdx];
+  if (!curQ || curQ.id !== question_id) return;
+  const total = Object.values(counts || {}).reduce((a, b) => a + b, 0);
+  const expected = (state.approvedUsers || []).length;
+  if (expected === 0) { el.hidden = true; return; }
+  el.innerHTML = `투표 완료 <strong>${total}</strong> / ${expected}`;
+  el.hidden = false;
+}
+
 function renderVoteBars(question_id, counts) {
   const q = state.questions.find(q => q.id === question_id);
   if (!q) return;
+  updateVoteProgress(question_id, counts);
   const container = document.getElementById('vote-bars');
   if (!container) return;
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
