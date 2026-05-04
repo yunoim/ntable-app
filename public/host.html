@@ -3905,8 +3905,15 @@ function handleWSMessage(msg) {
       break;
     }
     case 'vote_result':
+      // CC-A4 (2026-05-04): cache 는 항상 갱신(나중에 그 Q로 돌아왔을 때 정합),
+      // DOM 재렌더는 current Q 매칭 시에만 — 다른 Q 의 늦은 vote_result 가 현재 vote-bars 덮어쓰는 버그 차단.
       state.currentVotes[msg.question_id] = msg.counts;
-      renderVoteBars(msg.question_id, msg.counts);
+      {
+        const curQ = state.questions && state.questions[state.currentQIdx];
+        if (curQ && curQ.id === msg.question_id) {
+          renderVoteBars(msg.question_id, msg.counts);
+        }
+      }
       renderHostStats();
       break;
     case 'mvp_update':
