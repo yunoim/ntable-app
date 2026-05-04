@@ -2,28 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
 const QRCode = require('qrcode');
-const Sentry = require('@sentry/node');
+const { logDbError } = require('./_db-errors');
 const { listPacks, getPack, DEFAULT_PACK_ID, getPackFlow, buildRoomQuestions, buildRoomTopics, getPackDefaults } = require('./question-sources');
-
-// pg 에러를 구조화 로깅 + Sentry 캡처 + 정규화 500 응답으로 통합.
-// label = 라우트 식별자, ctx = 요청 컨텍스트(room_code/uuid 등 — PII 없는 식별 필드만).
-function logDbError(res, label, err, ctx) {
-  const pgFields = {
-    code: err && err.code,
-    detail: err && err.detail,
-    constraint: err && err.constraint,
-    routine: err && err.routine,
-    table: err && err.table,
-    message: err && err.message,
-  };
-  console.error(`[${label}] db error:`, pgFields, 'ctx:', ctx);
-  try {
-    Sentry.captureException(err, { extra: { route: label, ...pgFields, ctx } });
-  } catch (_) {}
-  if (!res.headersSent) {
-    res.status(500).json({ error: 'db error', code: pgFields.code || null });
-  }
-}
 
 function generateRoomCode() {
   // 혼동 쉬운 문자 제외 (O↔0, I↔1) — 입력·공유 시 오독 방지
