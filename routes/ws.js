@@ -2,6 +2,7 @@ const { WebSocketServer } = require('ws');
 const crypto = require('crypto');
 const { pool } = require('../db');
 const Sentry = require('../sentry');
+const { captureDbError } = require('./_db-errors');
 
 // rooms[room_code] = {
 //   clients: Map<uuid, ws>,
@@ -218,7 +219,7 @@ function init(server) {
           );
           const cur0 = stateRes0.rows[0]?.state_json;
           if (cur0 && ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'state_update', state: cur0 }));
-        } catch (e) { console.error('[ws] initial sync error', e.message); }
+        } catch (e) { captureDbError('[ws] initial sync', e, { room_code, uuid }); }
       };
 
       ws.on('message', async (data) => {
@@ -253,7 +254,7 @@ function init(server) {
                 host_uuid
               );
             } catch (e) {
-              console.error('waiting_too_long handler error:', e.message);
+              captureDbError('[ws] waiting_too_long handler', e, { room_code, uuid });
             }
           } else if (msg.type === 'photo_update') {
             // 클라이언트 base64 사진 broadcast + 방별 메모리 캐시 (방 close 시 GC, DB 미사용)
@@ -308,7 +309,7 @@ function init(server) {
                 ws.send(JSON.stringify({ type: 'state_update', state: currentState }));
               }
             } catch (e) {
-              console.error('[ws] state catch-up error', e.message);
+              captureDbError('[ws] state catch-up', e, { room_code, uuid });
             }
             // 캐시에 없는 경우 대비 — 기존 사용자에게 재공유 요청도 broadcast
             broadcastToRoom(room_code, {
@@ -412,7 +413,7 @@ function init(server) {
                 reason: 'host_grace_expired',
               });
             } catch (e) {
-              console.error(`[ws] host grace auto-close error [${room_code}]:`, e.message);
+              captureDbError('[ws] host grace auto-close', e, { room_code });
             }
             delete rooms[room_code];
           }, HOST_GRACE_MS);
