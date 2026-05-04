@@ -190,6 +190,98 @@ ntable-app/
 - `KAKAO_JS_KEY` — 모임장 카카오 공유 (선택, 없으면 카카오 버튼 숨김)
 - `PUBLIC_ORIGIN` — 선택
 
+> **부트 시 env 누락 자동 감지** (2026-05-04, `e399b70`): `server.js` 의 `logEnvStatus()` 가 initDB 직후 required/optional 분리해 콘솔 출력. Railway 배포 후 누락 즉시 가시화.
+
+## 코드 패턴 / 헬퍼 (2026-05-04 신설)
+
+### `routes/_db-errors.js` — DB 에러 관측성 헬퍼
+
+모든 라우트의 generic-500 catch 표준. PG 에러 필드 구조화 + Sentry 캡처 + 정규화 응답.
+
+```js
+const { logDbError, captureDbError } = require('./_db-errors');
+
+// 신규 라우트 / 응답 표준화 OK 인 경우
+try { ... } catch (err) {
+  logDbError(res, 'POST /api/foo', err, { uuid, room_code });
+  // 응답: 500 + {error:'db error', code:<SQLSTATE>}
+}
+
+// 기존 응답 포맷 유지해야 하는 경우 (클라이언트 호환)
+try { ... } catch (err) {
+  captureDbError('POST /api/legacy', err, { ctx });
+  return res.status(500).json({ error: 'INTERNAL_ERROR' });
+}
+```
+
+- 두 헬퍼 모두 `code · detail · constraint · routine · table · message` 구조화 console.error + `Sentry.captureException(err, { extra: { route, ...pgFields, ctx } })`
+- `logDbError` 만 응답 표준화 (`{error:'db error', code:<SQLSTATE>}`)
+- 23505 같은 에러 서브타입 분기는 catch 진입 후 분기 먼저 처리하고 generic 500 leg 에서만 헬퍼 호출
+- 트랜잭션 내부면 `client.query('ROLLBACK')` 먼저, 그 다음 헬퍼 호출
+- ws.js 같은 비-HTTP 핸들러도 `captureDbError` 사용 가능 (응답 없으므로 logDbError 부적합)
+- 적용 현황 (2026-05-04): rooms · survey · auth · ai · admin · panel · admin-auth · ws.js — 50+ catch 통일
+
+### `routes/question-sources.js` — 'final' tier 콘텐츠 패턴
+
+탐구 질문 풀에서 마지막 자리에 항상 같은 문항이 오게 하려면:
+
+```markdown
+## 탐구 질문 - Final
+
+Q1. 결혼은 나에게?
+A. 꼭 하고 싶은 것
+B. 인연 따라 (꼭은 아님)
+```
+
+- 헤더는 `Final` / `마지막` / `고정` 모두 인식
+- 풀에 여러 문항 두면 `final[0]` 만 선택됨 (셔플 X — 의도된 고정)
+- `buildRoomQuestions()` 가 final 풀 차있으면 count -= 1 → 다른 tier 분배 후 final[0] 을 명확한 마지막에 배치
+- 미사용 팩(섹션 없음)은 기존 surface→preference→deep arc 그대로 (zero regression)
+- `compat_rule` 자동 전달 (couples 역대응 도 적용 가능)
+
+### 게스트 catch-up 패턴 (mobile WS 좀비 대응)
+
+WS onclose 에서 reason 만으로 redirect 결정 금지 — 브라우저 기본 reason 이 정규식 false-positive 잡을 수 있음. 명시 코드 (4005 등) 외엔 REST 로 server state 재검증:
+
+```js
+if (e.code === 4005 || /closed/i.test(e.reason || '')) {
+  let serverConfirmed = e.code === 4005;
+  if (!serverConfirmed) {
+    const opts = AbortSignal.timeout
+      ? { signal: AbortSignal.timeout(2000) }
+      : undefined;
+    const r = await fetch(`/api/rooms/${code}`, opts).catch(() => null);
+    serverConfirmed = r && r.ok && (await r.json()).status === 'closed';
+  }
+  if (serverConfirmed) location.replace(...);
+  // else: fall-through to reconnect — transient mobile sleep
+}
+```
+
+A1 (`6af02d1`), B (`9a5fb6f`) 모두 이 패턴 사용.
+
+### 호스트 WS 재접속 catch-up 패턴
+
+좀비 WS 동안 누락된 broadcast 풀카운트 복원:
+
+```js
+// forceReconnectHost 에서 pre-clear (race 제거)
+state.currentVotes = {};
+connectWS();
+
+// ws.onopen 에서 REST catch-up
+async function catchUpVoteCounts() {
+  const r = await fetch(`/api/rooms/${code}/explore-result`, {
+    signal: AbortSignal.timeout(3000)
+  }).catch(() => null);
+  if (!r || !r.ok) return;
+  const data = await r.json();
+  // 재계산 → state 풀 덮어쓰기 → 현재 화면 재렌더
+}
+```
+
+A2 (`d13bb8c`) 적용. cache 가 새 broadcast 와 race 안 나도록 forceReconnect 단계에서 비우는 게 핵심.
+
 ## 구현 완료 현황
 
 - [x] GitHub + Railway + Cloudflare 인프라
