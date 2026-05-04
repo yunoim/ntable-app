@@ -2522,7 +2522,7 @@ function connectWS() {
     // WS reconnect 시 host 현재 화면으로 강제 catch-up (REST fallback)
     catchUpToHostScreen();
   };
-  STATE.ws.onclose = (e) => {
+  STATE.ws.onclose = async (e) => {
     console.log('[guest] ws.onclose', e.code, e.reason, 'replaced=', !!STATE.ws?._replaced);
     try {
       window.Sentry?.addBreadcrumb({
@@ -2534,16 +2534,36 @@ function connectWS() {
     } catch (_) {}
     // forceReconnect 가 만든 close 는 onclose 핸들러에서 추가 retry 트리거하지 않음
     if (e.code === 4100) { stopPing(); return; }
-    // 서버가 모임 종료로 닫으면 곧장 설문으로 (room_closed broadcast 누락 fallback)
+    // 서버가 모임 종료로 닫으면 곧장 설문으로 (room_closed broadcast 누락 fallback).
+    // CC-A1 (2026-05-04): 모바일 슬립 후 visibilitychange→재접속 시 브라우저 기본 close reason
+    // ("Connection closed before received" 등)이 /closed/i 정규식에 false-positive 매칭되어 후기로 튕기던 버그.
+    // 4005 명시는 즉시 redirect, reason 매칭만으로는 REST 로 room.status 재검증 후 결정.
     if (e.code === 4005 || /closed/i.test(e.reason || '')) {
-      const isCouplesClose = STATE.room && STATE.room.pack_id === 'couples';
-      if (!isCouplesClose) {
-        try { localStorage.setItem('pending_survey', STATE.roomCode); } catch (_) {}
+      let serverClosed = e.code === 4005;
+      if (!serverClosed) {
+        // 모바일 느린 망에서 verify fetch 가 길어지면 reconnect 가 지연됨 → 2s timeout, 미완성 시 transient 처리.
+        try {
+          const ctrl = ('AbortSignal' in window && AbortSignal.timeout)
+            ? { signal: AbortSignal.timeout(2000) }
+            : undefined;
+          const r = await fetch(`/api/rooms/${STATE.roomCode}`, ctrl);
+          if (r.ok) {
+            const room = await r.json();
+            serverClosed = room && room.status === 'closed';
+          }
+        } catch (_) { /* timeout/network — transient 로 판단 */ }
       }
-      location.replace(isCouplesClose
-        ? `/result?room=${STATE.roomCode}&uuid=${encodeURIComponent(STATE.uuid)}`
-        : `/survey?room=${STATE.roomCode}`);
-      return;
+      if (serverClosed) {
+        const isCouplesClose = STATE.room && STATE.room.pack_id === 'couples';
+        if (!isCouplesClose) {
+          try { localStorage.setItem('pending_survey', STATE.roomCode); } catch (_) {}
+        }
+        location.replace(isCouplesClose
+          ? `/result?room=${STATE.roomCode}&uuid=${encodeURIComponent(STATE.uuid)}`
+          : `/survey?room=${STATE.roomCode}`);
+        return;
+      }
+      console.log('[guest] onclose: reason matched /closed/i but room.status != closed — transient, fall through to reconnect');
     }
     // 모임장이 강퇴
     if (e.code === 4006 || /kicked/i.test(e.reason || '')) {
