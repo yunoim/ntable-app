@@ -3737,6 +3737,9 @@ function connectWS() {
         renderApprovedList();
       }
     } catch (_) {}
+    // CC-A2 (2026-05-04): 좀비 WS 동안 놓친 vote_result 누락분 catch-up.
+    // forceReconnectHost 가 state.currentVotes={} 로 pre-clear → 여기서 REST 로 풀카운트 재계산.
+    catchUpVoteCounts();
   };
   ws.onmessage = (e) => {
     try {
@@ -3775,7 +3778,38 @@ function forceReconnectHost(reason) {
     try { state.ws.close(4100, 'force-reconnect'); } catch (_) {}
   }
   state.ws = null;
+  // CC-A2 (2026-05-04): pre-clear 으로 onopen 의 catchUpVoteCounts 가 race 없이 풀카운트 덮어씀.
+  state.currentVotes = {};
   try { connectWS(); } catch (e) { console.warn('[host] connectWS failed', e); }
+}
+
+// CC-A2 (2026-05-04): 호스트 좀비 WS 후 재접속 시 vote_result 누락 catch-up.
+// /explore-result 로 모든 멤버의 votes_json 받아 question_id 별 counts 재계산.
+async function catchUpVoteCounts() {
+  if (!state.roomCode) return;
+  try {
+    const opts = ('AbortSignal' in window && AbortSignal.timeout)
+      ? { signal: AbortSignal.timeout(3000) }
+      : undefined;
+    const r = await fetch(`/api/rooms/${state.roomCode}/explore-result`, opts);
+    if (!r.ok) return;
+    const data = await r.json();
+    const counts = {};
+    for (const m of (data.members || [])) {
+      const v = m.votes_json || {};
+      for (const [qid, ans] of Object.entries(v)) {
+        if (!ans) continue;
+        if (!counts[qid]) counts[qid] = {};
+        counts[qid][ans] = (counts[qid][ans] || 0) + 1;
+      }
+    }
+    state.currentVotes = counts;
+    // 현재 보여지는 explore 문항이면 즉시 재렌더
+    const q = state.questions && state.questions[state.currentQIdx];
+    if (q && state.activeTab === 'explore' && typeof renderVoteBars === 'function') {
+      renderVoteBars(q.id, state.currentVotes[q.id] || {});
+    }
+  } catch (_) { /* timeout/network — 다음 vote_result 메시지로 회복 */ }
 }
 
 function handleWSMessage(msg) {
