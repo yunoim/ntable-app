@@ -2,7 +2,28 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
 const QRCode = require('qrcode');
+const Sentry = require('@sentry/node');
 const { listPacks, getPack, DEFAULT_PACK_ID, getPackFlow, buildRoomQuestions, buildRoomTopics, getPackDefaults } = require('./question-sources');
+
+// pg 에러를 구조화 로깅 + Sentry 캡처 + 정규화 500 응답으로 통합.
+// label = 라우트 식별자, ctx = 요청 컨텍스트(room_code/uuid 등 — PII 없는 식별 필드만).
+function logDbError(res, label, err, ctx) {
+  const pgFields = {
+    code: err && err.code,
+    detail: err && err.detail,
+    constraint: err && err.constraint,
+    routine: err && err.routine,
+    table: err && err.table,
+    message: err && err.message,
+  };
+  console.error(`[${label}] db error:`, pgFields, 'ctx:', ctx);
+  try {
+    Sentry.captureException(err, { extra: { route: label, ...pgFields, ctx } });
+  } catch (_) {}
+  if (!res.headersSent) {
+    res.status(500).json({ error: 'db error', code: pgFields.code || null });
+  }
+}
 
 function generateRoomCode() {
   // 혼동 쉬운 문자 제외 (O↔0, I↔1) — 입력·공유 시 오독 방지
@@ -145,8 +166,7 @@ router.post('/rooms', async (req, res) => {
     res.json({ room_code, title, host_role, question_count, pack_id: pack.id, display_fields, birth_year_format, display_mode, photo_enabled, region_detail, closing_steps, free_chat_timer_minutes: fc_timer, free_chat_chat_enabled: fc_chat, free_chat_topic_card_enabled: fc_topic, instagram_collect: insta_collect, meeting_at });
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('POST /api/rooms error:', err);
-    res.status(500).json({ error: 'DB error' });
+    logDbError(res, 'POST /api/rooms', err, { uuid, pack_id: pack && pack.id, host_role });
   } finally {
     client.release();
   }
@@ -166,55 +186,63 @@ router.get('/packs', async (req, res) => {
 // GET /api/rooms/:code — room 메타 + 현재 진행 state (게스트 catch-up용)
 router.get('/rooms/:code', async (req, res) => {
   const { code } = req.params;
-  const result = await pool.query(
-    'SELECT id, room_code, title, host_uuid, host_role, status, question_count, pack_id, display_fields, birth_year_format, display_mode, photo_enabled, region_detail, closing_steps, free_chat_timer_minutes, free_chat_chat_enabled, free_chat_topic_card_enabled, instagram_collect, meeting_at FROM rooms WHERE room_code = $1',
-    [code]
-  );
-  if (result.rows.length === 0) return res.status(404).json({ error: 'room not found' });
-  const room = result.rows[0];
-  // 현재 room_state 포함 — 게스트가 페이지 로드 시 바로 모임장 화면으로 진입할 수 있도록
-  let current_state = null;
   try {
-    const sr = await pool.query('SELECT state_json FROM room_state WHERE room_id = $1', [room.id]);
-    current_state = sr.rows[0]?.state_json || null;
-  } catch (_) {}
-  // id는 응답에서 제외 (외부 노출 불필요)
-  delete room.id;
-  // 팩 기본값 — read-time 계산 (스냅샷 X). 팩별 wizard·display·result·flow 정책.
-  const pack_defaults = getPackDefaults(room.pack_id);
-  // 기존 방 호환 — playlist-share 에서 과거 생성된 방에 'match' 가 남아있으면 읽기 시점에 필터.
-  // (2026-04-22 QA: myplay 킷은 작대기 단계 없음)
-  if (room.pack_id === 'playlist-share' && Array.isArray(room.closing_steps)) {
-    room.closing_steps = room.closing_steps.filter(s => s !== 'match');
+    const result = await pool.query(
+      'SELECT id, room_code, title, host_uuid, host_role, status, question_count, pack_id, display_fields, birth_year_format, display_mode, photo_enabled, region_detail, closing_steps, free_chat_timer_minutes, free_chat_chat_enabled, free_chat_topic_card_enabled, instagram_collect, meeting_at FROM rooms WHERE room_code = $1',
+      [code]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'room not found' });
+    const room = result.rows[0];
+    // 현재 room_state 포함 — 게스트가 페이지 로드 시 바로 모임장 화면으로 진입할 수 있도록
+    let current_state = null;
+    try {
+      const sr = await pool.query('SELECT state_json FROM room_state WHERE room_id = $1', [room.id]);
+      current_state = sr.rows[0]?.state_json || null;
+    } catch (_) {}
+    // id는 응답에서 제외 (외부 노출 불필요)
+    delete room.id;
+    // 팩 기본값 — read-time 계산 (스냅샷 X). 팩별 wizard·display·result·flow 정책.
+    const pack_defaults = getPackDefaults(room.pack_id);
+    // 기존 방 호환 — playlist-share 에서 과거 생성된 방에 'match' 가 남아있으면 읽기 시점에 필터.
+    // (2026-04-22 QA: myplay 킷은 작대기 단계 없음)
+    if (room.pack_id === 'playlist-share' && Array.isArray(room.closing_steps)) {
+      room.closing_steps = room.closing_steps.filter(s => s !== 'match');
+    }
+    res.json({ ...room, current_state, pack_defaults });
+  } catch (err) {
+    logDbError(res, 'GET /api/rooms/:code', err, { code });
   }
-  res.json({ ...room, current_state, pack_defaults });
 });
 
 // GET /api/rooms/:code/preview
 // 인증 전(게스트 대기 화면)에서 노출할 최소 공개 정보
 router.get('/rooms/:code/preview', async (req, res) => {
   const { code } = req.params;
-  // host_nickname — room_members 우선 (모임장이 참여자로 참여한 경우 방별 닉네임), users 는 legacy fallback
-  const r = await pool.query(
-    `SELECT r.room_code, r.title, r.status,
-            COALESCE(rm.nickname, u.nickname) AS host_nickname
-     FROM rooms r
-     LEFT JOIN room_members rm ON rm.room_id = r.id AND rm.uuid = r.host_uuid
-     LEFT JOIN users u ON u.uuid = r.host_uuid
-     WHERE r.room_code = $1`,
-    [code]
-  );
-  if (r.rows.length === 0) return res.status(404).json({ error: 'room not found' });
-  const wsModule = require('./ws');
-  const member_count = wsModule.getRoomClients(code).length;
-  const row = r.rows[0];
-  res.json({
-    room_code: row.room_code,
-    title: row.title,
-    status: row.status,
-    host_nickname: row.host_nickname,
-    member_count,
-  });
+  try {
+    // host_nickname — room_members 우선 (모임장이 참여자로 참여한 경우 방별 닉네임), users 는 legacy fallback
+    const r = await pool.query(
+      `SELECT r.room_code, r.title, r.status,
+              COALESCE(rm.nickname, u.nickname) AS host_nickname
+       FROM rooms r
+       LEFT JOIN room_members rm ON rm.room_id = r.id AND rm.uuid = r.host_uuid
+       LEFT JOIN users u ON u.uuid = r.host_uuid
+       WHERE r.room_code = $1`,
+      [code]
+    );
+    if (r.rows.length === 0) return res.status(404).json({ error: 'room not found' });
+    const wsModule = require('./ws');
+    const member_count = wsModule.getRoomClients(code).length;
+    const row = r.rows[0];
+    res.json({
+      room_code: row.room_code,
+      title: row.title,
+      status: row.status,
+      host_nickname: row.host_nickname,
+      member_count,
+    });
+  } catch (err) {
+    logDbError(res, 'GET /api/rooms/:code/preview', err, { code });
+  }
 });
 
 // GET /api/rooms/:code/members
@@ -223,62 +251,66 @@ router.get('/rooms/:code/preview', async (req, res) => {
 router.get('/rooms/:code/members', async (req, res) => {
   const { code } = req.params;
   const viewer = req.query.viewer;
-  const room = await pool.query(
-    'SELECT id, host_uuid, host_role FROM rooms WHERE room_code = $1',
-    [code]
-  );
-  if (room.rows.length === 0) return res.status(404).json({ error: 'room not found' });
-  const hostUuid = room.rows[0].host_uuid;
-  const isHostViewer = viewer && hostUuid && viewer === hostUuid;
-
-  const wsModule = require('./ws');
-  let clients = wsModule.getRoomClients(code);
-  if (room.rows[0].host_role === 'host_only' && hostUuid) {
-    clients = clients.filter(u => u !== hostUuid);
-  }
-  if (clients.length === 0) return res.json([]);
-
-  // room_members 우선 (방별 익명 + hide 정보), 없으면 users fallback
-  const placeholders = clients.map((_, i) => `$${i + 2}`).join(',');
-  const members = await pool.query(
-    `SELECT uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram, emoji,
-            hide_birth_year, hide_region, hide_industry, hide_interest, hide_instagram
-       FROM room_members
-      WHERE room_id = $1 AND uuid IN (${placeholders})`,
-    [room.rows[0].id, ...clients]
-  );
-  const memberMap = new Map(members.rows.map(m => [m.uuid, m]));
-  // legacy fallback for clients not in room_members
-  const missing = clients.filter(u => !memberMap.has(u));
-  if (missing.length) {
-    const ph2 = missing.map((_, i) => `$${i + 1}`).join(',');
-    const users = await pool.query(
-      `SELECT uuid, nickname, gender, birth_year, region, industry, mbti, interest
-         FROM users WHERE uuid IN (${ph2})`,
-      missing
+  try {
+    const room = await pool.query(
+      'SELECT id, host_uuid, host_role FROM rooms WHERE room_code = $1',
+      [code]
     );
-    users.rows.forEach(u => memberMap.set(u.uuid, u));
-  }
-  // viewer 마스킹 (모임장이 viewer면 마스킹 X — 운영용)
-  const out = clients.map(u => {
-    const m = memberMap.get(u);
-    if (!m) return null;
-    const row = { ...m };
-    if (!isHostViewer && viewer && viewer !== u) {
-      if (row.hide_birth_year) row.birth_year = null;
-      if (row.hide_region) row.region = null;
-      if (row.hide_industry) row.industry = null;
-      if (row.hide_interest) row.interest = null;
-      if (row.hide_instagram) row.instagram = null;
+    if (room.rows.length === 0) return res.status(404).json({ error: 'room not found' });
+    const hostUuid = room.rows[0].host_uuid;
+    const isHostViewer = viewer && hostUuid && viewer === hostUuid;
+
+    const wsModule = require('./ws');
+    let clients = wsModule.getRoomClients(code);
+    if (room.rows[0].host_role === 'host_only' && hostUuid) {
+      clients = clients.filter(u => u !== hostUuid);
     }
-    delete row.hide_birth_year;
-    delete row.hide_region;
-    delete row.hide_industry;
-    delete row.hide_interest;
-    delete row.hide_instagram;
-    return row;
-  }).filter(Boolean);
-  res.json(out);
+    if (clients.length === 0) return res.json([]);
+
+    // room_members 우선 (방별 익명 + hide 정보), 없으면 users fallback
+    const placeholders = clients.map((_, i) => `$${i + 2}`).join(',');
+    const members = await pool.query(
+      `SELECT uuid, nickname, gender, birth_year, region, industry, mbti, interest, instagram, emoji,
+              hide_birth_year, hide_region, hide_industry, hide_interest, hide_instagram
+         FROM room_members
+        WHERE room_id = $1 AND uuid IN (${placeholders})`,
+      [room.rows[0].id, ...clients]
+    );
+    const memberMap = new Map(members.rows.map(m => [m.uuid, m]));
+    // legacy fallback for clients not in room_members
+    const missing = clients.filter(u => !memberMap.has(u));
+    if (missing.length) {
+      const ph2 = missing.map((_, i) => `$${i + 1}`).join(',');
+      const users = await pool.query(
+        `SELECT uuid, nickname, gender, birth_year, region, industry, mbti, interest
+           FROM users WHERE uuid IN (${ph2})`,
+        missing
+      );
+      users.rows.forEach(u => memberMap.set(u.uuid, u));
+    }
+    // viewer 마스킹 (모임장이 viewer면 마스킹 X — 운영용)
+    const out = clients.map(u => {
+      const m = memberMap.get(u);
+      if (!m) return null;
+      const row = { ...m };
+      if (!isHostViewer && viewer && viewer !== u) {
+        if (row.hide_birth_year) row.birth_year = null;
+        if (row.hide_region) row.region = null;
+        if (row.hide_industry) row.industry = null;
+        if (row.hide_interest) row.interest = null;
+        if (row.hide_instagram) row.instagram = null;
+      }
+      delete row.hide_birth_year;
+      delete row.hide_region;
+      delete row.hide_industry;
+      delete row.hide_interest;
+      delete row.hide_instagram;
+      return row;
+    }).filter(Boolean);
+    res.json(out);
+  } catch (err) {
+    logDbError(res, 'GET /api/rooms/:code/members', err, { code, viewer });
+  }
 });
 
 // POST /api/rooms/:code/approve
@@ -443,16 +475,20 @@ router.get('/rooms/:code/me', async (req, res) => {
   const { code } = req.params;
   const uuid = req.query.uuid;
   if (!uuid) return res.status(400).json({ error: 'uuid required' });
-  const room = await pool.query('SELECT id FROM rooms WHERE room_code = $1', [code]);
-  if (room.rows.length === 0) return res.status(404).json({ error: 'room not found' });
-  const me = await pool.query(
-    `SELECT nickname, gender, birth_year, region, industry, mbti, interest, instagram, emoji,
-            hide_birth_year, hide_region, hide_industry, hide_interest, hide_instagram
-       FROM room_members WHERE room_id = $1 AND uuid = $2`,
-    [room.rows[0].id, uuid]
-  );
-  if (me.rows.length === 0) return res.json({ joined: false });
-  res.json({ joined: true, ...me.rows[0] });
+  try {
+    const room = await pool.query('SELECT id FROM rooms WHERE room_code = $1', [code]);
+    if (room.rows.length === 0) return res.status(404).json({ error: 'room not found' });
+    const me = await pool.query(
+      `SELECT nickname, gender, birth_year, region, industry, mbti, interest, instagram, emoji,
+              hide_birth_year, hide_region, hide_industry, hide_interest, hide_instagram
+         FROM room_members WHERE room_id = $1 AND uuid = $2`,
+      [room.rows[0].id, uuid]
+    );
+    if (me.rows.length === 0) return res.json({ joined: false });
+    res.json({ joined: true, ...me.rows[0] });
+  } catch (err) {
+    logDbError(res, 'GET /api/rooms/:code/me', err, { code, uuid });
+  }
 });
 
 // GET /api/rooms/:code/nickname-check?n=<nickname>&uuid=<uuid>
@@ -473,8 +509,7 @@ router.get('/rooms/:code/nickname-check', async (req, res) => {
     if (!r.rows.length) return res.json({ taken: false, is_self: false });
     return res.json({ taken: true, is_self: r.rows[0].uuid === uuid });
   } catch (err) {
-    console.error('nickname-check error:', err);
-    res.status(500).json({ error: 'db error' });
+    logDbError(res, 'GET /api/rooms/:code/nickname-check', err, { code, n, uuid });
   }
 });
 
@@ -488,18 +523,23 @@ router.post('/rooms/:code/join', async (req, res) => {
   const nick = String(nickname).trim().slice(0, 20);
   if (!nick) return res.status(400).json({ error: 'nickname empty' });
 
-  const room = await pool.query('SELECT id, status FROM rooms WHERE room_code = $1', [code]);
-  if (room.rows.length === 0) return res.status(404).json({ error: 'room not found' });
-  if (room.rows[0].status === 'closed') return res.status(410).json({ error: 'room closed' });
-  const room_id = room.rows[0].id;
+  let room_id;
+  try {
+    const room = await pool.query('SELECT id, status FROM rooms WHERE room_code = $1', [code]);
+    if (room.rows.length === 0) return res.status(404).json({ error: 'room not found' });
+    if (room.rows[0].status === 'closed') return res.status(410).json({ error: 'room closed' });
+    room_id = room.rows[0].id;
 
-  // 같은 방·다른 uuid가 같은 nickname 사용 중인지 체크
-  const dup = await pool.query(
-    'SELECT uuid FROM room_members WHERE room_id = $1 AND nickname = $2',
-    [room_id, nick]
-  );
-  if (dup.rows.length && dup.rows[0].uuid !== uuid) {
-    return res.status(409).json({ error: 'NICKNAME_TAKEN', message: '이 방에서 이미 사용 중인 닉네임이에요' });
+    // 같은 방·다른 uuid가 같은 nickname 사용 중인지 체크
+    const dup = await pool.query(
+      'SELECT uuid FROM room_members WHERE room_id = $1 AND nickname = $2',
+      [room_id, nick]
+    );
+    if (dup.rows.length && dup.rows[0].uuid !== uuid) {
+      return res.status(409).json({ error: 'NICKNAME_TAKEN', message: '이 방에서 이미 사용 중인 닉네임이에요' });
+    }
+  } catch (err) {
+    return logDbError(res, 'POST /api/rooms/:code/join (pre)', err, { code, uuid, nick });
   }
 
   try {
@@ -557,8 +597,7 @@ router.post('/rooms/:code/join', async (req, res) => {
     res.json({ ok: true, room_code: code, nickname: nick });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'NICKNAME_TAKEN' });
-    console.error('join error:', err);
-    res.status(500).json({ error: 'db error' });
+    logDbError(res, 'POST /api/rooms/:code/join', err, { code, uuid, nick });
   }
 });
 
@@ -732,8 +771,7 @@ router.get('/host-stats/:host_uuid', async (req, res) => {
       total_insta_exchanges: totalInstaExchanges,
     });
   } catch (err) {
-    console.error('host-stats error:', err);
-    res.status(500).json({ error: 'db' });
+    logDbError(res, 'GET /api/host-stats/:host_uuid', err, { host_uuid });
   }
 });
 
