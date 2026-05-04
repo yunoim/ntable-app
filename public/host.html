@@ -1320,8 +1320,17 @@
     border: 1px solid var(--gold-border);
     border-radius: 999px;
     font-variant-numeric: tabular-nums;
+    transition: background 0.18s, border-color 0.18s, color 0.18s;
   }
   .vote-progress strong { color: var(--white); font-weight: 700; }
+  .vote-progress.all-done {
+    color: var(--navy);
+    background: linear-gradient(135deg, var(--gold), #a07828);
+    border-color: var(--gold);
+    font-weight: 700;
+  }
+  .vote-progress.all-done strong { color: var(--navy); }
+  .vote-progress .done-badge { margin-left: 6px; font-weight: 800; }
   .vote-bars { display: flex; flex-direction: column; gap: 24px; margin-bottom: 36px; }
   .vote-bar-wrap { display: flex; flex-direction: column; gap: 10px; }
   .vote-label {
@@ -4679,6 +4688,7 @@ function renderQuestion() {
 // CC-A2.5 (2026-05-04): 현재 보여지는 문항이면 "투표 완료 N/M" 인디케이터 갱신.
 // approvedUsers 는 host_role 에 따라 호스트 포함/제외 자동 처리 (participant=포함, host_only=제외).
 // N > M 인 케이스(투표 후 강퇴)는 raw 표기 — "3/2" 자체가 호스트에게 시그널 ("이탈 후 투표 잔존").
+// CC-A2.5b (2026-05-04): 모두 응답 시 골드 솔리드 배경 + ✓ 배지 — 호스트가 다음 진행 즉시 인지.
 function updateVoteProgress(question_id, counts) {
   const el = document.getElementById('vote-progress');
   if (!el) return;
@@ -4686,8 +4696,12 @@ function updateVoteProgress(question_id, counts) {
   if (!curQ || curQ.id !== question_id) return;
   const total = Object.values(counts || {}).reduce((a, b) => a + b, 0);
   const expected = (state.approvedUsers || []).length;
-  if (expected === 0) { el.hidden = true; return; }
-  el.innerHTML = `투표 완료 <strong>${total}</strong> / ${expected}`;
+  if (expected === 0) { el.hidden = true; el.classList.remove('all-done'); return; }
+  const allDone = total >= expected;
+  el.innerHTML = allDone
+    ? `<strong>${total}</strong> / ${expected} <span class="done-badge">✓ 모두 응답</span>`
+    : `투표 완료 <strong>${total}</strong> / ${expected}`;
+  el.classList.toggle('all-done', allDone);
   el.hidden = false;
 }
 
