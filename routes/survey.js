@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
+const { logDbError } = require('./_db-errors');
 const { getPackDefaults } = require('./question-sources');
 
 const VALID_TAGS = [
@@ -67,8 +68,7 @@ router.post('/survey', async (req, res) => {
     );
     res.json({ success: true, is_host: isHost });
   } catch (err) {
-    console.error('POST /api/survey error:', err);
-    res.status(500).json({ error: 'db error' });
+    logDbError(res, 'POST /api/survey', err, { uuid, room_code });
   }
 });
 
@@ -99,8 +99,7 @@ router.get('/survey/eligibility', async (req, res) => {
 
     res.json({ eligible: true, is_host: uuid === host_uuid, room_title: title });
   } catch (err) {
-    console.error('eligibility error:', err);
-    res.status(500).json({ error: 'db error' });
+    logDbError(res, 'GET /api/survey/eligibility', err, { room, uuid });
   }
 });
 
@@ -130,8 +129,7 @@ router.get('/survey/participants', async (req, res) => {
     );
     res.json(rows.rows);
   } catch (err) {
-    console.error('participants error:', err);
-    res.status(500).json({ error: 'db error' });
+    logDbError(res, 'GET /api/survey/participants', err, { room, uuid });
   }
 });
 
@@ -217,8 +215,7 @@ router.post('/connections', async (req, res) => {
 
     res.json({ saved: cleanPicks.length, mutuals: mutuals.rows });
   } catch (err) {
-    console.error('connections error:', err);
-    res.status(500).json({ error: 'db error' });
+    logDbError(res, 'POST /api/connections', err, { uuid, room_code });
   }
 });
 
@@ -247,8 +244,7 @@ router.get('/connections/status', async (req, res) => {
     );
     res.json({ mutuals: mutuals.rows });
   } catch (err) {
-    console.error('connections status error:', err);
-    res.status(500).json({ error: 'db error' });
+    logDbError(res, 'GET /api/connections/status', err, { room_code, uuid });
   }
 });
 
@@ -494,8 +490,7 @@ router.get('/result', async (req, res) => {
 
     res.json({ match_nickname, match_uuid, match_emoji, fi_count, match_common, match_total_answered, match_common_picks, top_matches, participants, question_highlights, host_summary, mutual_pairs, pack_id, pack_defaults, couple_partner_uuid, mvp, host_uuid, playlists });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'db error' });
+    logDbError(res, 'GET /api/result', err, { uuid, room_code });
   }
 });
 
@@ -592,8 +587,7 @@ router.get('/rooms/:code/couple-card', async (req, res) => {
       questions,
     });
   } catch (err) {
-    console.error('couple-card error:', err);
-    res.status(500).json({ error: 'db error' });
+    logDbError(res, 'GET /api/rooms/:code/couple-card', err, { code, uuid, partner_uuid });
   }
 });
 

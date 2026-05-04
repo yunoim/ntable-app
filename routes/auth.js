@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../db');
+const { captureDbError } = require('./_db-errors');
 const { isUserActive } = require('./ws');
 
 // POST /api/login
@@ -54,7 +55,7 @@ router.post('/login', async (req, res) => {
     );
     return res.json({ uuid: newUuid, is_new: true });
   } catch (err) {
-    console.error('[auth] /login error:', err);
+    captureDbError('POST /api/login', err, { uuid, nickname: trimmedNickname });
     return res.status(500).json({ error: 'INTERNAL_ERROR' });
   }
 });
@@ -74,7 +75,7 @@ router.get('/me', async (req, res) => {
     }
     return res.json(result.rows[0]);
   } catch (err) {
-    console.error('[auth] /me error:', err);
+    captureDbError('GET /api/me', err, { uuid });
     return res.status(500).json({ error: 'INTERNAL_ERROR' });
   }
 });
@@ -99,7 +100,7 @@ router.put('/profile', async (req, res) => {
     );
     return res.json({ success: true });
   } catch (err) {
-    console.error('[auth] /profile error:', err);
+    captureDbError('PUT /api/profile', err, { uuid });
     return res.status(500).json({ error: 'INTERNAL_ERROR' });
   }
 });
@@ -120,7 +121,7 @@ router.get('/check-nickname', async (req, res) => {
     const active = exists ? isUserActive(existingUuid) : false;
     return res.json({ available: !exists, exists, active, uuid: existingUuid });
   } catch (err) {
-    console.error('[auth] /check-nickname error:', err);
+    captureDbError('GET /api/check-nickname', err, { nickname });
     return res.status(500).json({ error: 'INTERNAL_ERROR' });
   }
 });
@@ -142,7 +143,7 @@ router.get('/my-room', async (req, res) => {
     }
     return res.json(result.rows[0]);
   } catch (err) {
-    console.error('[auth] /my-room error:', err);
+    captureDbError('GET /api/my-room', err, { uuid });
     return res.status(500).json({ error: 'INTERNAL_ERROR' });
   }
 });

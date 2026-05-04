@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { parseQuestions, parseFreeTopics } = require('./question-sources');
+const { captureDbError } = require('./_db-errors');
 
 let pool, broadcastToRoom, getRoomClients;
 
@@ -155,7 +156,7 @@ router.put('/rooms/:code/questions', async (req, res) => {
     );
     res.json({ ok: true, questions: normalized, question_count: qcount });
   } catch (err) {
-    console.error('PUT questions error:', err);
+    captureDbError('PUT /api/rooms/:code/questions', err, { code: req.params.code });
     res.status(500).json({ error: err.message });
   }
 });
@@ -179,7 +180,7 @@ router.put('/rooms/:code/host-role', async (req, res) => {
     await pool.query('UPDATE rooms SET host_role = $1 WHERE id = $2', [host_role, room.id]);
     res.json({ ok: true, host_role });
   } catch (err) {
-    console.error('PUT host-role error:', err);
+    captureDbError('PUT /api/rooms/:code/host-role', err, { code: req.params.code });
     res.status(500).json({ error: err.message });
   }
 });
@@ -227,7 +228,7 @@ router.put('/rooms/:code/free-topics', async (req, res) => {
     );
     res.json({ ok: true, topics: normalized });
   } catch (err) {
-    console.error('PUT free-topics error:', err);
+    captureDbError('PUT /api/rooms/:code/free-topics', err, { code: req.params.code });
     res.status(500).json({ error: err.message });
   }
 });
@@ -266,7 +267,7 @@ router.post('/rooms/:code/state', async (req, res) => {
     broadcastToRoom(code, { type: 'state_update', state });
     res.json({ ok: true });
   } catch (err) {
-    console.error('state error:', err);
+    captureDbError('POST /api/rooms/:code/state', err, { code: req.params.code });
     res.status(500).json({ error: err.message });
   }
 });
@@ -321,7 +322,7 @@ router.post('/rooms/:code/vote', async (req, res) => {
     broadcastToRoom(code, { type: 'vote_result', question_id, counts });
     res.json({ counts });
   } catch (err) {
-    console.error('vote error:', err);
+    captureDbError('POST /api/rooms/:code/vote', err, { code: req.params.code });
     res.status(500).json({ error: err.message });
   }
 });
@@ -341,7 +342,7 @@ router.post('/rooms/:code/nudge', async (req, res) => {
     broadcastToRoom(code, { type: 'nudge', message: msg });
     res.json({ ok: true });
   } catch (err) {
-    console.error('nudge error:', err);
+    captureDbError('POST /api/rooms/:code/nudge', err, { code: req.params.code });
     res.status(500).json({ error: err.message });
   }
 });
@@ -360,7 +361,7 @@ router.post('/rooms/:code/question-card', async (req, res) => {
     broadcastToRoom(code, { type: 'question_card', text });
     res.json({ ok: true });
   } catch (err) {
-    console.error('question-card error:', err);
+    captureDbError('POST /api/rooms/:code/question-card', err, { code: req.params.code });
     res.status(500).json({ error: err.message });
   }
 });
@@ -432,7 +433,7 @@ router.post('/rooms/:code/vote/mvp', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('mvp vote error:', err);
+    captureDbError('POST /api/rooms/:code/vote/mvp', err, { code: req.params.code });
     res.status(500).json({ error: err.message });
   }
 });
@@ -468,7 +469,7 @@ router.post('/rooms/:code/mvp-finalize', async (req, res) => {
     broadcastToRoom(code, { type: 'mvp_announce', mvp });
     res.json({ success: true, mvp });
   } catch (err) {
-    console.error('mvp-finalize error:', err);
+    captureDbError('POST /api/rooms/:code/mvp-finalize', err, { code: req.params.code });
     res.status(500).json({ error: err.message });
   }
 });
@@ -572,7 +573,7 @@ router.post('/rooms/:code/insta-reveal', async (req, res) => {
       },
     });
   } catch (err) {
-    console.error('insta-reveal error:', err);
+    captureDbError('POST /api/rooms/:code/insta-reveal', err, { code: req.params.code });
     res.status(500).json({ error: err.message });
   }
 });
@@ -615,7 +616,7 @@ router.post('/rooms/:code/vote/match', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('match vote error:', err);
+    captureDbError('POST /api/rooms/:code/vote/match', err, { code: req.params.code });
     res.status(500).json({ error: err.message });
   }
 });
@@ -765,7 +766,7 @@ router.post('/rooms/:code/match', async (req, res) => {
     broadcastToRoom(code, { type: 'matching_result', match_json });
     res.json({ match_json });
   } catch (err) {
-    console.error('match error:', err);
+    captureDbError('POST /api/rooms/:code/match', err, { code: req.params.code });
     res.status(500).json({ error: err.message });
   }
 });

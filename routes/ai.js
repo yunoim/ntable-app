@@ -6,6 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
+const { captureDbError } = require('./_db-errors');
 
 // ─────────────────────────────────────────
 // [Claude API - 추후 활성화 가능]
@@ -223,7 +224,7 @@ router.get('/personality', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('[ai.js] /api/personality 오류:', err.message);
+    captureDbError('GET /api/personality', err, { uuid, room_code });
     return res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
 });
@@ -368,7 +369,7 @@ router.get('/rooms/:code/couple-love', async (req, res) => {
       summary: summary.join(' '),
     });
   } catch (err) {
-    console.error('[ai.js] /couple-love error:', err);
+    captureDbError('GET /api/rooms/:code/couple-love', err, { code, uuid, partner_uuid });
     res.status(500).json({ error: 'server error' });
   }
 });

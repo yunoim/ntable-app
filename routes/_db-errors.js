@@ -12,7 +12,9 @@
 
 const Sentry = require('@sentry/node');
 
-function logDbError(res, label, err, ctx) {
+// 로깅 + Sentry 캡처만 — 응답은 호출 측에서 결정.
+// 라우트가 기존 클라이언트 호환 응답 포맷(예: 'INTERNAL_ERROR')을 유지해야 할 때 사용.
+function captureDbError(label, err, ctx) {
   const pgFields = {
     code: err && err.code,
     detail: err && err.detail,
@@ -25,9 +27,16 @@ function logDbError(res, label, err, ctx) {
   try {
     Sentry.captureException(err, { extra: { route: label, ...pgFields, ctx } });
   } catch (_) {}
+  return pgFields;
+}
+
+// 로깅 + Sentry + 정규화 500 응답 (`{ error: 'db error', code: <SQLSTATE> }`).
+// 신규/관측 우선 라우트의 generic-500 catch 표준.
+function logDbError(res, label, err, ctx) {
+  const pgFields = captureDbError(label, err, ctx);
   if (!res.headersSent) {
     res.status(500).json({ error: 'db error', code: pgFields.code || null });
   }
 }
 
-module.exports = { logDbError };
+module.exports = { captureDbError, logDbError };
