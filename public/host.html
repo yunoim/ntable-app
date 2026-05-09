@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="color-scheme" content="dark">
 <link rel="stylesheet" href="/theme-lock.css">
 <link rel="stylesheet" href="/styles/tokens.css">
@@ -5151,6 +5151,10 @@ function bindEvents() {
   };
   if (chatSend) chatSend.addEventListener('click', sendChat);
   if (chatInp) chatInp.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat(); });
+  // 모바일 키보드 가시성 — focus 시 input 영역으로 자동 스크롤 (iOS Safari + 안드로이드 Chrome)
+  if (chatInp) chatInp.addEventListener('focus', () => {
+    setTimeout(() => { try { chatInp.scrollIntoView({ block: 'end', behavior: 'smooth' }); } catch (_) {} }, 250);
+  });
 
   // §5 Lobby Tabs (v1.0 · 2026-04-30) — 대기실 익명 채팅 탭 초기화
   if (typeof initLobbyTabsHost === 'function') initLobbyTabsHost();
