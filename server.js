@@ -181,6 +181,36 @@ const PORT = process.env.PORT || 8080;
 const RETENTION_DAYS = Math.max(1, parseInt(process.env.ROOM_RETENTION_DAYS || '30', 10) || 30);
 const RETENTION_ENABLED = process.env.ROOM_RETENTION_ENABLED === '1';
 
+// ── 자동 종료 cron: meeting_at + N시간 경과한 open/waiting 방을 status='closed' 로 전환 ──
+// 호스트가 모임 종료 후 cleanup 안 해도 게스트 화면이 자연스럽게 종료되도록.
+// 기본 ON. ROOM_STALE_CLOSE_ENABLED=0 으로 끌 수 있음.
+const STALE_CLOSE_HOURS = Math.max(1, parseInt(process.env.ROOM_STALE_CLOSE_HOURS || '6', 10) || 6);
+const STALE_CLOSE_ENABLED = process.env.ROOM_STALE_CLOSE_ENABLED !== '0';
+
+async function closeStaleRooms() {
+  try {
+    const pool = require('./db').pool;
+    const wsModule = require('./routes/ws');
+    const { rows } = await pool.query(
+      `UPDATE rooms
+          SET status = 'closed'
+        WHERE status IN ('open', 'waiting')
+          AND meeting_at IS NOT NULL
+          AND meeting_at < NOW() - ($1 || ' hours')::interval
+        RETURNING room_code`,
+      [String(STALE_CLOSE_HOURS)]
+    );
+    if (rows.length === 0) return;
+    for (const r of rows) {
+      try { wsModule.broadcastToRoom(r.room_code, { type: 'room_closed' }); } catch {}
+    }
+    console.log(`[stale-close] auto-closed ${rows.length} rooms past meeting_at + ${STALE_CLOSE_HOURS}h`);
+  } catch (err) {
+    console.error('[stale-close] error:', err && err.message);
+    try { Sentry.captureException(err, { extra: { route: 'stale-close' } }); } catch {}
+  }
+}
+
 async function cleanExpiredRooms() {
   try {
     const pool = require('./db').pool;
@@ -256,6 +286,13 @@ initDB()
         setInterval(cleanExpiredRooms, 24 * 60 * 60 * 1000); // 매일
       } else {
         console.log('[retention] cron disabled (ROOM_RETENTION_ENABLED != 1)');
+      }
+      if (STALE_CLOSE_ENABLED) {
+        console.log(`[stale-close] cron enabled — meeting_at + ${STALE_CLOSE_HOURS}h 경과 시 자동 closed`);
+        setTimeout(closeStaleRooms, 60 * 1000); // 서버 시작 60초 후 첫 실행
+        setInterval(closeStaleRooms, 30 * 60 * 1000); // 30분마다
+      } else {
+        console.log('[stale-close] cron disabled (ROOM_STALE_CLOSE_ENABLED == 0)');
       }
     });
   })
