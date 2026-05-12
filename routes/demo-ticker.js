@@ -27,7 +27,7 @@ let wsModule = null;
 let timer = null;
 
 const TICK_INTERVAL_MS = Math.max(1000, parseInt(process.env.DEMO_TICK_INTERVAL_MS || '5000', 10) || 5000);
-const EXPLORE_SECONDS = Math.max(10, parseInt(process.env.DEMO_EXPLORE_SECONDS || '75', 10) || 75);
+const EXPLORE_SECONDS = Math.max(5, parseInt(process.env.DEMO_EXPLORE_SECONDS || '15', 10) || 15);
 const CLOSING_SECONDS = Math.max(5, parseInt(process.env.DEMO_CLOSING_SECONDS || '10', 10) || 10);
 const HOST_ACTIVE_TIMEOUT_SEC = Math.max(60, parseInt(process.env.DEMO_HOST_ACTIVE_TIMEOUT_SEC || '1800', 10) || 1800); // 기본 30분
 const ENABLED = process.env.DEMO_TICKER_ENABLED !== '0';

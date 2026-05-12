@@ -30,14 +30,14 @@ const DEMO_ROOMS = [
     title: '🤖 ntable × AI — 라이브 체험',
     pack_id: 'ai-workplace',
     demo_kind: 'ai',
-    question_count: 5,
+    question_count: 3,
   },
   {
     room_code: 'DEMONT',
     title: '🍽 ntable — 5분 체험 모임',
     pack_id: 'ntable-showcase',
     demo_kind: 'ntable',
-    question_count: 5,
+    question_count: 3,
   },
 ];
 
