@@ -14,6 +14,7 @@
 <script src="/remember-toggle.js" defer></script>
 -->
 <script src="/js/brand.js"></script>
+<script src="/js/pack-fragment-loader.js" defer></script>
 <title>ntable — 모임장 프레젠테이션</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2557,6 +2558,10 @@
       <div id="no-approved" class="empty-msg" data-copy="empty_states.no_members" style="text-align:center; padding: 40px 0; font-size: 16px;">
         아직 참가자가 없어요. QR을 공유해 모임을 시작해보세요.
       </div>
+      <!-- Pack-별 intro 안내 카드 slot (2026-05-12 모듈화 Phase 2 POC).
+           ntPackFragment.load() 가 /pack/:pack_id/intro fragment 를 inject.
+           Pack 미정의 시 _default 로 fallback, 그것도 없으면 빈 채로 유지 (zero regression). -->
+      <div id="pack-intro-card-slot" data-pack-phase="intro"></div>
     </div>
 
     <!-- EXPLORE -->
@@ -3071,6 +3076,12 @@ async function loadRoomInfo() {
     if (room.pack_id) {
       document.body.classList.forEach(c => { if (c.startsWith('pack-')) document.body.classList.remove(c); });
       document.body.classList.add('pack-' + String(room.pack_id).replace(/[^a-z0-9-]/gi, ''));
+      // Pack 별 intro 안내 카드 fragment 로드 (2026-05-12 모듈화 Phase 2 POC).
+      // _default 또는 pack-specific fragment 가 있으면 #pack-intro-card-slot 에 inject. 없으면 silent skip.
+      if (typeof window.ntPackFragment === 'object' && window.ntPackFragment) {
+        window.ntPackFragment.load({ pack_id: room.pack_id, phase: 'intro', slotId: 'pack-intro-card-slot' })
+          .catch(err => console.warn('[pack-fragment] intro load fail', err && err.message));
+      }
     }
     // T-B0-10 (2026-04-22): pack_id 확정 후 stat bar 로드 시도 (dating 외는 내부에서 조기 return)
     loadHostCumulativeStats();

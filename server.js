@@ -17,6 +17,7 @@ const aiRouter = require('./routes/ai');
 const panelRouter = require('./routes/panel');
 const adminAuthRouter = require('./routes/admin-auth');
 const userAuthRouter = require('./routes/user-auth');
+const packFragmentsRouter = require('./routes/pack-fragments');
 const demoAuthRouter = require('./routes/demo-auth');
 const demoTicker = require('./routes/demo-ticker');
 
@@ -96,6 +97,8 @@ app.use('/api', surveyRouter);
 app.use('/api', aiRouter);
 app.use('/api', panelRouter);
 app.use('/api', adminAuthRouter);
+// /pack/:id/:phase — pack-별 UI fragment (2026-05-12 모듈화 Phase 2)
+app.use('/', packFragmentsRouter);
 // 데모 호스트 핸드오프 (admin OAuth 재활용 + HMAC grant 1회용).
 app.use('/api', demoAuthRouter);
 // 2026-04-22: 사용자 OAuth(Kakao/Google) 라우트 비활성화 (사용자 요청 — admin OAuth 만 유지).

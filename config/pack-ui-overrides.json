@@ -1,0 +1,8 @@
+{
+  "_comment": "Pack-별 UI fragment override manifest (2026-05-12 모듈화 Phase 2 POC). 신규 pack 이 phase fragment 를 override 하고 싶을 때 여기 명시. 명시 없으면 _default/<phase>.html 로 fallback. fragment 파일 자체가 없으면 zero-injection (안전). phase enum: intro/explore/free/ending. slot 은 host/guest 양쪽 모두 적용 (이번 POC 는 host 만).",
+  "overrides": {
+    "_default": {
+      "intro": "public/packs/_default/intro.html"
+    }
+  }
+}
