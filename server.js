@@ -17,6 +17,8 @@ const aiRouter = require('./routes/ai');
 const panelRouter = require('./routes/panel');
 const adminAuthRouter = require('./routes/admin-auth');
 const userAuthRouter = require('./routes/user-auth');
+const demoAuthRouter = require('./routes/demo-auth');
+const demoTicker = require('./routes/demo-ticker');
 
 const app = express();
 
@@ -94,6 +96,8 @@ app.use('/api', surveyRouter);
 app.use('/api', aiRouter);
 app.use('/api', panelRouter);
 app.use('/api', adminAuthRouter);
+// 데모 호스트 핸드오프 (admin OAuth 재활용 + HMAC grant 1회용).
+app.use('/api', demoAuthRouter);
 // 2026-04-22: 사용자 OAuth(Kakao/Google) 라우트 비활성화 (사용자 요청 — admin OAuth 만 유지).
 // app.use('/api', userAuthRouter);
 
@@ -139,6 +143,26 @@ app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
+// ── 영구 데모방 진입 경로 ──────────────────────────────────────────────
+// /demo  → ntable 홍보용 데모 (room_code: DEMONT, pack: ntable-showcase)
+// /ai    → AI 강의 도입부용 데모 (room_code: DEMOAI, pack: ai-workplace)
+// 게스트는 login.html 로 redirect (?next=/room/CODE) — 닉네임 입력 후 자동 입장.
+app.get('/demo', (req, res) => {
+  res.redirect(302, '/?next=/room/DEMONT');
+});
+app.get('/ai', (req, res) => {
+  res.redirect(302, '/?next=/room/DEMOAI');
+});
+// 호스트 진입 (admin.ntable.kr → app.ntable.kr 핸드오프 endpoint).
+// URL fragment #host_grant=<token> 을 demo-redeem.html 이 redeem 한 뒤
+// /room/CODE/host 로 location.replace.
+app.get('/demo/host', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'demo-redeem.html'));
+});
+app.get('/ai/host', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'demo-redeem.html'));
+});
+
 // Fallback: serve login.html for non-api routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
@@ -170,6 +194,8 @@ const server = http.createServer(app);
 wsRouter.init(server);
 adminRouter.init(require('./db').pool, wsRouter);
 adminAuthRouter.init(require('./db').pool);
+demoAuthRouter.init(require('./db').pool, adminAuthRouter);
+demoTicker.init(wsRouter);
 // 2026-04-22: 사용자 OAuth 비활성화.
 // userAuthRouter.init(require('./db').pool);
 
@@ -217,6 +243,7 @@ async function cleanExpiredRooms() {
     const { rows } = await pool.query(
       `SELECT id FROM rooms
         WHERE status = 'closed'
+          AND demo_kind IS NULL
           AND created_at < NOW() - ($1 || ' days')::interval`,
       [String(RETENTION_DAYS)]
     );

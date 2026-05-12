@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>데모 호스트 진입 — ntable</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    margin: 0; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    background: #0a0f1e; color: #ddd5bc;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    padding: 20px;
+  }
+  .card { text-align: center; max-width: 360px; }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid rgba(212,168,67,0.18);
+    border-top-color: #d4a843;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 18px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .title { font-size: 16px; font-weight: 700; color: #d4a843; margin-bottom: 8px; }
+  .msg { font-size: 14px; color: rgba(216,208,187,0.78); line-height: 1.5; }
+  .err { color: #e87e7e; }
+  .back {
+    display: inline-block; margin-top: 18px; padding: 10px 18px;
+    background: rgba(212,168,67,0.18); color: #d4a843;
+    border: 1px solid rgba(212,168,67,0.35); border-radius: 10px;
+    font-size: 13px; text-decoration: none;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="spinner" id="spinner"></div>
+  <div class="title">데모 호스트로 들어가는 중</div>
+  <div class="msg" id="msg">grant 검증 중…</div>
+  <div id="actions"></div>
+</div>
+<script>
+(async function() {
+  const msg = document.getElementById('msg');
+  const spinner = document.getElementById('spinner');
+  const actions = document.getElementById('actions');
+
+  function showError(text, showBack) {
+    spinner.style.display = 'none';
+    msg.textContent = text;
+    msg.className = 'msg err';
+    if (showBack) {
+      actions.innerHTML = '<a class="back" href="https://admin.ntable.kr/admin">관리자로 돌아가기</a>';
+    }
+  }
+
+  const hash = location.hash || '';
+  const m = hash.match(/host_grant=([^&]+)/);
+  const grant = m ? decodeURIComponent(m[1]) : null;
+  if (!grant) {
+    showError('grant 토큰이 없어요. admin.ntable.kr 에서 다시 진입해주세요.', true);
+    return;
+  }
+  // fragment 비우기 (재진입 방지)
+  try { history.replaceState(null, '', location.pathname); } catch (_) {}
+
+  try {
+    const r = await fetch('/api/demo/redeem-host-grant', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ host_grant: grant }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || !data.ok) {
+      const errMap = {
+        invalid_or_expired_grant: 'grant 가 만료됐어요 (60초). 다시 발급해주세요.',
+        demo_room_not_seeded: '데모방이 아직 시드되지 않았어요.',
+      };
+      showError(errMap[data.error] || ('redeem 실패: ' + (data.error || 'unknown')), true);
+      return;
+    }
+    msg.textContent = data.kind === 'ai' ? '🤖 AI 데모 방으로 이동' : '🍽 ntable 데모 방으로 이동';
+
+    // localStorage 강제 세팅 — host.html 이 demo_uuid · preferred_nickname 을 읽음
+    try {
+      localStorage.setItem('demo_uuid', data.host_uuid);
+      localStorage.setItem('preferred_nickname', data.host_nickname);
+    } catch (_) {}
+
+    // host_active=true 토글 (자동진행 일시정지)
+    try {
+      await fetch('/api/demo/set-host-active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-uuid': data.host_uuid },
+        body: JSON.stringify({ kind: data.kind, active: true, uuid: data.host_uuid }),
+      });
+    } catch (_) {}
+
+    location.replace('/room/' + encodeURIComponent(data.room_code) + '/host');
+  } catch (err) {
+    showError('redeem 오류: ' + (err && err.message || 'unknown'), true);
+  }
+})();
+</script>
+</body>
+</html>

@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
+    "seed:demo": "node scripts/seed-demo-rooms.js",
+    "gen:demo-qr": "node scripts/gen-demo-qr.js",
     "prepare": "husky"
   },
   "dependencies": {

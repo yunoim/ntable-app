@@ -121,6 +121,11 @@ async function initDB() {
     // 모임 시각 — 모임장이 create.html에서 입력 (선택). QR/카카오 공유 텍스트에 노출.
     try { await client.query(`ALTER TABLE rooms ADD COLUMN meeting_at TIMESTAMPTZ`); } catch (e) { if (e.code !== '42701') throw e; }
 
+    // 영구 데모방 식별자 — NULL=일반, 'ai'=강의 도입부용, 'ntable'=홍보용.
+    // 데모방 정책 (rooms 검색·만료 cron·결제 분기 등) 모두 이 컬럼 기준.
+    // meeting_at은 NULL로 두어 stale-close cron(meeting_at IS NOT NULL 조건)이 자연 제외.
+    try { await client.query(`ALTER TABLE rooms ADD COLUMN demo_kind VARCHAR(20)`); } catch (e) { if (e.code !== '42701') throw e; }
+
     // 아바타 이모지 — 사진 안 올린 사용자를 위한 대안 (토끼/호랑이/여우 등). users + room_members 양쪽
     try { await client.query(`ALTER TABLE users ADD COLUMN emoji VARCHAR(8)`); } catch (e) { if (e.code !== '42701') throw e; }
     try { await client.query(`ALTER TABLE room_members ADD COLUMN emoji VARCHAR(8)`); } catch (e) { if (e.code !== '42701') throw e; }
@@ -248,6 +253,29 @@ async function initDB() {
       `);
     } catch (e) {
       // 42710 = duplicate_object (제약/인덱스 이미 존재), 42P07 = duplicate_table
+      if (e.code !== '42710' && e.code !== '42P07') throw e;
+    }
+
+    // 데모방 사이클 — 일반 방은 0, 영구 데모방은 1씩 증가하며 누적.
+    // UNIQUE 키를 (uuid, room_id, cycle_id) 로 확장해 같은 게스트가 다른 사이클에
+    // 들어와도 충돌 없이 결과 보존. 일반 방은 cycle_id=0 으로 zero regression.
+    try {
+      await client.query(`ALTER TABLE member_results ADD COLUMN cycle_id INTEGER NOT NULL DEFAULT 0`);
+    } catch (e) {
+      if (e.code !== '42701') throw e;
+    }
+    // 기존 UNIQUE (uuid, room_id) 제약을 (uuid, room_id, cycle_id) 로 교체.
+    // 이미 위에서 (uuid, room_id) 가 붙어있는 상태이므로 drop 먼저.
+    try {
+      await client.query(`ALTER TABLE member_results DROP CONSTRAINT IF EXISTS member_results_uuid_room_id_key`);
+    } catch (_) {}
+    try {
+      await client.query(`
+        ALTER TABLE member_results
+        ADD CONSTRAINT member_results_uuid_room_cycle_key
+        UNIQUE (uuid, room_id, cycle_id)
+      `);
+    } catch (e) {
       if (e.code !== '42710' && e.code !== '42P07') throw e;
     }
 
