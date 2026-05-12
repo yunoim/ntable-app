@@ -12,6 +12,11 @@ const path = require('path');
 
 const PACKS_DIR = path.join(__dirname, '../questions/packs');
 
+// Pack 메타 SoT (2026-05-12 모듈화 Phase 1) — JSON 로드.
+// 코드 hard-coded 였던 PACK_DEFAULTS · PACK_FLOW_DEFAULTS 를 config/pack-defaults.json 으로 추출.
+// 신규 pack 추가 = JSON entry + questions/packs/{id}.md (코드 변경 불필요).
+const PACK_CONFIG = require('../config/pack-defaults.json');
+
 // 헤더 텍스트에서 tier / topic group 식별
 // 4-tier 구조 (2026-05-04 확장): final = 모임 마지막 고정 문항 (단일).
 // 팩 md 에 `## 탐구 질문 - Final` (또는 `- 마지막`, `- 고정`) 섹션 추가하면 풀의 첫 항목이 항상 마지막에 배치.
@@ -276,25 +281,17 @@ function buildRoomTopics(pack) {
   return out;
 }
 
-// 하위 호환 — 기본 팩
-const DEFAULT_PACK_ID = 'icebreaker';
+// 하위 호환 — 기본 팩 (JSON SoT 에서 derived)
+const DEFAULT_PACK_ID = PACK_CONFIG.default || 'icebreaker';
 
-// 팩별 마무리 단계 (closing_steps)
+// 팩별 마무리 단계 (closing_steps) — JSON SoT 에서 derived.
 // - 'mvp'           : MVP 투표 + 발표
 // - 'match'         : 사랑의 작대기 + 매칭 발표
 // - 'explore-result': 라운드별 탐구 결과 카드
 // 빈 배열이면 closing 단계 없이 모임 종료
-const PACK_FLOW_DEFAULTS = {
-  couples: [],                                // 1:1 — closing-explore-result 자동
-  icebreaker: ['mvp'],                        // 첫만남 — MVP 만
-  'friends-reunion': ['explore-result'],      // 오랜만 — 탐구 결과 카드
-  dating: ['mvp', 'match'],                   // 연애 — MVP + 작대기
-  teambuilding: ['mvp', 'explore-result'],    // 팀빌딩 — MVP + 결과
-  'playlist-share': ['mvp', 'explore-result'],// 플리 공유회 — BEST 플리 투표(MVP 재활용) + 탐구 결과. match(작대기) 단계 없음 (2026-04-22 QA 피드백)
-  'nights-stories': ['mvp'],                  // 나의 이야기 찾기 — 오늘의 주인공만
-  'ai-workplace': [],                         // AI 강의 데모 — closing 없이 결과로 바로
-  'ntable-showcase': [],                      // ntable 홍보 데모 — 무인 자동진행, closing 없음
-};
+const PACK_FLOW_DEFAULTS = Object.fromEntries(
+  Object.entries(PACK_CONFIG.packs).map(([id, def]) => [id, def.flow || []])
+);
 
 function getPackFlow(packId) {
   if (PACK_FLOW_DEFAULTS[packId]) return PACK_FLOW_DEFAULTS[packId];
@@ -324,18 +321,27 @@ const CONTENT_KIND = {
   record:       '기록 측정 숫자 입력 [skeleton]',
 };
 
-// 팩별 UX 정책 (wizard 수집 · 카드 노출 · 결과 페이지 섹션 · 인스타 교환)
+// 팩별 UX 정책 (wizard 수집 · 카드 노출 · 결과 페이지 섹션 · 인스타 교환) — JSON SoT 에서 derived.
 // Read-time 에 /api/rooms/:code · /api/result 응답으로 내려줌 (스냅샷 저장 X).
 // 모임장이 display_fields 추가·hide_* 토글로 사용자별 override 가능.
+// 신규 pack 추가 = config/pack-defaults.json 에 entry 추가 (이 파일 수정 불필요).
 const WIZARD_FIELDS_ALL = ['nickname', 'emoji', 'gender', 'birth_year', 'region', 'industry', 'mbti', 'interest', 'instagram'];
 const DISPLAY_FIELDS_ALL = ['birth_year', 'region', 'industry', 'mbti', 'interest'];
 const RESULT_SECTIONS_ALL = ['ai_personality', 'couple_love', 'couple_card', 'best_match', 'mutual_pairs', 'mvp', 'explore_result', 'summary'];
 
-// skip_free_chat: true 면 탐구(explore) → 자유대화(free) 건너뛰고 바로 마무리(ending).
-// wizard_fields: 게스트가 입장 마법사에서 수집하는 필드.
-// display_fields_default: 결과카드·참가자카드에 보이는 필드 기본값 (모임장 override 가능).
-// result_sections: 결과 페이지에서 렌더될 섹션 화이트리스트.
-const PACK_DEFAULTS = {
+// PACK_DEFAULTS — JSON entry 에서 flow 필드만 제거한 형태 (flow 는 PACK_FLOW_DEFAULTS 가 담당).
+const PACK_DEFAULTS = Object.fromEntries(
+  Object.entries(PACK_CONFIG.packs).map(([id, def]) => {
+    const { flow, ...rest } = def;
+    return [id, rest];
+  })
+);
+
+/* eslint-disable */
+// 2026-05-12 JSON 추출: 아래 거대 객체는 config/pack-defaults.json 으로 이동 완료.
+// 코드는 PACK_DEFAULTS = Object.fromEntries(...) 로 derived. 이 dead 객체는 다음 phase 에 cleanup.
+// 임시 unreachable wrap (`if (false)`) — 런타임 영향 0, syntax 검사만 통과.
+if (false) { const _REMOVED = {
   // 커플/듀오 — 닉·이모지·MBTI·출생연도만. 자유대화 skip · 매칭·MVP·인스타 없음.
   // 결과: 개인 성향(ai_personality) + 연애 분석(couple_love: MBTI궁합 + 탐구답변 기반) + 커플 카드(couple_card) + 탐구결과 + 요약.
   couples: {
@@ -528,7 +534,8 @@ const PACK_DEFAULTS = {
       best_match_eyebrow: '비슷한 답을 고른 동료',
     },
   },
-};
+}; }
+/* eslint-enable */
 
 function getPackDefaults(packId) {
   return PACK_DEFAULTS[packId] || PACK_DEFAULTS[DEFAULT_PACK_ID];

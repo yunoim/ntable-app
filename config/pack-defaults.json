@@ -1,0 +1,191 @@
+{
+  "_comment": "Pack 메타·UX 정책 SoT. 신규 pack 추가 = 여기에 entry + questions/packs/{id}.md 추가. content_kind enum: conversation/playlist/performance/creation/pitch/record. series id: ntable-nights/plays/draws/pitches/games. flow items: mvp/match/explore-result. wizard_fields enum: nickname/emoji/gender/birth_year/region/industry/mbti/interest/instagram/playlist. result_sections enum: ai_personality/couple_love/couple_card/best_match/mutual_pairs/mvp/explore_result/summary.",
+  "default": "icebreaker",
+  "packs": {
+    "couples": {
+      "series": null,
+      "content_kind": "conversation",
+      "flow": [],
+      "wizard_fields": ["nickname", "emoji", "gender", "mbti", "birth_year"],
+      "wizard_required": ["nickname"],
+      "wizard_prompt_after_join": ["gender", "birth_year", "mbti"],
+      "display_fields_default": ["birth_year", "mbti"],
+      "result_sections": ["ai_personality", "couple_love", "couple_card", "explore_result"],
+      "skip_free_chat": true,
+      "insta_exchange_enabled": false,
+      "best_match_enabled": false,
+      "mvp_enabled": false,
+      "match_pairs_enabled": false,
+      "chat_reactions": ["💫 케미 좋아요", "🌙 분위기 있어요", "💛 한 번 더 보고파", "😊 편안해요", "🙌 공감돼요"],
+      "labels": {
+        "page2_card_title": "💘 우리 연애 케미",
+        "best_match_eyebrow": "우리만의 케미"
+      }
+    },
+    "dating": {
+      "series": "ntable-nights",
+      "content_kind": "conversation",
+      "flow": ["mvp", "match"],
+      "wizard_fields": ["nickname", "emoji", "gender", "birth_year", "region", "industry", "mbti", "interest", "instagram"],
+      "wizard_required": ["nickname"],
+      "wizard_prompt_after_join": ["gender", "birth_year", "region", "industry", "mbti", "interest", "instagram"],
+      "display_fields_default": ["birth_year", "region", "industry", "interest"],
+      "result_sections": ["ai_personality", "best_match", "mutual_pairs", "explore_result", "summary"],
+      "skip_free_chat": false,
+      "insta_exchange_enabled": true,
+      "insta_opposite_gender_only": true,
+      "best_match_enabled": true,
+      "mvp_enabled": true,
+      "match_pairs_enabled": true,
+      "chat_reactions": ["💫 케미 좋아요", "🌙 분위기 있어요", "💛 한 번 더 보고파", "😊 편안해요", "🙌 공감돼요"],
+      "labels": {
+        "page2_card_title": "💘 베스트 매칭",
+        "best_match_eyebrow": "오늘의 인연"
+      }
+    },
+    "icebreaker": {
+      "series": "ntable-nights",
+      "content_kind": "conversation",
+      "flow": ["mvp"],
+      "wizard_fields": ["nickname", "emoji", "gender", "birth_year", "region", "industry", "mbti", "interest"],
+      "wizard_required": ["nickname"],
+      "wizard_prompt_after_join": ["gender", "birth_year", "region", "industry", "mbti", "interest"],
+      "display_fields_default": ["birth_year", "region", "industry", "interest"],
+      "result_sections": ["ai_personality", "best_match", "mvp", "explore_result", "summary"],
+      "skip_free_chat": false,
+      "insta_exchange_enabled": false,
+      "best_match_enabled": true,
+      "mvp_enabled": true,
+      "match_pairs_enabled": false,
+      "chat_reactions": ["😄 재밌어요", "🤔 흥미로워요", "👏 공감돼요", "💡 인사이트", "🙌 좋은 질문"],
+      "labels": {
+        "page2_card_title": "🤝 베스트 매칭",
+        "best_match_eyebrow": "나와 가장 잘 맞았던 사람"
+      }
+    },
+    "friends-reunion": {
+      "series": "ntable-nights",
+      "content_kind": "conversation",
+      "flow": ["explore-result"],
+      "wizard_fields": ["nickname", "emoji", "birth_year", "mbti"],
+      "wizard_required": ["nickname"],
+      "wizard_prompt_after_join": ["birth_year", "mbti"],
+      "display_fields_default": ["birth_year", "mbti"],
+      "result_sections": ["ai_personality", "explore_result", "summary"],
+      "skip_free_chat": false,
+      "insta_exchange_enabled": false,
+      "best_match_enabled": false,
+      "mvp_enabled": false,
+      "match_pairs_enabled": false,
+      "chat_reactions": ["😄 재밌어요", "🤔 흥미로워요", "👏 공감돼요", "💡 인사이트", "🙌 좋은 질문"],
+      "labels": {
+        "page2_card_title": "✨ 오늘 또 가까워진 사람",
+        "best_match_eyebrow": "오늘 다시 통한 사람"
+      }
+    },
+    "nights-stories": {
+      "series": "ntable-nights",
+      "content_kind": "conversation",
+      "flow": ["mvp"],
+      "wizard_fields": ["nickname", "emoji", "gender", "birth_year", "mbti", "interest"],
+      "wizard_required": ["nickname"],
+      "wizard_prompt_after_join": ["gender", "birth_year", "mbti", "interest"],
+      "display_fields_default": ["birth_year", "mbti", "interest"],
+      "result_sections": ["ai_personality", "best_match", "mvp", "explore_result", "summary"],
+      "skip_free_chat": false,
+      "insta_exchange_enabled": false,
+      "best_match_enabled": true,
+      "mvp_enabled": true,
+      "match_pairs_enabled": false,
+      "chat_reactions": ["🌙 분위기 있어요", "💡 인사이트", "👏 공감돼요", "🤔 흥미로워요", "💛 고마워요"],
+      "labels": {
+        "page2_card_title": "🌙 비슷한 이야기를 가진 사람",
+        "best_match_eyebrow": "나와 비슷한 이야기"
+      }
+    },
+    "playlist-share": {
+      "series": "ntable-plays",
+      "content_kind": "playlist",
+      "flow": ["mvp", "explore-result"],
+      "wizard_fields": ["nickname", "emoji", "mbti", "playlist", "instagram"],
+      "wizard_required": ["nickname", "playlist"],
+      "wizard_prompt_after_join": ["mbti", "instagram"],
+      "display_fields_default": ["mbti", "playlist"],
+      "result_sections": ["ai_personality", "mvp", "explore_result", "summary"],
+      "skip_free_chat": false,
+      "insta_exchange_enabled": true,
+      "insta_opposite_gender_only": false,
+      "best_match_enabled": false,
+      "mvp_enabled": true,
+      "match_pairs_enabled": false,
+      "chat_reactions": ["🔥 이 곡 뭐죠?", "🎧 플리 추가", "💗 눈물 주의", "🕺 춤추게 됨", "😌 힐링됨"],
+      "labels": {
+        "page2_card_title": "🎵 오늘의 BEST 플리",
+        "best_match_eyebrow": "음악 취향이 비슷한 사람",
+        "mvp_card_head": "🎵 오늘의 베스트 플리",
+        "mvp_vote_card_head": "🎵 베스트 플리 투표",
+        "closing_stage_sub": "베스트 플리 투표 → 발표 → 탐구 결과 공개 순서로 진행해요."
+      }
+    },
+    "ai-workplace": {
+      "series": null,
+      "content_kind": "conversation",
+      "flow": [],
+      "wizard_fields": ["nickname", "emoji"],
+      "wizard_required": ["nickname"],
+      "wizard_prompt_after_join": [],
+      "display_fields_default": [],
+      "result_sections": ["ai_personality", "explore_result", "summary"],
+      "skip_free_chat": true,
+      "insta_exchange_enabled": false,
+      "best_match_enabled": false,
+      "mvp_enabled": false,
+      "match_pairs_enabled": false,
+      "chat_reactions": ["👍 공감", "💡 인사이트", "🤔 흥미로워요", "📝 메모", "😄 재밌네요"],
+      "labels": {
+        "page2_card_title": "🤖 오늘의 AI 성향",
+        "best_match_eyebrow": "나와 비슷한 AI 태도"
+      }
+    },
+    "ntable-showcase": {
+      "series": null,
+      "content_kind": "conversation",
+      "flow": [],
+      "wizard_fields": ["nickname", "emoji"],
+      "wizard_required": ["nickname"],
+      "wizard_prompt_after_join": [],
+      "display_fields_default": [],
+      "result_sections": ["ai_personality", "explore_result", "summary"],
+      "skip_free_chat": true,
+      "insta_exchange_enabled": false,
+      "best_match_enabled": false,
+      "mvp_enabled": false,
+      "match_pairs_enabled": false,
+      "chat_reactions": ["😄 재밌어요", "🤝 반가워요", "🙌 좋아요", "💡 인사이트", "✨ 한 번 더"],
+      "labels": {
+        "page2_card_title": "🍽 오늘의 ntable 성향",
+        "best_match_eyebrow": "나와 비슷한 성향"
+      }
+    },
+    "teambuilding": {
+      "series": "ntable-nights",
+      "content_kind": "conversation",
+      "flow": ["mvp", "explore-result"],
+      "wizard_fields": ["nickname", "emoji", "industry", "mbti", "interest"],
+      "wizard_required": ["nickname"],
+      "wizard_prompt_after_join": ["industry", "mbti", "interest"],
+      "display_fields_default": ["industry", "mbti", "interest"],
+      "result_sections": ["ai_personality", "mvp", "explore_result", "summary"],
+      "skip_free_chat": false,
+      "insta_exchange_enabled": false,
+      "best_match_enabled": false,
+      "mvp_enabled": true,
+      "match_pairs_enabled": false,
+      "chat_reactions": ["👍 좋은 의견", "😄 재밌네요", "📝 메모", "❓ 질문 있음", "✅ 동의"],
+      "labels": {
+        "page2_card_title": "🎯 오늘의 주인공",
+        "best_match_eyebrow": "비슷한 답을 고른 동료"
+      }
+    }
+  }
+}

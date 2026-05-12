@@ -1,6 +1,6 @@
 # ntable-app — 데모 형상 개발 허브
 
-> **Notion 동기화**: 2026-04-17
+> **Notion 동기화**: 2026-05-12 (모듈화 Phase 1 — PACK_DEFAULTS JSON 추출 / outdated SoT 정리)
 > **목적**: 누구나 모임장이 되어 실제 모임을 열고 진행할 수 있는 경량 플랫폼
 > **기존 ntable(ns)과 완전 분리된 병렬 프로젝트**
 > **🧊 ns 동결 (2026-04-17부)**: ns는 신규 개발 중단. 플랫폼 작업은 이 디렉토리 + `ntable-landing/`에만 집중.
@@ -77,12 +77,11 @@
 
 ## 핵심 설계 (확정)
 
-- **인증**: OAuth 없음. 닉네임 + 브라우저 UUID (localStorage)
-  - 닉네임 재로그인 지원 (localStorage 유실 시 복구 가능)
+- **인증** (2026-04-18 OAuth 활성화): 호스트는 Google/Kakao OAuth (선택) + 게스트는 닉네임 + 브라우저 UUID (localStorage). OAuth 로그인 시 device uuid → user.uuid 마이그레이션. 닉네임 재로그인 지원 (localStorage 유실 시 복구).
 - **홈 진입** (2026-04-23 T-34 개편): `app.ntable.kr` = 역할 분기 홈 — "모임을 열고 싶어요"(호스트 카드 → `/create`) vs "초대받아 들어가요"(게스트 카드 → 참여 코드 6자리 모달 → `/room/:code`). `?next=/room/CODE` / `?role=guest` / `?code=XXXXXX` 쿼리 파라미터 지원. (이전 규칙 "무조건 모임장·로비 없음" 폐기 — 게스트가 코드만 알고 QR 못 연 케이스를 웰컴 화면에서 구제해야 함.)
 - **게스트 진입**: 오프라인(QR 스캔 · `/room/:code` 직접) / 온라인(URL 공유) / 홈 코드 입력 3경로. 슬림 온보딩 = 닉네임(2–8자 한글·영문) + 아바타 12개 curated pool. 나머지 7필드는 `guest.html` 의 lazy prompt 카드가 점진 수집.
 - **입장 URL**: 방 생성 시 `https://app.ntable.kr/room/:code` 자동 생성 + QR + URL 복사 버튼
-- **승인**: 모임장 수동 승인 (개별/전체)
+- **승인** (2026-04-19 자동 입장으로 변경 — 수동 승인 폐기): 게스트는 닉네임 + 아바타만 입력하면 즉시 입장. 호스트는 강퇴만 가능 (isSelf 제외).
 - **모임장 역할**: 방 생성 시 선택 — 진행 전담 / 게스트 겸임
 - **결제/계좌/SMS/Discord 없음**
 - **동시 모임 수 제한 없음**, 최대 참가자 제한 없음
@@ -99,9 +98,17 @@
 - **변경 SoT 순서**: Notion 브랜드 가이드 → `docs/brand/brand.json` → `public/styles/*.css` → HTML `<style>` → 인라인
 - **이전 정책 배경**: 초기 병렬 개발 + Claude 프롬프트 파일 단위 공유 편의. 현재는 해당 없음.
 
-## 방(Pack) 별 UI 분기 구조 (2026-04-22 — B 방식 전환 중)
+## 방(Pack) 별 UI 분기 구조 (2026-05-12 — 모듈화 Phase 1 완료, Phase 2 진행 중)
 
-방 종류(`pack_id`)마다 대기실·탐구·자유대화·마무리 탭 UI 가 달라질 수 있도록 fragment partial 기반으로 전환 중. 현재 B 방식(partial fragment 로딩) 최소 hook 만 심어둔 상태.
+방 종류(`pack_id`)마다 대기실·탐구·자유대화·마무리 탭 UI 가 달라질 수 있도록 fragment partial 기반으로 전환 중.
+
+### Phase 1 (완료 — 2026-05-12)
+- **PACK_DEFAULTS JSON 추출**: 코드 hard-coded 였던 9개 pack 정의를 `config/pack-defaults.json` 으로 이동. 신규 pack 추가 = JSON entry + `questions/packs/{id}.md` (코드 변경 불필요).
+- `routes/question-sources.js` 의 PACK_DEFAULTS · PACK_FLOW_DEFAULTS 는 JSON 에서 derived. exports API 호환 유지.
+
+### Phase 2+ (진행 중)
+- Fragment loader 인프라: `/pack/:id/:tab` server route, `public/packs/${pack_id}/${tab}.html` 디렉토리, client loader, `packUI(path, fallback)` helper.
+- intro / explore / free / ending phase 순차 분할 (각 phase 별도 commit + advisor 양끝 + prod 검증).
 
 ### 합의된 규약 (다음 PR 의 fragment 로더가 이 규약 전제로 구현)
 
@@ -139,7 +146,14 @@ ntable-app/
 │   ├── host.html       # 모임장 (로그아웃, MVP 실시간)
 │   ├── guest.html      # 게스트 (매칭/인스타/채팅)
 │   ├── survey.html, result.html, admin.html
-├── questions/season1.md  # 연애 밸런스 게임 13문항
+├── questions/packs/*.md  # 15+ 팩 (couples/dating/icebreaker/teambuilding/playlist-share/...)
+├── config/pack-defaults.json  # 2026-05-12 신설 — pack 메타 SoT
+├── docs/brand/   # brand.json + brand-guide.md
+├── lib/          # 공용 헬퍼 (mailer 등)
+├── public/styles/  # tokens.css + components.css
+├── public/js/      # 클라이언트 공용 (brand.js 등)
+├── .husky/         # 2026-05-09 신설 — pre-commit lock 동기화
+├── nixpacks.toml   # Railway 빌드 설정 (npm ci 강제)
 ├── package.json, .env.example, README.md
 ```
 
