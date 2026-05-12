@@ -292,6 +292,8 @@ const PACK_FLOW_DEFAULTS = {
   teambuilding: ['mvp', 'explore-result'],    // 팀빌딩 — MVP + 결과
   'playlist-share': ['mvp', 'explore-result'],// 플리 공유회 — BEST 플리 투표(MVP 재활용) + 탐구 결과. match(작대기) 단계 없음 (2026-04-22 QA 피드백)
   'nights-stories': ['mvp'],                  // 나의 이야기 찾기 — 오늘의 주인공만
+  'ai-workplace': [],                         // AI 강의 데모 — closing 없이 결과로 바로
+  'ntable-showcase': [],                      // ntable 홍보 데모 — 무인 자동진행, closing 없음
 };
 
 function getPackFlow(packId) {
@@ -461,6 +463,49 @@ const PACK_DEFAULTS = {
       mvp_card_head: '🎵 오늘의 베스트 플리',
       mvp_vote_card_head: '🎵 베스트 플리 투표',
       closing_stage_sub: '베스트 플리 투표 → 발표 → 탐구 결과 공개 순서로 진행해요.',
+    },
+  },
+  // AI 강의 도입부용 영구 데모 — 매칭·인스타·MVP 모두 OFF. AI 성향 카드 + 탐구 결과만.
+  // 호스트(닉)가 핸드폰으로 직접 페이싱. wizard 최소화 (닉네임 + 이모지만).
+  'ai-workplace': {
+    series: null,
+    content_kind: 'conversation',
+    wizard_fields: ['nickname', 'emoji'],
+    wizard_required: ['nickname'],
+    wizard_prompt_after_join: [],
+    display_fields_default: [],
+    result_sections: ['ai_personality', 'explore_result', 'summary'],
+    skip_free_chat: true,
+    insta_exchange_enabled: false,
+    best_match_enabled: false,
+    mvp_enabled: false,
+    match_pairs_enabled: false,
+    chat_reactions: ['👍 공감','💡 인사이트','🤔 흥미로워요','📝 메모','😄 재밌네요'],
+    labels: {
+      page2_card_title: '🤖 오늘의 AI 성향',
+      best_match_eyebrow: '나와 비슷한 AI 태도',
+    },
+  },
+  // ntable 홍보용 영구 데모 — 글로벌 클록 자동진행 + 호스트 takeover 가능.
+  // 무인 기본 정책: 매칭·인스타·MVP 모두 OFF (영업·블로그 QR 노출 안전).
+  // 호스트(닉)가 takeover 진입하면 admin/panel 런타임에서 정책 동적 활성화.
+  'ntable-showcase': {
+    series: null,
+    content_kind: 'conversation',
+    wizard_fields: ['nickname', 'emoji'],
+    wizard_required: ['nickname'],
+    wizard_prompt_after_join: [],
+    display_fields_default: [],
+    result_sections: ['ai_personality', 'explore_result', 'summary'],
+    skip_free_chat: true,
+    insta_exchange_enabled: false,
+    best_match_enabled: false,
+    mvp_enabled: false,
+    match_pairs_enabled: false,
+    chat_reactions: ['😄 재밌어요','🤝 반가워요','🙌 좋아요','💡 인사이트','✨ 한 번 더'],
+    labels: {
+      page2_card_title: '🍽 오늘의 ntable 성향',
+      best_match_eyebrow: '나와 비슷한 성향',
     },
   },
   // 팀빌딩 — 업종·관심사 중심. MVP 만. 매칭·인스타 없음.

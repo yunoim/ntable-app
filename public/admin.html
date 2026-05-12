@@ -351,6 +351,20 @@
   <main>
     <!-- Dashboard -->
     <div class="panel active" id="panel-dashboard">
+      <div class="section-h">🎬 데모 호스트 진입</div>
+      <div id="demoHostPanel" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:24px;">
+        <button type="button" data-kind="ai" onclick="enterDemoHost('ai')"
+          style="background:var(--gold-dim); color:var(--gold); border:1px solid var(--gold-border); border-radius:10px; padding:12px 18px; font-size:14px; font-weight:600; cursor:pointer;">
+          🤖 AI 강의 데모 호스트로 진입
+        </button>
+        <button type="button" data-kind="ntable" onclick="enterDemoHost('ntable')"
+          style="background:var(--gold-dim); color:var(--gold); border:1px solid var(--gold-border); border-radius:10px; padding:12px 18px; font-size:14px; font-weight:600; cursor:pointer;">
+          🍽 ntable 홍보 데모 takeover
+        </button>
+        <div id="demoHostMsg" style="flex-basis:100%; font-size:12px; color:var(--text-muted); margin-top:4px;">
+          super_admin 만 진입 가능 · 60초 1회용 grant 발급 후 app.ntable.kr 로 자동 이동
+        </div>
+      </div>
       <div class="stats-grid" id="statsGrid"></div>
       <div class="section-h">최근 모임 (10개)</div>
       <div class="table-wrap" id="dashRecentRooms"></div>
@@ -522,6 +536,29 @@ async function api(path, opts = {}) {
   if (r.status === 401) { logout(); throw new Error('UNAUTHORIZED'); }
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'ERROR');
   return r.json();
+}
+
+// 데모 호스트 진입 — super_admin (DEMO_HOST_EMAIL) 만 통과.
+// 60초 TTL 1회용 grant 발급 후 app.ntable.kr 으로 location.href 이동.
+async function enterDemoHost(kind) {
+  const msgEl = document.getElementById('demoHostMsg');
+  try {
+    const r = await api('/api/admin/demo-host-grant?kind=' + encodeURIComponent(kind), { method: 'POST' });
+    if (!r || !r.target_url) {
+      if (msgEl) msgEl.textContent = 'grant 발급 실패 — 응답에 target_url 없음';
+      return;
+    }
+    if (msgEl) msgEl.textContent = '진입 중… 잠시만요';
+    location.href = r.target_url;
+  } catch (e) {
+    const errMap = {
+      forbidden: 'super_admin (' + 'skb.yunho.im@gmail.com'.replace('@','＠') + ') 계정만 진입 가능해요',
+      invalid_session: '세션이 만료됐어요. 다시 로그인해주세요',
+      invalid_kind: '잘못된 데모 종류',
+      admin_auth_not_initialized: '서버가 아직 준비 중이에요',
+    };
+    if (msgEl) msgEl.textContent = errMap[e.message] || ('grant 실패: ' + e.message);
+  }
 }
 
 function esc(s) {
