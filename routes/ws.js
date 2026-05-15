@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const { pool } = require('../db');
 const Sentry = require('../sentry');
 const { captureDbError } = require('./_db-errors');
+const demoTicker = require('./demo-ticker');
 
 // rooms[room_code] = {
 //   clients: Map<uuid, ws>,
@@ -179,6 +180,9 @@ function init(server) {
         if (!rooms[room_code].photoCache) rooms[room_code].photoCache = new Map();
         if (!rooms[room_code].introCache) rooms[room_code].introCache = new Map();
       }
+      // #24+#25 (2026-05-13) — 빈 방에 첫 진입자가 들어왔을 때 데모방 cycle reset 트리거.
+      // 직전 size 0 → 1 이 첫 진입 시그널. demo_kind 검증은 demoTicker.resetDemoCycle 안에서 수행.
+      const wasEmpty = rooms[room_code].clients.size === 0;
       rooms[room_code].clients.set(uuid, ws);
 
       // 모임장 재접속 → grace timer 취소
@@ -194,6 +198,13 @@ function init(server) {
       // 자동 입장 (2026-04-19) — 모임장 승인 절차 폐지. 참가자는 즉시 approved.
       if (uuid !== hostUuid) {
         broadcastToRoom(room_code, { type: 'approved', uuid });
+      }
+
+      // 데모방 빈방 reset — broadcast 다음 트리거. resetDemoCycle 이 state_update broadcast 까지 처리.
+      if (wasEmpty && demoTicker && typeof demoTicker.resetDemoCycle === 'function') {
+        demoTicker.resetDemoCycle(room_code).catch(err => {
+          console.warn('[ws] resetDemoCycle error', err && err.message);
+        });
       }
 
       // ── 입장 즉시 sync (fire-and-forget) ── 캐시된 사진/소개 + 현재 room_state + 타이머 push

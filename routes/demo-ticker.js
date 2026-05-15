@@ -22,6 +22,7 @@
 
 const Sentry = require('../sentry');
 const { pool } = require('../db');
+const { buildRoomQuestions, getPack } = require('./question-sources');
 
 let wsModule = null;
 let timer = null;
@@ -184,4 +185,72 @@ function stop() {
   if (timer) { clearInterval(timer); timer = null; }
 }
 
-module.exports = { init, stop, sweepOnce };
+// #24 + #25 (2026-05-13) — 빈 방에 첫 진입자가 들어왔을 때 호출.
+// 새 questions 셔플 + cycle 재시작. ws.js user_joined 직후에서 트리거.
+// 외부 호출이라 idempotent + 안전하게 동작 (실패해도 sweep 이 normal sweep 진행).
+async function resetDemoCycle(roomCode) {
+  try {
+    const r = await pool.query(
+      `SELECT r.id, r.pack_id, r.question_count, r.demo_kind, rs.state_json
+         FROM rooms r
+         LEFT JOIN room_state rs ON rs.room_id = r.id
+        WHERE r.room_code = $1 AND r.demo_kind IS NOT NULL`,
+      [roomCode]
+    );
+    if (r.rows.length === 0) return false;
+    const row = r.rows[0];
+    const pack = getPack(row.pack_id);
+    if (!pack) {
+      console.warn('[demo-ticker] resetDemoCycle pack not found', row.pack_id);
+      return false;
+    }
+    const newQuestions = buildRoomQuestions(pack, row.question_count || 3);
+    const prevState = row.state_json || {};
+    const nextCycleId = (Number.isFinite(prevState.demo_cycle_id) ? prevState.demo_cycle_id : 0) + 1;
+    const now = new Date().toISOString();
+    const nextState = {
+      ...prevState,
+      current_tab: 'explore',
+      current_question_id: 1,
+      question_index: 0,
+      demo_phase: 'explore',
+      demo_cycle_id: nextCycleId,
+      demo_question_index: 0,
+      demo_tick_started_at: now,
+      host_active: false,
+      host_active_at: null,
+    };
+    await pool.query(
+      `UPDATE rooms SET questions_json = $1::jsonb WHERE id = $2`,
+      [JSON.stringify(newQuestions), row.id]
+    );
+    await pool.query(
+      `UPDATE room_state SET state_json = $1::jsonb, updated_at = NOW() WHERE room_id = $2`,
+      [JSON.stringify(nextState), row.id]
+    );
+    if (wsModule && typeof wsModule.broadcastToRoom === 'function') {
+      const questionCount = newQuestions.filter(q => q && q.enabled !== false).length || newQuestions.length;
+      wsModule.broadcastToRoom(roomCode, {
+        type: 'state_update',
+        state: nextState,
+        demo: {
+          kind: row.demo_kind,
+          cycle_id: nextCycleId,
+          question_index: 0,
+          question_count: questionCount,
+          phase: 'explore',
+          tick_seconds: EXPLORE_SECONDS,
+          tick_started_at: now,
+        },
+      });
+    }
+    console.log(`[demo-ticker] resetDemoCycle ${roomCode} → cycle ${nextCycleId} (${newQuestions.length} Qs)`);
+    return true;
+  } catch (err) {
+    try { Sentry.captureException(err, { extra: { route: 'demo-ticker.resetDemoCycle', room_code: roomCode } }); } catch {}
+    console.error('[demo-ticker] resetDemoCycle error', err && err.message);
+    return false;
+  }
+}
+
+module.exports = { init, stop, sweepOnce, resetDemoCycle };
