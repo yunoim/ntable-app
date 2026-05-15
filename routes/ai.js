@@ -7,6 +7,18 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
 const { captureDbError } = require('./_db-errors');
+const { getPackDefaults } = require('./question-sources');
+
+// 성향 라벨 set SoT (2026-05-13 Step B) — pack-별 분기.
+// pack-defaults.json 의 'personality_labels' 필드가 set 키 (예: 'workplace'). 미지정 시 'default'.
+const PERSONALITY_LABEL_SETS = require('../config/pack-personality-labels.json');
+
+function getPersonalityLabels(pack_id, personality_key) {
+  const pd = getPackDefaults(pack_id);
+  const setKey = (pd && pd.personality_labels) || 'default';
+  const set = (PERSONALITY_LABEL_SETS.sets && PERSONALITY_LABEL_SETS.sets[setKey]) || PERSONALITY_LABEL_SETS.sets.default;
+  return set[personality_key] || set['자유형'] || null;
+}
 
 // ─────────────────────────────────────────
 // [Claude API - 추후 활성화 가능]
@@ -172,17 +184,19 @@ router.get('/personality', async (req, res) => {
   }
 
   try {
-    // 1) 유저 프로필 조회 (방별 nickname/emoji 우선 — room_members)
+    // 1) 유저 프로필 + room.pack_id 조회 (방별 nickname/emoji 우선 — room_members)
     const memberResult = await pool.query(
-      `SELECT rm.uuid, rm.nickname, rm.emoji, rm.gender, rm.birth_year, rm.mbti, rm.interest
+      `SELECT rm.uuid, rm.nickname, rm.emoji, rm.gender, rm.birth_year, rm.mbti, rm.interest, r.pack_id
          FROM room_members rm
          JOIN rooms r ON r.id = rm.room_id
         WHERE rm.uuid = $1 AND r.room_code = $2`,
       [uuid, room_code]
     );
     let profile;
+    let pack_id = null;
     if (memberResult.rows.length > 0) {
       profile = memberResult.rows[0];
+      pack_id = profile.pack_id;
     } else {
       const userResult = await pool.query(
         'SELECT uuid, nickname, emoji, gender, birth_year, mbti, interest FROM users WHERE uuid = $1',
@@ -192,6 +206,11 @@ router.get('/personality', async (req, res) => {
         return res.status(404).json({ error: '유저를 찾을 수 없습니다.' });
       }
       profile = userResult.rows[0];
+      // member 가 아닌 fallback 경로 — room.pack_id 별도 조회 (라벨 set 결정용)
+      try {
+        const rR = await pool.query('SELECT pack_id FROM rooms WHERE room_code = $1', [room_code]);
+        if (rR.rows.length > 0) pack_id = rR.rows[0].pack_id;
+      } catch (_) { /* pack_id 없어도 default set 사용 */ }
     }
 
     // 2) 투표 결과 조회
@@ -210,17 +229,19 @@ router.get('/personality', async (req, res) => {
       }
     }
 
-    // 3) 유형 결정
+    // 3) 유형 결정 (8유형 key 는 내부 식별자 그대로 유지)
     const personalityKey = determinePersonality(profile.mbti, votes);
-    const result = PERSONALITY_TYPES[personalityKey];
+    // 4) pack-별 라벨 set 적용 (workplace 등) — label·text·emoji 모두 set 에서 가져옴
+    const label = getPersonalityLabels(pack_id, personalityKey) || PERSONALITY_TYPES[personalityKey];
 
     return res.json({
       uuid: profile.uuid,
       nickname: profile.nickname,
-      personality: personalityKey,
-      text: result.text,
-      emoji: result.emoji,
-      my_emoji: profile.emoji || null, // 사용자가 wizard에서 선택한 본인 이모지
+      personality: label.label || personalityKey, // 사용자 표시용 라벨 (예: default=탐구형, workplace=전략가)
+      personality_key: personalityKey,            // 8유형 internal key (디버깅·다른 분기 활용 가능)
+      text: label.text,
+      emoji: label.emoji,
+      my_emoji: profile.emoji || null,
     });
 
   } catch (err) {
@@ -375,3 +396,7 @@ router.get('/rooms/:code/couple-love', async (req, res) => {
 });
 
 module.exports = router;
+// 단위 검증·재사용 위한 internal helper export (라우터 사용에 영향 없음)
+module.exports.getPersonalityLabels = getPersonalityLabels;
+module.exports.PERSONALITY_TYPES = PERSONALITY_TYPES;
+module.exports.determinePersonality = determinePersonality;

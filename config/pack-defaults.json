@@ -181,6 +181,7 @@
       "best_match_enabled": false,
       "mvp_enabled": true,
       "match_pairs_enabled": false,
+      "personality_labels": "workplace",
       "chat_reactions": ["👍 좋은 의견", "😄 재밌네요", "📝 메모", "❓ 질문 있음", "✅ 동의"],
       "labels": {
         "page2_card_title": "🎯 오늘의 주인공",
