@@ -440,7 +440,7 @@
       return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
-    // 활성 템플릿 (2026-05-15 현재): couples · playlist-share · workshop 3개.
+    // 활성 템플릿 (2026-05-15 현재): couples · playlist-share · workshop · icebreaker · dating 5개.
     // 스펙 B·재구성안 기준. 비활성 템플릿은 리스트에서 제외.
     const ROOM_KITS = [
       {
@@ -484,6 +484,51 @@
         },
       },
       {
+        id: 'icebreaker',
+        icon: '🤝',
+        title: '처음 만나는 자리',
+        meta: '4–20인 · 60–90분',
+        desc: '서로 처음 만난 자리, 가벼운 10문항 + 자유대화 + MVP·매칭',
+        categories: ['small'],
+        detailedDesc: '동호회 첫 모임·소셜 살롱·소개 자리. 익명 투표로 서로의 취향·가치관을 가볍게 들여다보고, 마지막에 가장 좋았던 사람과 매칭·MVP 까지.',
+        stages: [
+          { label: '입장', items: ['QR 자동 입장 · 닉네임 + 아바타', '직무·관심사·MBTI (선택)'] },
+          { label: '탐구·대화', items: ['취향 10문항 익명 투표', '자유대화 — 토픽 카드 + 익명 채팅', 'MVP 투표'] },
+          { label: '마무리', items: ['질문별 결과 공개', 'AI 성향 카드', 'BEST 매칭 발표'] },
+        ],
+        defaults: {
+          question_count: 10,
+          display_fields: ['birth_year', 'region', 'industry', 'interest'],
+          birth_year_format: 'decade_half',
+          host_role: 'participant', display_mode: 'mobile',
+          photo_enabled: true, region_detail: false,
+          free_chat_timer_minutes: 30, free_chat_chat_enabled: true, free_chat_topic_card_enabled: true,
+        },
+      },
+      {
+        id: 'dating',
+        icon: '💘',
+        title: '소개팅·첫 만남',
+        meta: '4–20인 · 60–120분',
+        desc: '취향·연애관 10문항 + 자유대화 + 인스타 상호공개',
+        categories: ['dating'],
+        detailedDesc: '소개팅 자리·소셜 다이닝·살롱. 익명 투표로 연애 가치관·취향을 들여다보고, 서로 좋은 인상이면 인스타 자동 공개. 평가 부담 없이 자연스럽게 친해지는 시간.',
+        stages: [
+          { label: '입장', items: ['QR 자동 입장 · 닉네임 + 아바타', '기본 프로필 + 인스타 (선택)'] },
+          { label: '탐구·대화', items: ['취향·연애관 10문항 익명 투표', '자유대화 — 토픽 카드 + 익명 채팅', 'MVP 투표'] },
+          { label: '마무리', items: ['질문별 결과 공개', 'AI 성향 카드', 'BEST 매칭 + 인스타 상호공개'] },
+        ],
+        defaults: {
+          question_count: 10,
+          display_fields: ['birth_year', 'region', 'industry', 'interest'],
+          birth_year_format: 'decade_half',
+          host_role: 'participant', display_mode: 'mobile',
+          photo_enabled: true, region_detail: false,
+          free_chat_timer_minutes: 45, free_chat_chat_enabled: true, free_chat_topic_card_enabled: true,
+          instagram_collect: true,
+        },
+      },
+      {
         id: 'workshop',
         icon: '🎯',
         title: '팀빌딩·워크샵',
@@ -511,6 +556,8 @@
     const FILTER_DEFS = [
       { id: 'all',       copyKey: 'create.filter_all',       label: '전체' },
       { id: '2p',        copyKey: 'create.filter_2p',        label: '2인' },
+      { id: 'small',     copyKey: 'create.filter_small',     label: '소규모' },
+      { id: 'dating',    copyKey: 'create.filter_dating',    label: '첫 만남' },
       { id: 'music',     copyKey: 'create.filter_music',     label: '뮤직' },
       { id: 'workplace', copyKey: 'create.filter_workplace', label: '직장' },
     ];
