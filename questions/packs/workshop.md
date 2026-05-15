@@ -1,6 +1,6 @@
 ---
 id: workshop
-title: 워크샵 아이스브레이커
+title: 팀빌딩·워크샵
 description: 워크샵·외부 세미나·신규 팀 합류 자리에서 처음 만난 동료와 빠르게 친해지는 협업 성향 탐구 10문항
 icon: 🎯
 recommended: 2~20+명
