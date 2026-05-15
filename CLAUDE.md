@@ -172,7 +172,7 @@ ntable-app/
 │   ├── host.html       # 모임장 (로그아웃, MVP 실시간)
 │   ├── guest.html      # 게스트 (매칭/인스타/채팅)
 │   ├── survey.html, result.html, admin.html
-├── questions/packs/*.md  # 15+ 팩 (couples/dating/icebreaker/teambuilding/playlist-share/...)
+├── questions/packs/*.md  # 9개 팩 (couples/dating/icebreaker/workshop/playlist-share/...)
 ├── config/pack-defaults.json  # 2026-05-12 신설 — pack 메타 SoT
 ├── docs/brand/   # brand.json + brand-guide.md
 ├── lib/          # 공용 헬퍼 (mailer 등)

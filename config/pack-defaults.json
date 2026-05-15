@@ -167,8 +167,8 @@
         "best_match_eyebrow": "나와 비슷한 성향"
       }
     },
-    "teambuilding": {
-      "series": "ntable-nights",
+    "workshop": {
+      "series": null,
       "content_kind": "conversation",
       "flow": ["mvp", "explore-result"],
       "wizard_fields": ["nickname", "emoji", "industry", "mbti", "interest"],
@@ -182,7 +182,7 @@
       "mvp_enabled": true,
       "match_pairs_enabled": false,
       "personality_labels": "workplace",
-      "chat_reactions": ["👍 좋은 의견", "😄 재밌네요", "📝 메모", "❓ 질문 있음", "✅ 동의"],
+      "chat_reactions": ["👍 좋은 의견", "📝 메모", "❓ 질문 있음", "✅ 동의", "😄 재밌네요"],
       "labels": {
         "page2_card_title": "🎯 오늘의 주인공",
         "best_match_eyebrow": "비슷한 답을 고른 동료"

@@ -5585,7 +5585,7 @@ async function submitHostMatch() {
 
 // closing 단계 시각 표시 + 카드 head/help 업데이트
 function renderClosingSubsteps(current) {
-  // closing_steps 에 'match' 가 없으면 match chips 숨김 + 번호 재부여 (myplay/teambuilding 등)
+  // closing_steps 에 'match' 가 없으면 match chips 숨김 + 번호 재부여 (myplay/workshop 등)
   const steps = Array.isArray(state.closingSteps) ? state.closingSteps : ['mvp'];
   const hasMatch = steps.includes('match');
   // stage-sub 텍스트 — 팩별 커스텀 또는 기본

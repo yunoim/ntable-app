@@ -440,7 +440,7 @@
       return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
-    // 활성 템플릿 (2026-04-22 현재): couples · playlist-share 2개만 실제 생성 가능.
+    // 활성 템플릿 (2026-05-15 현재): couples · playlist-share · workshop 3개.
     // 스펙 B·재구성안 기준. 비활성 템플릿은 리스트에서 제외.
     const ROOM_KITS = [
       {
@@ -483,13 +483,36 @@
           instagram_collect: true,
         },
       },
+      {
+        id: 'workshop',
+        icon: '🎯',
+        title: '워크샵 아이스브레이커',
+        meta: '2–20+인 · 30–60분',
+        desc: '협업 성향 10문항 + 자유대화 · 직장 톤 AI 카드',
+        categories: ['workplace'],
+        detailedDesc: '워크샵·외부 세미나·신규 팀 합류 자리에서 짧게 활용. 익명 투표로 협업 성향을 가볍게 공유하고, 마지막에 AI 가 직장 톤 성향 카드(전략가·조정가·추진가·분석가 등)를 정리해줘요.',
+        stages: [
+          { label: '입장', items: ['QR 자동 입장 · 닉네임 + 아바타', '직무·관심사 (선택)'] },
+          { label: '탐구·대화', items: ['협업 성향 10문항 익명 투표', '자유대화 — 토픽 카드 + 익명 채팅', '오늘의 주인공 발표 (MVP)'] },
+          { label: '마무리', items: ['질문별 결과 공개', 'AI 직장 성향 카드 (8유형)'] },
+        ],
+        defaults: {
+          question_count: 10,
+          display_fields: ['industry', 'mbti', 'interest'],
+          birth_year_format: 'decade_half',
+          host_role: 'participant', display_mode: 'mobile',
+          photo_enabled: false, region_detail: false,
+          free_chat_timer_minutes: 20, free_chat_chat_enabled: true, free_chat_topic_card_enabled: true,
+        },
+      },
     ];
 
     // 필터 pill 은 실제 활성 템플릿이 속한 카테고리만 노출. 전체 + 해당 카테고리만.
     const FILTER_DEFS = [
-      { id: 'all',   copyKey: 'create.filter_all',   label: '전체' },
-      { id: '2p',    copyKey: 'create.filter_2p',    label: '2인' },
-      { id: 'music', copyKey: 'create.filter_music', label: '뮤직' },
+      { id: 'all',       copyKey: 'create.filter_all',       label: '전체' },
+      { id: '2p',        copyKey: 'create.filter_2p',        label: '2인' },
+      { id: 'music',     copyKey: 'create.filter_music',     label: '뮤직' },
+      { id: 'workplace', copyKey: 'create.filter_workplace', label: '직장' },
     ];
 
     function renderFilters() {
