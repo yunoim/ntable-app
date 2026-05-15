@@ -228,6 +228,12 @@ async function resetDemoCycle(roomCode) {
       `UPDATE room_state SET state_json = $1::jsonb, updated_at = NOW() WHERE room_id = $2`,
       [JSON.stringify(nextState), row.id]
     );
+    // Y (2026-05-13): cycle reset 시 votes_json 도 clear — 이전 cycle counts 가 새 cycle 첫 vote 전까지 잔존하는 ghost 제거.
+    // 데모방이라 보관 의미 없음. result.html 진입자는 이미 fetch 완료라 화면 영향 X.
+    await pool.query(
+      `UPDATE member_results SET votes_json = '{}'::jsonb WHERE room_id = $1`,
+      [row.id]
+    );
     if (wsModule && typeof wsModule.broadcastToRoom === 'function') {
       const questionCount = newQuestions.filter(q => q && q.enabled !== false).length || newQuestions.length;
       wsModule.broadcastToRoom(roomCode, {

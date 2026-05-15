@@ -5151,8 +5151,14 @@ function bindEvents() {
   // 모바일 share row 핸들러 폐기 (sidebar-head 자체가 hidden)
 
   // 카카오 SDK 초기화 (키 없으면 카카오 버튼 hidden 유지)
+  // T (2026-05-13): 데모방은 카카오 공유 init skip — 시연 화면 노이즈 제거.
+  //   state.room 미로드 race 시 1회성으로 버튼 보일 수 있음 — 시연에 critical 아니라 polling 생략.
   (async () => {
     try {
+      if (state.room && state.room.demo_kind) {
+        console.log('[host] kakao init skipped — demo room');
+        return;
+      }
       const r = await fetch('/api/share-config');
       const cfg = r.ok ? await r.json() : {};
       console.log('[host] share-config', { hasKey: !!cfg.kakaoJsKey, kakaoLoaded: !!window.Kakao });
