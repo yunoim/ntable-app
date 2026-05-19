@@ -550,6 +550,50 @@
           free_chat_timer_minutes: 20, free_chat_chat_enabled: true, free_chat_topic_card_enabled: true,
         },
       },
+      {
+        id: 'friends-reunion',
+        icon: '🍻',
+        title: '오랜만에 만난 사이',
+        meta: '4–12인 · 60–90분',
+        desc: '동창회·송년회·집들이. 근황·변화 10문항 + 자유대화',
+        categories: ['reunion'],
+        detailedDesc: '한동안 못 본 친한 사이가 다시 모인 자리. 익명 투표로 서로의 요즘을 가볍게 들여다보고, 자유대화에서 깊은 근황까지 자연스럽게 풀어내요.',
+        stages: [
+          { label: '입장', items: ['QR 자동 입장 · 닉네임 + 아바타', '연차·MBTI (선택)'] },
+          { label: '탐구·대화', items: ['요즘 10문항 익명 투표', '자유대화 — 토픽 카드 + 익명 채팅'] },
+          { label: '마무리', items: ['질문별 결과 공개', 'AI 성향 카드'] },
+        ],
+        defaults: {
+          question_count: 10,
+          display_fields: ['birth_year', 'mbti'],
+          birth_year_format: 'decade_half',
+          host_role: 'participant', display_mode: 'mobile',
+          photo_enabled: true, region_detail: false,
+          free_chat_timer_minutes: 30, free_chat_chat_enabled: true, free_chat_topic_card_enabled: true,
+        },
+      },
+      {
+        id: 'hobby-travel',
+        icon: '✈️',
+        title: '여행 동호회',
+        meta: '4–15인 · 60–90분',
+        desc: '여행 스타일 10문항 + 자유대화 · 다음 여행 계획 공유',
+        categories: ['hobby'],
+        detailedDesc: '여행 동호회·여행 모임에서 활용. 익명 투표로 서로의 여행 스타일을 들여다보고, 자유대화에서 추억과 다음 계획을 자연스럽게 나눠요.',
+        stages: [
+          { label: '입장', items: ['QR 자동 입장 · 닉네임 + 아바타', '연차·MBTI·관심사 (선택)'] },
+          { label: '탐구·대화', items: ['여행 스타일 10문항 익명 투표', '자유대화 — 토픽 카드 + 익명 채팅'] },
+          { label: '마무리', items: ['질문별 결과 공개', 'AI 성향 카드'] },
+        ],
+        defaults: {
+          question_count: 10,
+          display_fields: ['birth_year', 'mbti', 'interest'],
+          birth_year_format: 'decade_half',
+          host_role: 'participant', display_mode: 'mobile',
+          photo_enabled: true, region_detail: false,
+          free_chat_timer_minutes: 30, free_chat_chat_enabled: true, free_chat_topic_card_enabled: true,
+        },
+      },
     ];
 
     // 필터 pill 은 실제 활성 템플릿이 속한 카테고리만 노출. 전체 + 해당 카테고리만.
@@ -558,6 +602,8 @@
       { id: '2p',        copyKey: 'create.filter_2p',        label: '2인' },
       { id: 'small',     copyKey: 'create.filter_small',     label: '소규모' },
       { id: 'dating',    copyKey: 'create.filter_dating',    label: '첫 만남' },
+      { id: 'reunion',   copyKey: 'create.filter_reunion',   label: '재회' },
+      { id: 'hobby',     copyKey: 'create.filter_hobby',     label: '동호회' },
       { id: 'music',     copyKey: 'create.filter_music',     label: '뮤직' },
       { id: 'workplace', copyKey: 'create.filter_workplace', label: '직장' },
     ];

@@ -187,6 +187,26 @@
         "page2_card_title": "🎯 오늘의 주인공",
         "best_match_eyebrow": "비슷한 답을 고른 동료"
       }
+    },
+    "hobby-travel": {
+      "series": null,
+      "content_kind": "conversation",
+      "flow": ["explore-result"],
+      "wizard_fields": ["nickname", "emoji", "birth_year", "mbti", "interest"],
+      "wizard_required": ["nickname"],
+      "wizard_prompt_after_join": ["birth_year", "mbti", "interest"],
+      "display_fields_default": ["birth_year", "mbti", "interest"],
+      "result_sections": ["ai_personality", "explore_result", "summary"],
+      "skip_free_chat": false,
+      "insta_exchange_enabled": false,
+      "best_match_enabled": false,
+      "mvp_enabled": false,
+      "match_pairs_enabled": false,
+      "chat_reactions": ["✈️ 가고 싶다", "📸 사진 보고파", "🌅 인상적", "😄 재밌어요", "🙌 공감돼요"],
+      "labels": {
+        "page2_card_title": "✈️ 오늘의 여행 스타일",
+        "best_match_eyebrow": "여행 스타일이 비슷한 사람"
+      }
     }
   }
 }
