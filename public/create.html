@@ -594,6 +594,28 @@
           free_chat_timer_minutes: 30, free_chat_chat_enabled: true, free_chat_topic_card_enabled: true,
         },
       },
+      {
+        id: 'book-club',
+        icon: '📚',
+        title: '독서·스터디 모임',
+        meta: '4–12인 · 60–90분',
+        desc: '독서 스타일·해석 10문항 + 자유대화 · 다음 책 공유',
+        categories: ['study'],
+        detailedDesc: '같은 책·주제를 두고 모인 사람들. 익명 투표로 서로의 독서 스타일·해석을 들여다보고, 자유대화에서 인상 깊은 문장·다음 책을 자연스럽게 나눠요.',
+        stages: [
+          { label: '입장', items: ['QR 자동 입장 · 닉네임 + 아바타', 'MBTI·관심사 (선택)'] },
+          { label: '탐구·대화', items: ['독서 스타일 10문항 익명 투표', '자유대화 — 토픽 카드 + 익명 채팅'] },
+          { label: '마무리', items: ['질문별 결과 공개', 'AI 독서 성향 카드'] },
+        ],
+        defaults: {
+          question_count: 10,
+          display_fields: ['mbti', 'interest'],
+          birth_year_format: 'decade_half',
+          host_role: 'participant', display_mode: 'mobile',
+          photo_enabled: true, region_detail: false,
+          free_chat_timer_minutes: 30, free_chat_chat_enabled: true, free_chat_topic_card_enabled: true,
+        },
+      },
     ];
 
     // 필터 pill 은 실제 활성 템플릿이 속한 카테고리만 노출. 전체 + 해당 카테고리만.
@@ -604,6 +626,7 @@
       { id: 'dating',    copyKey: 'create.filter_dating',    label: '첫 만남' },
       { id: 'reunion',   copyKey: 'create.filter_reunion',   label: '재회' },
       { id: 'hobby',     copyKey: 'create.filter_hobby',     label: '동호회' },
+      { id: 'study',     copyKey: 'create.filter_study',     label: '스터디' },
       { id: 'music',     copyKey: 'create.filter_music',     label: '뮤직' },
       { id: 'workplace', copyKey: 'create.filter_workplace', label: '직장' },
     ];

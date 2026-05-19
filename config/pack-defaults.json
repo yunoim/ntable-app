@@ -207,6 +207,26 @@
         "page2_card_title": "✈️ 오늘의 여행 스타일",
         "best_match_eyebrow": "여행 스타일이 비슷한 사람"
       }
+    },
+    "book-club": {
+      "series": null,
+      "content_kind": "conversation",
+      "flow": ["explore-result"],
+      "wizard_fields": ["nickname", "emoji", "birth_year", "mbti", "interest"],
+      "wizard_required": ["nickname"],
+      "wizard_prompt_after_join": ["birth_year", "mbti", "interest"],
+      "display_fields_default": ["mbti", "interest"],
+      "result_sections": ["ai_personality", "explore_result", "summary"],
+      "skip_free_chat": false,
+      "insta_exchange_enabled": false,
+      "best_match_enabled": false,
+      "mvp_enabled": false,
+      "match_pairs_enabled": false,
+      "chat_reactions": ["📖 좋은 인사이트", "💡 그 관점", "🤔 흥미로워요", "👏 공감돼요", "✍️ 메모할게요"],
+      "labels": {
+        "page2_card_title": "📚 오늘의 독서 성향",
+        "best_match_eyebrow": "읽는 결이 비슷한 사람"
+      }
     }
   }
 }
