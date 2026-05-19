@@ -484,6 +484,28 @@
         },
       },
       {
+        id: 'nights-stories',
+        icon: '🌙',
+        title: '나의 이야기 찾기',
+        meta: '6–8인 · 90–120분',
+        desc: '내면 성찰 10문항 + 깊은 자유대화 · 조용한 톤',
+        categories: ['small'],
+        detailedDesc: '지나온 시간·현재의 나·앞으로의 선택을 들여다보는 조용한 대화 모임. 익명 투표로 서로의 결을 짚어보고, 자유대화에서 가까운 사이가 더 가까워지는 시간.',
+        stages: [
+          { label: '입장', items: ['QR 자동 입장 · 닉네임 + 아바타', 'MBTI·관심사 (선택)'] },
+          { label: '탐구·대화', items: ['내면 성찰 10문항 익명 투표', '자유대화 — 토픽 카드 + 익명 채팅', 'MVP 투표 (오늘 가장 와닿은 사람)'] },
+          { label: '마무리', items: ['질문별 결과 공개', 'AI 성향 카드', 'BEST 매칭'] },
+        ],
+        defaults: {
+          question_count: 10,
+          display_fields: ['birth_year', 'mbti', 'interest'],
+          birth_year_format: 'decade_half',
+          host_role: 'participant', display_mode: 'mobile',
+          photo_enabled: true, region_detail: false,
+          free_chat_timer_minutes: 45, free_chat_chat_enabled: true, free_chat_topic_card_enabled: true,
+        },
+      },
+      {
         id: 'icebreaker',
         icon: '🤝',
         title: '처음 만나는 자리',
